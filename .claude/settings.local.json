@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(pnpm dlx shadcn@latest add:*)",
+      "Bash(timeout:*)",
+      "Bash(ipconfig:*)",
+      "Bash(findstr:*)",
+      "Bash(npm install:*)",
+      "Bash(curl:*)",
+      "Bash(copy:*)",
+      "Bash(cmd /c copy \"c:\\\\Users\\\\marti\\\\Downloads\\\\3dicons-target-dynamic-clay.png\" \"C:\\\\Users\\\\marti\\\\OneDrive\\\\Bureau\\\\CODE\\\\DEADSIGN\\\\public\\\\target-icon.png\")",
+      "Bash(cmd /c dir \"C:\\\\Users\\\\marti\\\\OneDrive\\\\Bureau\\\\CODE\\\\DEADSIGN\\\\public\\\\target-icon.png\")",
+      "Bash(cmd /c \"copy \"\"c:\\\\Users\\\\marti\\\\Downloads\\\\3dicons-target-dynamic-clay.png\"\" \"\"C:\\\\Users\\\\marti\\\\OneDrive\\\\Bureau\\\\CODE\\\\DEADSIGN\\\\public\\\\target-icon.png\"\"\")",
+      "Bash(powershell -Command:*)",
+      "Bash(npx next dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(netsh advfirewall firewall add:*)",
+      "Bash(node:*)",
+      "Bash(gh auth:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

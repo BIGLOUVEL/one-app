@@ -1,0 +1,282 @@
+"use client"
+
+import Link from "next/link"
+import { motion } from "framer-motion"
+import { Target, Focus, ArrowRight, Check, Zap, Shield, Flame, GitBranch } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+
+const tools = [
+  {
+    icon: Focus,
+    title: "The Focusing Question",
+    description: "Cut through the noise. Find the ONE thing that makes everything else easier or unnecessary.",
+    color: "primary",
+  },
+  {
+    icon: GitBranch,
+    title: "Goal-to-Now Cascade",
+    description: "Connect your someday vision to your right-now action. Never lose sight of why today matters.",
+    color: "violet",
+  },
+  {
+    icon: Zap,
+    title: "Time Blocking",
+    description: "Protect your focus. Schedule deep work blocks and enter bunker mode to eliminate distractions.",
+    color: "orange",
+  },
+  {
+    icon: Shield,
+    title: "Four Thieves Shield",
+    description: "Identify what steals your focus. Get tactical playbooks to defend against each thief.",
+    color: "cyan",
+  },
+  {
+    icon: Flame,
+    title: "66-Day Challenge",
+    description: "Build the focus habit. Track your streak and never miss twice.",
+    color: "red",
+  },
+]
+
+const principles = [
+  "ONE active objective at a time. No exceptions.",
+  "Everything else is noise until it's done.",
+  "Time blocks are sacred. Protect them.",
+  "Review weekly. Adjust. Recommit.",
+]
+
+export default function LandingPage() {
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="fixed top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-sm">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <Target className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold">DeadSign</h1>
+              <p className="text-xs text-muted-foreground -mt-0.5">The ONE Thing OS</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <Link href="/app">
+              <Button variant="outline">Sign In</Button>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <section className="container mx-auto px-4 pt-32 pb-20">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center"
+        >
+          <Badge className="mb-4" variant="outline">
+            <Target className="mr-1 h-3 w-3" />
+            Focus Operating System
+          </Badge>
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight text-balance">
+            Do <span className="text-primary">ONE</span> thing.
+            <br />
+            <span className="text-muted-foreground">Do it extraordinarily well.</span>
+          </h1>
+          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto text-balance">
+            Not a task manager. A focus operating system.
+            Pick ONE objective. Lock it in. Execute daily. Everything else waits.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/app/define">
+              <Button size="lg" className="gap-2 glow-green">
+                Define Your ONE Thing
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Link href="#how-it-works">
+              <Button size="lg" variant="outline">
+                See How It Works
+              </Button>
+            </Link>
+          </div>
+        </motion.div>
+
+        {/* Visual Hero Element */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2, duration: 0.6 }}
+          className="mt-20 relative"
+        >
+          <div className="max-w-3xl mx-auto">
+            <div className="liquid-glass p-8 md:p-12 text-center">
+              <p className="text-lg md:text-xl text-muted-foreground mb-4 italic">
+                "What's the ONE thing I can do such that by doing it
+                everything else will be easier or unnecessary?"
+              </p>
+              <p className="text-sm text-muted-foreground">
+                — The Focusing Question, Gary Keller
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* Principles */}
+      <section className="border-y border-border/50 py-12 bg-card/30">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-wrap justify-center gap-x-8 gap-y-4">
+            {principles.map((principle, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1, duration: 0.3 }}
+                className="flex items-center gap-2 text-sm text-muted-foreground"
+              >
+                <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                {principle}
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Tools / How it works */}
+      <section id="how-it-works" className="container mx-auto px-4 py-20">
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Tools from <span className="text-primary">The ONE Thing</span>
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Every feature is designed to help you pick the right thing, protect your focus, and build the habit.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {tools.map((tool, index) => (
+              <motion.div
+                key={tool.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1, duration: 0.5 }}
+              >
+                <Card className="glass-panel border-border/50 h-full hover:border-primary/30 transition-colors">
+                  <CardHeader>
+                    <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-${tool.color}/10 border border-${tool.color}/20 mb-4`}>
+                      <tool.icon className={`h-6 w-6 text-${tool.color === 'primary' ? 'primary' : tool.color + '-400'}`} />
+                    </div>
+                    <CardTitle className="text-lg">{tool.title}</CardTitle>
+                    <CardDescription className="text-base">
+                      {tool.description}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      </section>
+
+      {/* The Lock Principle */}
+      <section className="container mx-auto px-4 py-20">
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          className="max-w-4xl mx-auto"
+        >
+          <div className="liquid-glass-green p-8 md:p-12">
+            <div className="flex items-start gap-6">
+              <div className="hidden md:flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary/20 border border-primary/30">
+                <Target className="h-8 w-8 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold mb-4">The Lock Principle</h3>
+                <p className="text-muted-foreground text-lg mb-6">
+                  When you commit to your ONE thing, the system locks. You cannot create a new objective until you finish or fail the current one.
+                  This isn't a limitation — it's liberation. No more switching. No more negotiating. Just execute.
+                </p>
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Check className="h-4 w-4 text-primary" />
+                    <span>One objective at a time</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Check className="h-4 w-4 text-primary" />
+                    <span>Complete or fail to unlock</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Check className="h-4 w-4 text-primary" />
+                    <span>No escape until done</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* CTA */}
+      <section className="container mx-auto px-4 py-20">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center"
+        >
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Ready to focus?
+          </h2>
+          <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
+            Stop managing tasks. Start achieving the ONE thing that actually matters.
+          </p>
+          <Link href="/app/define">
+            <Button size="lg" className="gap-2 glow-green">
+              Start Now — It's Free
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
+        </motion.div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-border py-12">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" />
+              <span className="text-sm text-muted-foreground">
+                DeadSign — The ONE Thing OS
+              </span>
+            </div>
+            <div className="flex gap-6 text-sm text-muted-foreground">
+              <a href="#" className="hover:text-foreground transition-colors">
+                Privacy
+              </a>
+              <a href="#" className="hover:text-foreground transition-colors">
+                Terms
+              </a>
+              <a href="#" className="hover:text-foreground transition-colors">
+                Contact
+              </a>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  )
+}

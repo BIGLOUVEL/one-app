@@ -20,7 +20,7 @@ ONE is not a task manager. It's a decision validation system that ensures you're
 
 ## Tech Stack
 
-- **Framework:** Next.js 14 (App Router)
+- **Framework:** Next.js 14.2.35+ (App Router)
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS
 - **State:** Zustand

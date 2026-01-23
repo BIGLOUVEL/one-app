@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
@@ -11,18 +11,24 @@ import {
   Plus,
   X,
   Check,
-  Timer,
   Smartphone,
   Bell,
   DoorClosed,
   Volume2,
-  Target,
+  Clock,
+  StickyNote,
+  Sparkles,
   Quote,
+  Pencil,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { IconBolt, IconTarget } from "@/components/ui/custom-icons"
 import { useAppStore } from "@/store/useAppStore"
 
-type SessionState = "idle" | "bunker-checklist" | "active" | "paused" | "reflection"
+// ============================================
+// TYPES
+// ============================================
+type SessionState = "idle" | "bunker-checklist" | "session-setup" | "active" | "paused" | "reflection"
 
 interface BunkerItem {
   id: string
@@ -31,12 +37,33 @@ interface BunkerItem {
   checked: boolean
 }
 
+interface PostIt {
+  id: string
+  text: string
+  x: number
+  y: number
+  rotation: number // slight tilt for realism
+  color: string
+}
+
+// ============================================
+// CONSTANTS
+// ============================================
 const initialBunkerChecklist: BunkerItem[] = [
   { id: "phone", label: "Phone on silent / Do Not Disturb", icon: Smartphone, checked: false },
   { id: "notifications", label: "All notifications disabled", icon: Bell, checked: false },
   { id: "door", label: "Door closed / signal set", icon: DoorClosed, checked: false },
   { id: "noise", label: "Noise handled (headphones/quiet)", icon: Volume2, checked: false },
 ]
+
+const durationPresets = [
+  { label: "25 min", value: 25, description: "Pomodoro" },
+  { label: "50 min", value: 50, description: "Deep work" },
+  { label: "90 min", value: 90, description: "Flow state" },
+]
+
+// Post-it color - classic yellow
+const postItColor = "bg-yellow-200"
 
 // Motivational quotes from successful people
 const motivationalQuotes = [
@@ -62,6 +89,95 @@ const motivationalQuotes = [
   { text: "The person who says it cannot be done should not interrupt the person who is doing it.", author: "Chinese Proverb" },
 ]
 
+// ============================================
+// POST-IT COMPONENT (Draggable + Editable)
+// ============================================
+function PostItElement({
+  note,
+  onDismiss,
+  onDrag,
+}: {
+  note: PostIt
+  onDismiss: (id: string) => void
+  onDrag: (id: string, x: number, y: number) => void
+}) {
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const noteRef = useRef<HTMLDivElement>(null)
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+    const rect = noteRef.current?.getBoundingClientRect()
+    if (rect) {
+      setDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      })
+    }
+  }
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging) return
+    const newX = e.clientX - dragOffset.x
+    const newY = e.clientY - dragOffset.y
+    onDrag(note.id, newX, newY)
+  }, [isDragging, dragOffset, note.id, onDrag])
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false)
+  }, [])
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove)
+      window.addEventListener('mouseup', handleMouseUp)
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove)
+        window.removeEventListener('mouseup', handleMouseUp)
+      }
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp])
+
+  return (
+    <motion.div
+      ref={noteRef}
+      initial={{ scale: 0.8, opacity: 0, rotate: note.rotation }}
+      animate={{ scale: 1, opacity: 1, rotate: note.rotation }}
+      exit={{ scale: 0.8, opacity: 0 }}
+      className="fixed w-36 shadow-lg group select-none"
+      style={{
+        left: note.x,
+        top: note.y,
+        zIndex: isDragging ? 1000 : 100,
+        cursor: isDragging ? 'grabbing' : 'grab',
+        background: '#fef08a',
+        boxShadow: '2px 3px 8px rgba(0,0,0,0.15)',
+      }}
+      onMouseDown={handleMouseDown}
+    >
+      {/* Close button */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          onDismiss(note.id)
+        }}
+        className="absolute -top-2 -right-2 w-5 h-5 bg-neutral-800 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow hover:bg-neutral-700"
+      >
+        <X className="h-3 w-3 text-white" />
+      </button>
+
+      {/* Text - simple paragraph */}
+      <p className="p-3 text-neutral-800 text-sm leading-relaxed break-words">
+        {note.text}
+      </p>
+    </motion.div>
+  )
+}
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
 export default function FocusPage() {
   const router = useRouter()
   const {
@@ -73,6 +189,7 @@ export default function FocusPage() {
     addDistraction,
   } = useAppStore()
 
+  // States
   const [sessionState, setSessionState] = useState<SessionState>("idle")
   const [timeLeft, setTimeLeft] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
@@ -82,17 +199,39 @@ export default function FocusPage() {
   const [reflectionText, setReflectionText] = useState("")
   const [nextActionText, setNextActionText] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+
+  // Session setup states
+  const [sessionObjective, setSessionObjective] = useState("")
+  const [sessionDuration, setSessionDuration] = useState(50)
+  const [customDuration, setCustomDuration] = useState("")
+
+  // Post-it notes states
+  const [postIts, setPostIts] = useState<PostIt[]>([])
+  const [showNoteInput, setShowNoteInput] = useState(false)
+  const [newNoteText, setNewNoteText] = useState("")
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Objective completion state
+  const [objectiveCompleted, setObjectiveCompleted] = useState(false)
+
+  // Motivational quotes states
   const [showMotivationalQuotes, setShowMotivationalQuotes] = useState(false)
   const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0)
 
-  // Session duration in minutes (default 50, or from focus block)
-  const sessionDuration = focusBlock?.duration ?? 50
+  // Editable focus objective during session
+  const [isEditingFocus, setIsEditingFocus] = useState(false)
+
+  // Initialize session objective from today's goal
+  useEffect(() => {
+    if (objective?.todayGoal) {
+      setSessionObjective(objective.todayGoal)
+    }
+  }, [objective])
 
   // Initialize
   useEffect(() => {
     setIsLoading(false)
     if (currentSession && !currentSession.endedAt) {
-      // Resume existing session
       const elapsed = Math.floor(
         (Date.now() - new Date(currentSession.startedAt).getTime()) / 1000
       )
@@ -127,6 +266,19 @@ export default function FocusPage() {
     }
   }, [objective, isLoading, router])
 
+
+  // Rotate motivational quotes during active session
+  useEffect(() => {
+    if (sessionState === "active" && showMotivationalQuotes && !isPaused) {
+      const interval = setInterval(() => {
+        setCurrentQuoteIndex((prev) => (prev + 1) % motivationalQuotes.length)
+      }, 12000) // Change quote every 12 seconds
+
+      return () => clearInterval(interval)
+    }
+  }, [sessionState, showMotivationalQuotes, isPaused])
+
+  // Helpers
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
@@ -145,12 +297,16 @@ export default function FocusPage() {
 
   const handleStartChecklist = () => {
     setSessionState("bunker-checklist")
-    setCurrentQuoteIndex(0)
+  }
+
+  const handleProceedToSetup = () => {
+    setSessionState("session-setup")
   }
 
   const handleStartSession = () => {
+    const duration = customDuration ? parseInt(customDuration) : sessionDuration
     startSession()
-    setTimeLeft(sessionDuration * 60)
+    setTimeLeft(duration * 60)
     setSessionState("active")
     setIsPaused(false)
   }
@@ -165,25 +321,49 @@ export default function FocusPage() {
   }
 
   const handleCompleteSession = () => {
+    // TODO: Save session with postIts snapshot and objectiveCompleted status
     endSession(reflectionText, nextActionText)
     setSessionState("idle")
     setReflectionText("")
     setNextActionText("")
     setBunkerChecklist(initialBunkerChecklist)
+    setPostIts([])
     setShowMotivationalQuotes(false)
+    setIsEditingFocus(false)
+    setObjectiveCompleted(false)
     router.push("/app")
   }
 
-  // Rotate motivational quotes during active session
-  useEffect(() => {
-    if (sessionState === "active" && showMotivationalQuotes && !isPaused) {
-      const interval = setInterval(() => {
-        setCurrentQuoteIndex((prev) => (prev + 1) % motivationalQuotes.length)
-      }, 12000) // Change quote every 12 seconds
+  // Post-it handlers
+  const handleAddPostIt = () => {
+    if (!newNoteText.trim()) return
 
-      return () => clearInterval(interval)
+    // Place at center of screen initially - user will drag to desired position
+    const newPostIt: PostIt = {
+      id: Date.now().toString(),
+      text: newNoteText.trim(),
+      x: window.innerWidth / 2 - 96, // center horizontally (192px width / 2)
+      y: window.innerHeight / 2 - 96, // center vertically (192px height / 2)
+      rotation: 0, // no rotation for clean look
+      color: postItColor,
     }
-  }, [sessionState, showMotivationalQuotes, isPaused])
+
+    setPostIts((prev) => [...prev, newPostIt])
+    setNewNoteText("")
+    setShowNoteInput(false)
+  }
+
+  const handleDragPostIt = useCallback((id: string, x: number, y: number) => {
+    setPostIts((prev) =>
+      prev.map((note) =>
+        note.id === id ? { ...note, x, y } : note
+      )
+    )
+  }, [])
+
+  const handleDismissPostIt = (id: string) => {
+    setPostIts((prev) => prev.filter((note) => note.id !== id))
+  }
 
   const handleAddDistraction = useCallback(() => {
     if (distractionText.trim()) {
@@ -193,7 +373,7 @@ export default function FocusPage() {
     }
   }, [distractionText, addDistraction])
 
-  // Handle keyboard shortcut for distraction dump
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (sessionState === "active" || sessionState === "paused") {
@@ -201,15 +381,20 @@ export default function FocusPage() {
           e.preventDefault()
           setShowDistractionModal(true)
         }
-        if (e.key === "Escape" && showDistractionModal) {
+        if (e.key === "n" && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault()
+          setShowNoteInput(true)
+        }
+        if (e.key === "Escape") {
           setShowDistractionModal(false)
+          setShowNoteInput(false)
         }
       }
     }
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [sessionState, showDistractionModal])
+  }, [sessionState])
 
   // Loading state
   if (isLoading) {
@@ -227,7 +412,7 @@ export default function FocusPage() {
   if (!objective) {
     return (
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
-        <Target className="h-8 w-8 text-primary animate-pulse" />
+        <IconTarget size="lg" className="animate-pulse" />
       </div>
     )
   }
@@ -235,8 +420,11 @@ export default function FocusPage() {
   const progress = timeLeft > 0 ? ((sessionDuration * 60 - timeLeft) / (sessionDuration * 60)) * 100 : 100
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-4 sm:p-6 relative">
-      {/* Ambient glow - stronger during active session */}
+    <div
+      ref={containerRef}
+      className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-hidden"
+    >
+      {/* Ambient glow */}
       <div
         className={`fixed top-0 left-1/2 -translate-x-1/2 w-[600px] sm:w-[800px] h-[300px] sm:h-[400px] blur-[120px] rounded-full pointer-events-none transition-all duration-1000 ${
           sessionState === "active"
@@ -247,9 +435,23 @@ export default function FocusPage() {
         }`}
       />
 
+      {/* Post-it Notes Layer */}
+      <AnimatePresence>
+        {postIts.map((note) => (
+          <PostItElement
+            key={note.id}
+            note={note}
+            onDismiss={handleDismissPostIt}
+            onDrag={handleDragPostIt}
+          />
+        ))}
+      </AnimatePresence>
+
       <div className="w-full max-w-2xl relative z-10">
-        {/* Idle State - Start Button */}
         <AnimatePresence mode="wait">
+          {/* ============================================
+              IDLE STATE
+              ============================================ */}
           {sessionState === "idle" && (
             <motion.div
               key="idle"
@@ -261,16 +463,15 @@ export default function FocusPage() {
               <div className="space-y-4">
                 <div className="flex justify-center">
                   <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
-                    <Timer className="h-8 w-8 text-emerald-400" />
+                    <IconBolt size="lg" className="drop-shadow-[0_0_10px_rgba(16,185,129,0.4)]" />
                   </div>
                 </div>
                 <h1 className="text-3xl sm:text-4xl font-bold">Focus Session</h1>
                 <p className="text-muted-foreground">
-                  {sessionDuration} minutes of deep work on your ONE thing.
+                  Deep work on your ONE thing.
                 </p>
               </div>
 
-              {/* Current objective preview */}
               <div className="liquid-glass p-6 text-left space-y-4">
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Today's ONE Thing</p>
@@ -292,7 +493,9 @@ export default function FocusPage() {
             </motion.div>
           )}
 
-          {/* Bunker Checklist */}
+          {/* ============================================
+              BUNKER CHECKLIST
+              ============================================ */}
           {sessionState === "bunker-checklist" && (
             <motion.div
               key="bunker"
@@ -332,7 +535,7 @@ export default function FocusPage() {
                     <span className={item.checked ? "text-emerald-400" : ""}>{item.label}</span>
                   </button>
                 ))}
-                
+
                 {/* Motivational quotes toggle */}
                 <button
                   onClick={() => setShowMotivationalQuotes(!showMotivationalQuotes)}
@@ -367,7 +570,7 @@ export default function FocusPage() {
                   Back
                 </Button>
                 <Button
-                  onClick={handleStartSession}
+                  onClick={handleProceedToSetup}
                   disabled={!allBunkerChecked}
                   className={`flex-1 h-14 rounded-2xl text-base font-medium transition-all ${
                     allBunkerChecked
@@ -375,14 +578,118 @@ export default function FocusPage() {
                       : "bg-white/5 text-muted-foreground cursor-not-allowed"
                   }`}
                 >
-                  <Play className="mr-2 h-5 w-5" />
-                  Start Session
+                  Continue
                 </Button>
               </div>
             </motion.div>
           )}
 
-          {/* Active/Paused Session */}
+          {/* ============================================
+              SESSION SETUP (NEW!)
+              ============================================ */}
+          {sessionState === "session-setup" && (
+            <motion.div
+              key="setup"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              <div className="text-center space-y-2">
+                <div className="flex justify-center mb-2">
+                  <Sparkles className="h-6 w-6 text-primary" />
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold">Configure Session</h1>
+                <p className="text-muted-foreground">
+                  Set your focus for this session.
+                </p>
+              </div>
+
+              <div className="liquid-glass p-6 space-y-6">
+                {/* Session Objective */}
+                <div>
+                  <label className="text-sm text-muted-foreground block mb-2">
+                    What's your objective for this session?
+                  </label>
+                  <textarea
+                    value={sessionObjective}
+                    onChange={(e) => setSessionObjective(e.target.value)}
+                    placeholder="Describe what you want to accomplish..."
+                    rows={2}
+                    className="w-full bg-white/5 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Default: Today's goal. Change if you want to focus on something specific.
+                  </p>
+                </div>
+
+                {/* Duration Selection */}
+                <div>
+                  <label className="text-sm text-muted-foreground block mb-3">
+                    <Clock className="inline h-4 w-4 mr-1" />
+                    Session duration
+                  </label>
+
+                  <div className="grid grid-cols-3 gap-3 mb-3">
+                    {durationPresets.map((preset) => (
+                      <button
+                        key={preset.value}
+                        onClick={() => {
+                          setSessionDuration(preset.value)
+                          setCustomDuration("")
+                        }}
+                        className={`p-3 rounded-xl transition-all text-center ${
+                          sessionDuration === preset.value && !customDuration
+                            ? "bg-primary/20 border-2 border-primary"
+                            : "bg-white/5 border border-white/10 hover:bg-white/10"
+                        }`}
+                      >
+                        <p className="font-medium">{preset.label}</p>
+                        <p className="text-xs text-muted-foreground">{preset.description}</p>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Custom duration */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Custom:</span>
+                    <input
+                      type="number"
+                      value={customDuration}
+                      onChange={(e) => setCustomDuration(e.target.value)}
+                      placeholder="e.g. 45"
+                      min="5"
+                      max="180"
+                      className="w-20 bg-white/5 rounded-lg px-3 py-2 text-center focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                    <span className="text-sm text-muted-foreground">minutes</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setSessionState("bunker-checklist")}
+                  className="h-14 px-6 rounded-2xl"
+                >
+                  Back
+                </Button>
+                <Button
+                  onClick={handleStartSession}
+                  disabled={!sessionObjective.trim()}
+                  className="flex-1 h-14 rounded-2xl text-base font-medium glow-green"
+                >
+                  <Play className="mr-2 h-5 w-5" />
+                  Start {customDuration || sessionDuration} min Session
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ============================================
+              ACTIVE/PAUSED SESSION
+              ============================================ */}
           {(sessionState === "active" || sessionState === "paused") && (
             <motion.div
               key="active"
@@ -426,10 +733,76 @@ export default function FocusPage() {
                 </div>
               </div>
 
-              {/* Current focus */}
-              <div className="liquid-glass-green p-6 text-left max-w-md mx-auto">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Focus On</p>
-                <p className="text-lg font-medium">{objective.rightNowAction}</p>
+              {/* Current focus (session objective) - EDITABLE + COMPLETABLE */}
+              <div className={`p-6 text-left max-w-md mx-auto relative group rounded-2xl border transition-all ${
+                objectiveCompleted
+                  ? "bg-emerald-500/10 border-emerald-500/30"
+                  : "liquid-glass-green"
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Focus On</p>
+                  <div className="flex items-center gap-2">
+                    {!isEditingFocus && !objectiveCompleted && (
+                      <button
+                        onClick={() => setIsEditingFocus(true)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-white/10"
+                        title="Edit focus"
+                      >
+                        <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {isEditingFocus ? (
+                  <div className="space-y-3">
+                    <textarea
+                      value={sessionObjective}
+                      onChange={(e) => setSessionObjective(e.target.value)}
+                      className="w-full bg-white/5 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none text-lg"
+                      rows={2}
+                      autoFocus
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setIsEditingFocus(false)}
+                      >
+                        Done
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-3">
+                    {/* Completion checkbox */}
+                    <button
+                      onClick={() => setObjectiveCompleted(!objectiveCompleted)}
+                      className={`mt-1 shrink-0 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                        objectiveCompleted
+                          ? "bg-emerald-500 border-emerald-500"
+                          : "border-white/30 hover:border-emerald-400"
+                      }`}
+                      title={objectiveCompleted ? "Mark as incomplete" : "Mark as completed"}
+                    >
+                      {objectiveCompleted && <Check className="h-4 w-4 text-white" />}
+                    </button>
+                    <div className="flex-1">
+                      <p
+                        className={`text-lg font-medium transition-all ${
+                          objectiveCompleted
+                            ? "line-through text-emerald-400/70"
+                            : "cursor-pointer hover:text-primary/80"
+                        }`}
+                        onClick={() => !objectiveCompleted && setIsEditingFocus(true)}
+                      >
+                        {sessionObjective || objective.rightNowAction}
+                      </p>
+                      {objectiveCompleted && (
+                        <p className="text-sm text-emerald-400 mt-1">Objective completed!</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Motivational quotes display */}
@@ -455,7 +828,7 @@ export default function FocusPage() {
               )}
 
               {/* Controls */}
-              <div className="flex justify-center gap-4">
+              <div className="flex justify-center gap-3 flex-wrap">
                 <Button
                   onClick={handlePauseResume}
                   variant="outline"
@@ -469,12 +842,21 @@ export default function FocusPage() {
                 </Button>
 
                 <Button
+                  onClick={() => setShowNoteInput(true)}
+                  variant="outline"
+                  className="h-14 px-5 rounded-2xl"
+                >
+                  <StickyNote className="mr-2 h-5 w-5" />
+                  Note
+                </Button>
+
+                <Button
                   onClick={() => setShowDistractionModal(true)}
                   variant="outline"
-                  className="h-14 px-6 rounded-2xl"
+                  className="h-14 px-5 rounded-2xl"
                 >
                   <Plus className="mr-2 h-5 w-5" />
-                  Dump Distraction
+                  Distraction
                 </Button>
 
                 <Button
@@ -486,10 +868,21 @@ export default function FocusPage() {
                 </Button>
               </div>
 
-              {/* Keyboard hint */}
+              {/* Keyboard hints */}
               <p className="text-xs text-muted-foreground">
-                Press <kbd className="px-1.5 py-0.5 rounded bg-white/10">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 rounded bg-white/10">D</kbd> to dump a distraction
+                <kbd className="px-1.5 py-0.5 rounded bg-white/10">Ctrl+N</kbd> Note
+                {" · "}
+                <kbd className="px-1.5 py-0.5 rounded bg-white/10">Ctrl+D</kbd> Distraction
               </p>
+
+              {/* Post-it notes indicator */}
+              {postIts.length > 0 && (
+                <div className="text-sm text-yellow-400">
+                  <StickyNote className="inline h-4 w-4 mr-1" />
+                  {postIts.length} post-it{postIts.length > 1 ? "s" : ""} on board
+                  <span className="text-muted-foreground"> — drag to move, hover to delete</span>
+                </div>
+              )}
 
               {/* Distraction count */}
               {currentSession && currentSession.distractions.length > 0 && (
@@ -501,7 +894,9 @@ export default function FocusPage() {
             </motion.div>
           )}
 
-          {/* Reflection State */}
+          {/* ============================================
+              REFLECTION STATE
+              ============================================ */}
           {sessionState === "reflection" && (
             <motion.div
               key="reflection"
@@ -525,12 +920,12 @@ export default function FocusPage() {
               <div className="liquid-glass p-6 space-y-4">
                 <div>
                   <label className="text-sm text-muted-foreground block mb-2">
-                    What did you move forward?
+                    What did you accomplish?
                   </label>
                   <textarea
                     value={reflectionText}
                     onChange={(e) => setReflectionText(e.target.value)}
-                    placeholder="Describe what you accomplished..."
+                    placeholder="Describe what you moved forward..."
                     rows={3}
                     className="w-full bg-white/5 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none"
                     autoFocus
@@ -580,7 +975,80 @@ export default function FocusPage() {
         </AnimatePresence>
       </div>
 
-      {/* Distraction Dump Modal */}
+      {/* ============================================
+          POST-IT INPUT MODAL
+          ============================================ */}
+      <AnimatePresence>
+        {showNoteInput && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80"
+            onClick={() => setShowNoteInput(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="liquid-glass p-6 w-full max-w-md"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <StickyNote className="h-5 w-5 text-yellow-400" />
+                  Add Post-it
+                </h2>
+                <button
+                  onClick={() => setShowNoteInput(false)}
+                  className="p-2 rounded-xl hover:bg-white/10 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <p className="text-sm text-muted-foreground mb-4">
+                Write your note. It will appear on screen — drag it where you want.
+              </p>
+
+              <input
+                type="text"
+                value={newNoteText}
+                onChange={(e) => setNewNoteText(e.target.value)}
+                placeholder="Quick thought..."
+                className="w-full bg-white/5 rounded-xl px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleAddPostIt()
+                  }
+                }}
+              />
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowNoteInput(false)}
+                  className="flex-1 h-12 rounded-xl"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAddPostIt}
+                  disabled={!newNoteText.trim()}
+                  className="flex-1 h-12 rounded-xl bg-yellow-400 text-black hover:bg-yellow-300"
+                >
+                  Add Post-it
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ============================================
+          DISTRACTION DUMP MODAL
+          ============================================ */}
       <AnimatePresence>
         {showDistractionModal && (
           <motion.div

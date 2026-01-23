@@ -20,7 +20,18 @@
       "Bash(gh auth:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(gh repo create:*)"
+      "Bash(gh repo create:*)",
+      "Bash(explorer \"c:\\\\Users\\\\marti\\\\OneDrive\\\\Bureau\\\\CODE\\\\DEADSIGN\\\\public\")",
+      "Bash(start \"\" \"c:\\\\Users\\\\marti\\\\OneDrive\\\\Bureau\\\\CODE\\\\DEADSIGN\\\\public\")",
+      "Bash(dir:*)",
+      "Bash(ren:*)",
+      "Skill(frontend-design)",
+      "Skill(frontend-design:*)",
+      "Bash(taskkill:*)",
+      "Bash(netstat:*)",
+      "Bash(git push)",
+      "Bash(git fetch:*)",
+      "Bash(git rm:*)"
     ]
   }
 }

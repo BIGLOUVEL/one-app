@@ -4,8 +4,6 @@ import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
-  Shield,
-  Target,
   AlertTriangle,
   ChevronRight,
   Check,
@@ -17,6 +15,7 @@ import {
   Hand,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { IconShield, IconTarget } from "@/components/ui/custom-icons"
 import { useAppStore } from "@/store/useAppStore"
 import type { ThiefType } from "@/lib/types"
 
@@ -255,7 +254,7 @@ export default function ShieldPage() {
   if (!objective) {
     return (
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
-        <Target className="h-8 w-8 text-primary animate-pulse" />
+        <IconTarget size="lg" className="animate-pulse" />
       </div>
     )
   }
@@ -282,8 +281,8 @@ export default function ShieldPage() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center space-y-2"
           >
-            <div className="flex items-center justify-center gap-2">
-              <Shield className="h-6 w-6 text-primary" />
+            <div className="flex items-center justify-center gap-3">
+              <IconShield size="lg" className="drop-shadow-[0_0_10px_rgba(0,255,136,0.3)]" />
               <h1 className="text-2xl sm:text-3xl font-bold">Your Four Thieves</h1>
             </div>
             <p className="text-muted-foreground">
@@ -431,7 +430,7 @@ export default function ShieldPage() {
           <div className="text-center space-y-4">
             <div className="flex justify-center">
               <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20">
-                <Shield className="h-8 w-8 text-primary" />
+                <IconShield size="xl" className="drop-shadow-[0_0_12px_rgba(0,255,136,0.4)]" />
               </div>
             </div>
             <h1 className="text-3xl font-bold">The Four Thieves</h1>

@@ -4,15 +4,14 @@ import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
-  Flame,
   Trophy,
-  Target,
   Check,
   AlertTriangle,
   Calendar,
   Sparkles,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { IconFlame, IconTarget } from "@/components/ui/custom-icons"
 import { useAppStore } from "@/store/useAppStore"
 
 const SESSION_OPTIONS = [
@@ -132,7 +131,7 @@ export default function HabitPage() {
   if (!objective) {
     return (
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
-        <Target className="h-8 w-8 text-primary animate-pulse" />
+        <IconTarget size="lg" className="animate-pulse" />
       </div>
     )
   }
@@ -151,7 +150,7 @@ export default function HabitPage() {
           <div className="text-center space-y-4">
             <div className="flex justify-center">
               <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20">
-                <Flame className="h-8 w-8 text-primary" />
+                <IconFlame size="xl" className="drop-shadow-[0_0_12px_rgba(0,255,136,0.4)]" />
               </div>
             </div>
             <h1 className="text-3xl font-bold">66-Day Challenge</h1>
@@ -199,7 +198,7 @@ export default function HabitPage() {
             onClick={handleInitChallenge}
             className="w-full h-14 rounded-2xl text-base font-medium glow-green"
           >
-            <Flame className="mr-2 h-5 w-5" />
+            <IconFlame size="sm" className="mr-2" />
             Start 66-Day Challenge
           </Button>
         </motion.div>
@@ -219,8 +218,8 @@ export default function HabitPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center space-y-2"
         >
-          <div className="flex items-center justify-center gap-2">
-            <Flame className="h-6 w-6 text-orange-400" />
+          <div className="flex items-center justify-center gap-3">
+            <IconFlame size="lg" className="drop-shadow-[0_0_10px_rgba(249,115,22,0.4)]" />
             <h1 className="text-2xl sm:text-3xl font-bold">66-Day Challenge</h1>
           </div>
           <p className="text-muted-foreground">
@@ -241,7 +240,7 @@ export default function HabitPage() {
           </div>
           <div className="liquid-glass-green p-4 text-center">
             <div className="flex items-center justify-center gap-1">
-              <Flame className="h-4 w-4 text-orange-400" />
+              <IconFlame size="xs" />
               <p className="text-2xl sm:text-3xl font-bold text-orange-400">
                 {progress.streak}
               </p>

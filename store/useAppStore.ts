@@ -39,6 +39,13 @@ interface AppStore {
   contractMeter: ContractMeter | null
   plannedSessionsPerDay: number
 
+  // Session post-its (persist across page refreshes during session)
+  sessionPostIts: Array<{ id: string; text: string; x: number; y: number; rotation: number }>
+
+  // Post-it Actions
+  setSessionPostIts: (postIts: Array<{ id: string; text: string; x: number; y: number; rotation: number }>) => void
+  clearSessionPostIts: () => void
+
   // AI Actions
   setAIPlan: (plan: AIGeneratedPlan) => void
   setObjectiveFromAI: (plan: AIGeneratedPlan, deadline: string) => void
@@ -72,7 +79,7 @@ interface AppStore {
   setFocusBlock: (days: string[], startTime: string, duration: number) => void
 
   // Focus Session Actions
-  startSession: () => void
+  startSession: (duration?: number) => void
   endSession: (reflection?: string, nextAction?: string) => void
   addDistraction: (text: string) => void
   markDistractionHandled: (distractionId: string) => void
@@ -122,6 +129,18 @@ export const useAppStore = create<AppStore>()(
       dominoChain: null,
       contractMeter: null,
       plannedSessionsPerDay: 1,
+
+      // Session post-its
+      sessionPostIts: [],
+
+      // Post-it Actions
+      setSessionPostIts: (postIts) => {
+        set({ sessionPostIts: postIts })
+      },
+
+      clearSessionPostIts: () => {
+        set({ sessionPostIts: [] })
+      },
 
       // AI Actions
       setAIPlan: (plan) => {
@@ -394,7 +413,7 @@ export const useAppStore = create<AppStore>()(
       },
 
       // Focus Session Actions
-      startSession: () => {
+      startSession: (duration?: number) => {
         const { objective, focusBlock } = get()
         if (!objective) return
 
@@ -402,7 +421,7 @@ export const useAppStore = create<AppStore>()(
           id: generateId(),
           objectiveId: objective.id,
           startedAt: new Date().toISOString(),
-          duration: focusBlock?.duration ?? 50,
+          duration: duration ?? focusBlock?.duration ?? 50,
           distractions: [],
         }
         set({ currentSession: newSession })

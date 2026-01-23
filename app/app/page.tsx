@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import {
   Target,
   CheckCircle2,
@@ -22,6 +22,8 @@ import {
   Flame,
   ArrowRight,
   Play,
+  Flag,
+  X,
 } from "lucide-react"
 import { useAppStore } from "@/store/useAppStore"
 import { AIInsights } from "@/components/app/ai-insights"
@@ -567,10 +569,20 @@ export default function DashboardPage() {
     hasCompletedOnboarding,
     getTimeRemaining,
     dominoChain,
+    failObjective,
+    resetObjective,
   } = useAppStore()
 
   const [mounted, setMounted] = useState(false)
+  const [showAbandonModal, setShowAbandonModal] = useState(false)
   const timeRemaining = getTimeRemaining()
+
+  const handleAbandonObjective = () => {
+    failObjective()
+    resetObjective()
+    setShowAbandonModal(false)
+    router.push("/app/define")
+  }
 
   useEffect(() => {
     setMounted(true)
@@ -753,7 +765,78 @@ export default function DashboardPage() {
           </Link>
         </motion.div>
 
+        {/* Abandon Objective */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="flex justify-center pt-8 pb-4"
+        >
+          <button
+            onClick={() => setShowAbandonModal(true)}
+            className="group flex items-center gap-2 px-4 py-2 rounded-lg text-xs text-muted-foreground/60 hover:text-red-400 transition-colors"
+          >
+            <Flag className="h-3 w-3" />
+            <span>Abandonner cet objectif</span>
+          </button>
+        </motion.div>
+
       </div>
+
+      {/* Abandon Confirmation Modal */}
+      <AnimatePresence>
+        {showAbandonModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80"
+            onClick={() => setShowAbandonModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="liquid-glass p-6 w-full max-w-md border border-red-500/20"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold flex items-center gap-2 text-red-400">
+                  <AlertTriangle className="h-5 w-5" />
+                  Abandonner l'objectif
+                </h2>
+                <button
+                  onClick={() => setShowAbandonModal(false)}
+                  className="p-2 rounded-xl hover:bg-white/10 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <p className="text-sm text-muted-foreground mb-6">
+                Es-tu sûr de vouloir abandonner <span className="text-foreground font-medium">"{objective?.title}"</span> ?
+                <br /><br />
+                Cette action est irréversible. Ton contrat sera marqué comme rompu et tu devras définir un nouvel objectif.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowAbandonModal(false)}
+                  className="flex-1 h-12 rounded-xl border border-white/10 hover:bg-white/5 transition-colors text-sm font-medium"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleAbandonObjective}
+                  className="flex-1 h-12 rounded-xl bg-red-500/20 border border-red-500/30 hover:bg-red-500/30 transition-colors text-sm font-medium text-red-400"
+                >
+                  Oui, abandonner
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

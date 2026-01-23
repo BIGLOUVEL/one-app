@@ -187,6 +187,9 @@ export default function FocusPage() {
     startSession,
     endSession,
     addDistraction,
+    sessionPostIts,
+    setSessionPostIts,
+    clearSessionPostIts,
   } = useAppStore()
 
   // States
@@ -205,11 +208,14 @@ export default function FocusPage() {
   const [sessionDuration, setSessionDuration] = useState(50)
   const [customDuration, setCustomDuration] = useState("")
 
-  // Post-it notes states
-  const [postIts, setPostIts] = useState<PostIt[]>([])
+  // Post-it notes states (using store for persistence)
   const [showNoteInput, setShowNoteInput] = useState(false)
   const [newNoteText, setNewNoteText] = useState("")
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Constraints for post-it positioning (avoid sidebar and top bar)
+  const POST_IT_MIN_LEFT = 80 // Sidebar width
+  const POST_IT_MIN_TOP = 64 // Top bar height
 
   // Objective completion state
   const [objectiveCompleted, setObjectiveCompleted] = useState(false)
@@ -305,7 +311,8 @@ export default function FocusPage() {
 
   const handleStartSession = () => {
     const duration = customDuration ? parseInt(customDuration) : sessionDuration
-    startSession()
+    clearSessionPostIts() // Clear old post-its when starting new session
+    startSession(duration)
     setTimeLeft(duration * 60)
     setSessionState("active")
     setIsPaused(false)
@@ -321,13 +328,12 @@ export default function FocusPage() {
   }
 
   const handleCompleteSession = () => {
-    // TODO: Save session with postIts snapshot and objectiveCompleted status
+    // Note: Post-its are NOT cleared here - they persist until a new session starts
     endSession(reflectionText, nextActionText)
     setSessionState("idle")
     setReflectionText("")
     setNextActionText("")
     setBunkerChecklist(initialBunkerChecklist)
-    setPostIts([])
     setShowMotivationalQuotes(false)
     setIsEditingFocus(false)
     setObjectiveCompleted(false)
@@ -338,31 +344,37 @@ export default function FocusPage() {
   const handleAddPostIt = () => {
     if (!newNoteText.trim()) return
 
-    // Place at center of screen initially - user will drag to desired position
-    const newPostIt: PostIt = {
+    // Place at center of screen initially (constrained to valid area)
+    const centerX = Math.max(POST_IT_MIN_LEFT, window.innerWidth / 2 - 72)
+    const centerY = Math.max(POST_IT_MIN_TOP, window.innerHeight / 2 - 72)
+
+    const newPostIt = {
       id: Date.now().toString(),
       text: newNoteText.trim(),
-      x: window.innerWidth / 2 - 96, // center horizontally (192px width / 2)
-      y: window.innerHeight / 2 - 96, // center vertically (192px height / 2)
-      rotation: 0, // no rotation for clean look
-      color: postItColor,
+      x: centerX,
+      y: centerY,
+      rotation: 0,
     }
 
-    setPostIts((prev) => [...prev, newPostIt])
+    setSessionPostIts([...sessionPostIts, newPostIt])
     setNewNoteText("")
     setShowNoteInput(false)
   }
 
   const handleDragPostIt = useCallback((id: string, x: number, y: number) => {
-    setPostIts((prev) =>
-      prev.map((note) =>
-        note.id === id ? { ...note, x, y } : note
+    // Constrain position to avoid sidebar and top bar
+    const constrainedX = Math.max(POST_IT_MIN_LEFT, Math.min(x, window.innerWidth - 144))
+    const constrainedY = Math.max(POST_IT_MIN_TOP, Math.min(y, window.innerHeight - 100))
+
+    setSessionPostIts(
+      sessionPostIts.map((note) =>
+        note.id === id ? { ...note, x: constrainedX, y: constrainedY } : note
       )
     )
-  }, [])
+  }, [sessionPostIts, setSessionPostIts])
 
   const handleDismissPostIt = (id: string) => {
-    setPostIts((prev) => prev.filter((note) => note.id !== id))
+    setSessionPostIts(sessionPostIts.filter((note) => note.id !== id))
   }
 
   const handleAddDistraction = useCallback(() => {
@@ -437,10 +449,10 @@ export default function FocusPage() {
 
       {/* Post-it Notes Layer */}
       <AnimatePresence>
-        {postIts.map((note) => (
+        {sessionPostIts.map((note) => (
           <PostItElement
             key={note.id}
-            note={note}
+            note={{ ...note, color: postItColor }}
             onDismiss={handleDismissPostIt}
             onDrag={handleDragPostIt}
           />
@@ -876,10 +888,10 @@ export default function FocusPage() {
               </p>
 
               {/* Post-it notes indicator */}
-              {postIts.length > 0 && (
+              {sessionPostIts.length > 0 && (
                 <div className="text-sm text-yellow-400">
                   <StickyNote className="inline h-4 w-4 mr-1" />
-                  {postIts.length} post-it{postIts.length > 1 ? "s" : ""} on board
+                  {sessionPostIts.length} post-it{sessionPostIts.length > 1 ? "s" : ""} on board
                   <span className="text-muted-foreground"> — drag to move, hover to delete</span>
                 </div>
               )}

@@ -92,10 +92,10 @@ const stepConfigs: Record<Step, StepConfig> = {
     icon: Calendar,
     iconColor: "text-orange-400",
     bgColor: "bg-orange-500/10 border-orange-500/20",
-    title: "You start now",
-    subtitle: "No delays. No excuses. 24 hours to deliver.",
+    title: "Quand veux-tu atteindre ton objectif ?",
+    subtitle: "Choisis la deadline de ton GRAND objectif.",
     placeholder: "",
-    helperText: "Your deadline is tomorrow. Make it count.",
+    helperText: "Une date réaliste mais ambitieuse.",
   },
   7: {
     icon: Sparkles,
@@ -244,20 +244,14 @@ export default function DefinePage() {
   const canProceed = () => {
     const value = getCurrentValue()
     if (step === 6) {
-      // Step 6 is automatic - they start today, so deadline is set automatically
-      return true
+      // Step 6 requires a deadline to be selected
+      return deadline.length > 0
     }
     return value.trim().length >= 3
   }
 
   const handleNext = () => {
-    if (step === 6) {
-      // Set deadline to tomorrow (24h from now) to give time to work
-      const tomorrow = new Date()
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      tomorrow.setHours(23, 59, 59, 999) // End of tomorrow
-      setDeadline(tomorrow.toISOString())
-    }
+    // Deadline is now set by user in step 6, no need to override
 
     if (step < 7) {
       setStep((step + 1) as Step)
@@ -381,23 +375,72 @@ export default function DefinePage() {
             {/* Input */}
             <div className="space-y-3">
               {step === 6 ? (
-                <div className="liquid-glass p-6 text-center">
-                  <div className="space-y-2">
-                    <p className="text-lg font-medium">Deadline: demain soir</p>
-                    <p className="text-sm text-muted-foreground">
-                      {(() => {
+                <div className="space-y-4">
+                  <div className="liquid-glass p-1">
+                    <input
+                      type="date"
+                      value={deadline ? deadline.split('T')[0] : ''}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          const selectedDate = new Date(e.target.value)
+                          selectedDate.setHours(23, 59, 59, 999)
+                          setDeadline(selectedDate.toISOString())
+                        }
+                      }}
+                      min={(() => {
                         const tomorrow = new Date()
                         tomorrow.setDate(tomorrow.getDate() + 1)
-                        return tomorrow.toLocaleDateString("fr-FR", {
+                        return tomorrow.toISOString().split('T')[0]
+                      })()}
+                      className="w-full bg-transparent px-4 py-4 text-lg focus:outline-none text-center [color-scheme:dark]"
+                    />
+                  </div>
+
+                  {/* Quick select buttons */}
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { label: "1 sem", days: 7 },
+                      { label: "1 mois", days: 30 },
+                      { label: "3 mois", days: 90 },
+                      { label: "6 mois", days: 180 },
+                    ].map((option) => (
+                      <button
+                        key={option.days}
+                        onClick={() => {
+                          const date = new Date()
+                          date.setDate(date.getDate() + option.days)
+                          date.setHours(23, 59, 59, 999)
+                          setDeadline(date.toISOString())
+                        }}
+                        className={`p-3 rounded-xl border text-sm font-medium transition-all ${
+                          deadline && Math.abs(
+                            Math.ceil((new Date(deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) - option.days
+                          ) < 3
+                            ? "bg-primary/20 border-primary/40 text-primary"
+                            : "bg-white/5 border-white/10 hover:border-white/20"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {deadline && (
+                    <div className="text-center p-4 rounded-xl bg-primary/10 border border-primary/20">
+                      <p className="text-sm text-muted-foreground mb-1">Deadline fixée au</p>
+                      <p className="text-lg font-semibold text-primary">
+                        {new Date(deadline).toLocaleDateString("fr-FR", {
                           weekday: "long",
                           year: "numeric",
                           month: "long",
                           day: "numeric"
-                        })
-                      })()}
-                    </p>
-                    <p className="text-xs text-primary mt-2">23h59</p>
-                  </div>
+                        })}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {Math.ceil((new Date(deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} jours à partir d'aujourd'hui
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="liquid-glass p-1">

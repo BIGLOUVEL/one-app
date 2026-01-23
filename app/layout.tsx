@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/components/auth/auth-provider"
 import { Toaster } from "@/components/ui/toaster"
 
+// CLASSIC - Original fonts (Fraunces + Outfit)
 const outfit = Outfit({
   subsets: ["latin"],
   variable: "--font-sans",
@@ -28,7 +29,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${outfit.variable} ${fraunces.variable} font-sans antialiased`}>
+      <body
+        className={`${outfit.variable} ${fraunces.variable} font-sans antialiased`}
+      >
         <ThemeProvider defaultTheme="modern">
           <AuthProvider>
             {children}

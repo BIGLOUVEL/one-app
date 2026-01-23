@@ -24,6 +24,7 @@ import {
   Play,
 } from "lucide-react"
 import { useAppStore } from "@/store/useAppStore"
+import { AIInsights } from "@/components/app/ai-insights"
 
 // ============================================
 // TYPES
@@ -681,6 +682,15 @@ export default function DashboardPage() {
             data={dashboardData.trajectoryData}
             projectionMessage={dashboardData.projectionMessage}
           />
+        </motion.div>
+
+        {/* AI Insights - Main feature */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+        >
+          <AIInsights />
         </motion.div>
 
         {/* Task Flow */}

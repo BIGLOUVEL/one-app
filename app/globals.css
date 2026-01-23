@@ -1,3 +1,86 @@
+/* ============================================
+   SATOSHI FONT FAMILY - Local Font
+   ============================================ */
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-LightItalic.otf') format('opentype');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Italic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-MediumItalic.otf') format('opentype');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-BoldItalic.otf') format('opentype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Black.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-BlackItalic.otf') format('opentype');
+  font-weight: 900;
+  font-style: italic;
+  font-display: swap;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -127,7 +210,9 @@
     font-feature-settings: "ss01" 1, "ss02" 1, "cv01" 1;
   }
 
-  /* Typography scale */
+  /* ============================================
+     TYPOGRAPHY - Base Scale
+     ============================================ */
   h1, h2, h3, h4, h5, h6 {
     @apply font-display tracking-tight;
     text-wrap: balance;
@@ -150,6 +235,171 @@
 
   p {
     @apply leading-relaxed;
+  }
+
+  /* ============================================
+     FONT PRESET: TITAN
+     Bebas Neue + Barlow
+     Maximum impact, all-caps display, industrial
+     ============================================ */
+  .font-preset-titan h1,
+  .font-preset-titan h2,
+  .font-preset-titan h3 {
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-weight: 400; /* Bebas only has 400 */
+  }
+
+  .font-preset-titan h1 {
+    @apply text-5xl md:text-6xl lg:text-7xl;
+    letter-spacing: 0.04em;
+    line-height: 0.95;
+  }
+
+  .font-preset-titan h2 {
+    @apply text-4xl md:text-5xl;
+    letter-spacing: 0.03em;
+    line-height: 1;
+  }
+
+  .font-preset-titan h3 {
+    @apply text-2xl md:text-3xl;
+    letter-spacing: 0.02em;
+  }
+
+  /* ============================================
+     FONT PRESET: DISRUPTOR
+     Syne + Manrope
+     Tech-forward, geometric, modern
+     ============================================ */
+  .font-preset-disruptor h1,
+  .font-preset-disruptor h2,
+  .font-preset-disruptor h3 {
+    letter-spacing: -0.02em;
+    font-weight: 700;
+  }
+
+  .font-preset-disruptor h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl font-extrabold;
+    letter-spacing: -0.03em;
+  }
+
+  .font-preset-disruptor h2 {
+    @apply text-3xl md:text-4xl font-bold;
+    letter-spacing: -0.025em;
+  }
+
+  .font-preset-disruptor h3 {
+    @apply text-2xl md:text-3xl font-semibold;
+  }
+
+  /* ============================================
+     FONT PRESET: EMPIRE
+     Unbounded + Plus Jakarta Sans
+     Bold premium, confident, futuristic
+     ============================================ */
+  .font-preset-empire h1,
+  .font-preset-empire h2,
+  .font-preset-empire h3 {
+    letter-spacing: -0.01em;
+  }
+
+  .font-preset-empire h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl font-bold;
+    letter-spacing: -0.02em;
+  }
+
+  .font-preset-empire h2 {
+    @apply text-3xl md:text-4xl font-semibold;
+    letter-spacing: -0.015em;
+  }
+
+  .font-preset-empire h3 {
+    @apply text-2xl md:text-3xl font-medium;
+  }
+
+  /* ============================================
+     FONT PRESET: CLASSIC
+     Fraunces + Outfit
+     Original elegant style (backup)
+     ============================================ */
+  .font-preset-classic h1,
+  .font-preset-classic h2,
+  .font-preset-classic h3 {
+    letter-spacing: -0.03em;
+  }
+
+  .font-preset-classic h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl font-semibold;
+    letter-spacing: -0.03em;
+  }
+
+  .font-preset-classic h2 {
+    @apply text-3xl md:text-4xl font-semibold;
+    letter-spacing: -0.025em;
+  }
+
+  .font-preset-classic h3 {
+    @apply text-2xl md:text-3xl font-medium;
+    letter-spacing: -0.02em;
+  }
+
+  /* ============================================
+     FONT PRESET: FOUNDER
+     Satoshi (local font)
+     Clean, modern, pro - pour entrepreneurs
+     ============================================ */
+  .font-preset-founder {
+    font-family: 'Satoshi', system-ui, sans-serif;
+  }
+
+  .font-preset-founder h1,
+  .font-preset-founder h2,
+  .font-preset-founder h3,
+  .font-preset-founder h4,
+  .font-preset-founder h5,
+  .font-preset-founder h6 {
+    font-family: 'Satoshi', system-ui, sans-serif;
+  }
+
+  .font-preset-founder h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl;
+    font-weight: 900; /* Satoshi Black */
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+
+  .font-preset-founder h2 {
+    @apply text-3xl md:text-4xl;
+    font-weight: 700; /* Satoshi Bold */
+    letter-spacing: -0.015em;
+    line-height: 1.1;
+  }
+
+  .font-preset-founder h3 {
+    @apply text-xl md:text-2xl;
+    font-weight: 700; /* Satoshi Bold */
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+
+  .font-preset-founder h4 {
+    @apply text-lg md:text-xl;
+    font-weight: 500; /* Satoshi Medium */
+    letter-spacing: 0;
+  }
+
+  .font-preset-founder p,
+  .font-preset-founder span,
+  .font-preset-founder li,
+  .font-preset-founder label {
+    font-weight: 400; /* Satoshi Regular */
+    letter-spacing: 0;
+  }
+
+  .font-preset-founder strong,
+  .font-preset-founder b {
+    font-weight: 700;
   }
 }
 

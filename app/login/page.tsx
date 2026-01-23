@@ -1,6 +1,15 @@
+import { Suspense } from "react"
 import { LoginForm } from "@/components/auth/login-form"
 import Link from "next/link"
-import { ChevronLeft } from "lucide-react"
+import { ChevronLeft, Loader2 } from "lucide-react"
+
+function LoginFormFallback() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  )
+}
 
 export default function LoginPage() {
   return (
@@ -14,7 +23,9 @@ export default function LoginPage() {
       </Link>
 
       <div className="w-full max-w-sm md:max-w-4xl">
-        <LoginForm />
+        <Suspense fallback={<LoginFormFallback />}>
+          <LoginForm />
+        </Suspense>
       </div>
     </div>
   )

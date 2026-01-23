@@ -11,7 +11,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useDeadlineStore } from "@/store/useDeadlineStore"
 import { motion } from "framer-motion"
 
 interface TopbarProps {
@@ -19,8 +18,8 @@ interface TopbarProps {
 }
 
 export function Topbar({ onAddDeadline }: TopbarProps) {
-  const { setSearchQuery } = useDeadlineStore()
   const [time, setTime] = useState(new Date())
+  const [searchQuery, setSearchQuery] = useState("")
   const [searchFocused, setSearchFocused] = useState(false)
 
   useEffect(() => {

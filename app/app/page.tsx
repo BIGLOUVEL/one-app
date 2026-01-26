@@ -25,7 +25,7 @@ import {
   Flag,
   X,
 } from "lucide-react"
-import { useAppStore } from "@/store/useAppStore"
+import { useAppStore, useHasHydrated } from "@/store/useAppStore"
 import { AIInsights } from "@/components/app/ai-insights"
 
 // ============================================
@@ -571,10 +571,13 @@ export default function DashboardPage() {
     dominoChain,
     failObjective,
     resetObjective,
+    sessions,
+    plannedSessionsPerDay,
+    habitChallenge,
   } = useAppStore()
 
-  const [mounted, setMounted] = useState(false)
   const [showAbandonModal, setShowAbandonModal] = useState(false)
+  const hasHydrated = useHasHydrated()
   const timeRemaining = getTimeRemaining()
 
   const handleAbandonObjective = () => {
@@ -584,16 +587,12 @@ export default function DashboardPage() {
     router.push("/app/define")
   }
 
+  // Redirect to define if no objective - ONLY after hydration is complete
   useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  // Redirect to define if no objective
-  useEffect(() => {
-    if (mounted && (!hasCompletedOnboarding || !objective)) {
+    if (hasHydrated && (!hasCompletedOnboarding || !objective)) {
       router.push("/app/define")
     }
-  }, [mounted, hasCompletedOnboarding, objective, router])
+  }, [hasHydrated, hasCompletedOnboarding, objective, router])
 
   // Memoized calculations
   const dashboardData = useMemo(() => {
@@ -624,8 +623,8 @@ export default function DashboardPage() {
     }
   }, [objective])
 
-  // Loading state
-  if (!mounted || !objective || !dashboardData) {
+  // Loading state - wait for hydration before rendering
+  if (!hasHydrated || !objective || !dashboardData) {
     return (
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
         <Target className="h-8 w-8 text-primary animate-pulse" />
@@ -633,14 +632,40 @@ export default function DashboardPage() {
     )
   }
 
-  // Generate mock data for demo (replace with real data from store)
-  const mockSessions = { completed: dominoChain?.completedDominos || 8, expected: 12 }
-  const mockImpact = { highImpact: 14, lowImpact: 4 }
-  const mockInsight = objective.progress < 30
-    ? "Early stage. Focus on building consistent daily habits before optimizing."
-    : objective.progress < 70
-    ? "Good momentum. Your most productive hours appear to be in the morning."
-    : "Final stretch. Protect your focus time aggressively to close this out."
+  // Real data from store
+  const objectiveSessions = sessions.filter(s => s.objectiveId === objective.id)
+  const completedSessions = objectiveSessions.length
+  const expectedSessions = dashboardData.daysElapsed * plannedSessionsPerDay
+
+  // Calculate total focus time
+  const totalFocusMinutes = objectiveSessions.reduce((acc, s) => acc + (s.duration || 0), 0)
+  const totalDistractions = objectiveSessions.reduce((acc, s) => acc + (s.distractions?.length || 0), 0)
+
+  // Impact: sessions with few distractions = high impact
+  const highImpactSessions = objectiveSessions.filter(s => (s.distractions?.length || 0) <= 1).length
+  const lowImpactSessions = completedSessions - highImpactSessions
+
+  // Dynamic insight based on actual data
+  const generateInsight = () => {
+    if (completedSessions === 0) {
+      return "Aucune session pour le moment. Lance ta première session focus pour commencer !"
+    }
+    if (dashboardData.status === "off_track" && dashboardData.daysRemaining < 7) {
+      return "Temps limité. Concentre-toi sur l'essentiel et protège ton temps de focus."
+    }
+    if (habitChallenge && habitChallenge.currentStreak >= 7) {
+      return `${habitChallenge.currentStreak} jours de suite ! Ta régularité paie. Continue.`
+    }
+    if (totalDistractions > completedSessions * 2) {
+      return "Beaucoup de distractions notées. Renforce ton bunker mode."
+    }
+    if (highImpactSessions > lowImpactSessions) {
+      return "Tes sessions sont efficaces. Peu de distractions = impact maximum."
+    }
+    return objective.progress < 50
+      ? "Phase de construction. Chaque session compte pour créer l'élan."
+      : "Tu approches du but. Maintiens le rythme jusqu'à la ligne d'arrivée."
+  }
 
   return (
     <div className="min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8">
@@ -731,12 +756,12 @@ export default function DashboardPage() {
             weekly={objective.weekGoal}
           />
           <MomentumBlock
-            completed={mockSessions.completed}
-            expected={mockSessions.expected}
+            completed={completedSessions}
+            expected={Math.max(1, expectedSessions)}
           />
           <ImpactBlock
-            highImpact={mockImpact.highImpact}
-            lowImpact={mockImpact.lowImpact}
+            highImpact={highImpactSessions}
+            lowImpact={lowImpactSessions}
           />
         </motion.div>
 
@@ -746,7 +771,7 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
         >
-          <InsightBlock insight={mockInsight} />
+          <InsightBlock insight={generateInsight()} />
         </motion.div>
 
         {/* Action Zone (subtle) */}

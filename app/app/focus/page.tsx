@@ -23,7 +23,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { IconBolt, IconTarget } from "@/components/ui/custom-icons"
-import { useAppStore } from "@/store/useAppStore"
+import { useAppStore, useHasHydrated } from "@/store/useAppStore"
 
 // ============================================
 // TYPES
@@ -227,6 +227,9 @@ export default function FocusPage() {
   // Editable focus objective during session
   const [isEditingFocus, setIsEditingFocus] = useState(false)
 
+  // Hydration check
+  const hasHydrated = useHasHydrated()
+
   // Initialize session objective from today's goal
   useEffect(() => {
     if (objective?.todayGoal) {
@@ -236,16 +239,18 @@ export default function FocusPage() {
 
   // Initialize
   useEffect(() => {
-    setIsLoading(false)
-    if (currentSession && !currentSession.endedAt) {
-      const elapsed = Math.floor(
-        (Date.now() - new Date(currentSession.startedAt).getTime()) / 1000
-      )
-      const remaining = Math.max(0, currentSession.duration * 60 - elapsed)
-      setTimeLeft(remaining)
-      setSessionState("active")
+    if (hasHydrated) {
+      setIsLoading(false)
+      if (currentSession && !currentSession.endedAt) {
+        const elapsed = Math.floor(
+          (Date.now() - new Date(currentSession.startedAt).getTime()) / 1000
+        )
+        const remaining = Math.max(0, currentSession.duration * 60 - elapsed)
+        setTimeLeft(remaining)
+        setSessionState("active")
+      }
     }
-  }, [currentSession])
+  }, [hasHydrated, currentSession])
 
   // Timer countdown
   useEffect(() => {
@@ -265,12 +270,12 @@ export default function FocusPage() {
     return () => clearInterval(timer)
   }, [sessionState, isPaused])
 
-  // Redirect if no objective
+  // Redirect if no objective - ONLY after hydration
   useEffect(() => {
-    if (!isLoading && !objective) {
+    if (hasHydrated && !objective) {
       router.push("/app/define")
     }
-  }, [objective, isLoading, router])
+  }, [hasHydrated, objective, router])
 
 
   // Rotate motivational quotes during active session

@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     const allDistractions = input.sessions.flatMap(s => s.distractions.map(d => d.text))
     const distractionSummary = allDistractions.length > 0
       ? allDistractions.slice(-10).join("; ")
-      : "Aucune distraction enregistrée"
+      : "No distractions recorded"
 
     // Collect reflections
     const reflections = input.sessions
@@ -96,75 +96,75 @@ export async function POST(request: NextRequest) {
       .join(" | ")
 
     // Build context for AI
-    const systemPrompt = `Tu es un coach IA expert en productivité et "The ONE Thing". Tu analyses les données d'un utilisateur et fournis des insights personnalisés.
+    const systemPrompt = `You are an AI coach expert in productivity and "The ONE Thing" methodology. You analyze user data and provide personalized insights.
 
-Tu dois répondre en JSON avec cette structure exacte:
+You must respond in JSON with this exact structure:
 {
-  "summary": "Résumé de la situation en 2-3 phrases (où en est l'utilisateur, comment il avance)",
+  "summary": "Summary of the situation in 2-3 sentences (where the user stands, how they're progressing)",
   "insights": [
-    "Insight 1 basé sur les données",
-    "Insight 2 basé sur les données",
-    "Insight 3 basé sur les données"
+    "Data-based insight 1",
+    "Data-based insight 2",
+    "Data-based insight 3"
   ],
   "nextActions": [
-    "Action concrète suggérée 1",
-    "Action concrète suggérée 2"
+    "Concrete suggested action 1",
+    "Concrete suggested action 2"
   ],
-  "warning": "Un avertissement si nécessaire (ou null si tout va bien)",
-  "encouragement": "Un message d'encouragement personnalisé"
+  "warning": "A warning if necessary (or null if everything is fine)",
+  "encouragement": "A personalized encouragement message"
 }
 
-RÈGLES:
-- Sois CONCRET et SPÉCIFIQUE aux données de l'utilisateur
-- Utilise les chiffres et patterns que tu observes
-- Donne des conseils actionnables, pas génériques
-- Adapte ton ton: direct mais bienveillant
-- Si l'utilisateur est en retard, sois honnête mais constructif
-- Mentionne le "primary thief" si pertinent pour les conseils`
+RULES:
+- Be CONCRETE and SPECIFIC to the user's data
+- Use the numbers and patterns you observe
+- Give actionable advice, not generic tips
+- Adapt your tone: direct but supportive
+- If the user is behind schedule, be honest but constructive
+- Mention the "primary thief" if relevant to your advice`
 
-    const userPrompt = `DONNÉES DE L'UTILISATEUR:
+    const userPrompt = `USER DATA:
 
-📎 OBJECTIF:
-- Grand objectif (Someday): "${input.objective.somedayGoal}"
-- Objectif du mois: "${input.objective.monthGoal}"
-- Objectif de la semaine: "${input.objective.weekGoal}"
-- Objectif du jour: "${input.objective.todayGoal}"
-- Action immédiate: "${input.objective.rightNowAction}"
-- Pourquoi: "${input.objective.why}"
-- Progression: ${input.objective.progress}%
+📎 OBJECTIVE:
+- Big goal (Someday): "${input.objective.somedayGoal}"
+- Month goal: "${input.objective.monthGoal}"
+- Week goal: "${input.objective.weekGoal}"
+- Today goal: "${input.objective.todayGoal}"
+- Immediate action: "${input.objective.rightNowAction}"
+- Why: "${input.objective.why}"
+- Progress: ${input.objective.progress}%
 
-⏱️ TEMPS:
-- Deadline: ${deadline.toLocaleDateString('fr-FR')} (dans ${daysRemaining} jours)
-- Jours écoulés: ${daysElapsed}/${totalDays}
-- Progression attendue: ~${Math.round((daysElapsed / totalDays) * 100)}%
+⏱️ TIME:
+- Deadline: ${deadline.toLocaleDateString('en-US')} (${daysRemaining} days remaining)
+- Days elapsed: ${daysElapsed}/${totalDays}
+- Expected progress: ~${Math.round((daysElapsed / totalDays) * 100)}%
 
-📊 SESSIONS DE TRAVAIL:
+📊 WORK SESSIONS:
 - Total sessions: ${totalSessions}
-- Temps total: ${totalMinutes} minutes (~${Math.round(totalMinutes / 60)} heures)
-- Durée moyenne par session: ${avgSessionMinutes} minutes
-- Heure de travail préférée: ${peakHour ? `${peakHour}h` : 'Pas encore de données'}
-- Jour le plus productif: ${peakDay || 'Pas encore de données'}
+- Total time: ${totalMinutes} minutes (~${Math.round(totalMinutes / 60)} hours)
+- Average session duration: ${avgSessionMinutes} minutes
+- Preferred work hour: ${peakHour ? `${peakHour}:00` : 'No data yet'}
+- Most productive day: ${peakDay || 'No data yet'}
 
-🎯 CHALLENGE 66 JOURS:
-- Streak actuel: ${input.habitChallenge?.currentStreak || 0} jours
-- Meilleur streak: ${input.habitChallenge?.longestStreak || 0} jours
+🎯 66-DAY CHALLENGE:
+- Current streak: ${input.habitChallenge?.currentStreak || 0} days
+- Best streak: ${input.habitChallenge?.longestStreak || 0} days
 
-⚠️ PRINCIPAL VOLEUR DE FOCUS:
-${input.primaryThief || 'Non identifié'}
+⚠️ PRIMARY FOCUS THIEF:
+${input.primaryThief || 'Not identified'}
 
-📝 DISTRACTIONS RÉCENTES:
+📝 RECENT DISTRACTIONS:
 ${distractionSummary}
 
-💭 RÉFLEXIONS DE L'UTILISATEUR:
-${reflections || 'Aucune réflexion enregistrée'}
+💭 USER REFLECTIONS:
+${reflections || 'No reflections recorded yet'}
 
 ${input.reviews.length > 0 ? `
-📋 DERNIÈRE REVIEW:
-- Accomplissements: ${input.reviews[input.reviews.length - 1]?.accomplishments || 'N/A'}
+📋 LATEST REVIEW:
+- Accomplishments: ${input.reviews[input.reviews.length - 1]?.accomplishments || 'N/A'}
 - Blockers: ${input.reviews[input.reviews.length - 1]?.blockers || 'N/A'}
 ` : ''}
 
-Analyse ces données et génère des insights personnalisés pour aider l'utilisateur à atteindre son objectif.`
+Analyze this data and generate personalized insights to help the user achieve their objective.`
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",

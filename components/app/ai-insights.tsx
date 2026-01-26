@@ -16,6 +16,7 @@ import {
   Zap,
   Heart,
   ArrowRight,
+  Lock,
 } from "lucide-react"
 import { useAppStore } from "@/store/useAppStore"
 
@@ -46,16 +47,24 @@ export function AIInsights() {
     habitChallenge,
     thievesAssessment,
     reviews,
+    aiInsightsCache,
+    setAIInsightsCache,
+    canFetchAIInsights,
+    getAIInsightsCooldown,
   } = useAppStore()
 
-  const [insights, setInsights] = useState<AIInsightsData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isExpanded, setIsExpanded] = useState(true)
-  const [lastFetched, setLastFetched] = useState<Date | null>(null)
+
+  // Get cached insights
+  const insights = aiInsightsCache.data as AIInsightsData | null
+  const lastFetched = aiInsightsCache.lastFetched ? new Date(aiInsightsCache.lastFetched) : null
+  const { canFetch, hoursRemaining } = getAIInsightsCooldown()
 
   const fetchInsights = async () => {
     if (!objective) return
+    if (!canFetch) return // Rate limited
 
     setIsLoading(true)
     setError(null)
@@ -104,26 +113,19 @@ export function AIInsights() {
 
       if (response.ok) {
         const data = await response.json()
-        setInsights(data)
-        setLastFetched(new Date())
+        setAIInsightsCache(data)
       } else {
-        setError("Impossible de générer les insights")
+        setError("Failed to generate insights")
       }
     } catch (err) {
-      setError("Erreur de connexion")
+      setError("Connection error")
       console.error("Failed to fetch insights:", err)
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Auto-fetch on mount if no insights
-  useEffect(() => {
-    if (objective && !insights && !isLoading) {
-      fetchInsights()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [objective])
+  // NO auto-fetch - user must request manually
 
   if (!objective) return null
 
@@ -153,23 +155,35 @@ export function AIInsights() {
               </h3>
               <p className="text-xs text-muted-foreground">
                 {lastFetched
-                  ? `Mis à jour ${lastFetched.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
-                  : "Analyse de vos données"}
+                  ? `Last analysis: ${lastFetched.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at ${lastFetched.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
+                  : "Request your personalized analysis"}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                fetchInsights()
-              }}
-              disabled={isLoading}
-              className="p-2 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            </button>
+            {canFetch ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  fetchInsights()
+                }}
+                disabled={isLoading}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-500/20 hover:bg-violet-500/30 border border-violet-500/30 transition-colors disabled:opacity-50 text-xs font-medium"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                {insights ? "Refresh" : "Analyze"}
+              </button>
+            ) : (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-muted-foreground">
+                <Lock className="h-3 w-3" />
+                <span>{hoursRemaining}h cooldown</span>
+              </div>
+            )}
             <ChevronRight
               className={`h-5 w-5 text-muted-foreground transition-transform ${isExpanded ? 'rotate-90' : ''}`}
             />
@@ -190,19 +204,21 @@ export function AIInsights() {
                 {isLoading ? (
                   <div className="flex flex-col items-center justify-center py-12">
                     <Loader2 className="h-8 w-8 text-violet-400 animate-spin mb-4" />
-                    <p className="text-sm text-muted-foreground">Analyse en cours...</p>
-                    <p className="text-xs text-muted-foreground/60 mt-1">L'IA examine vos sessions, objectifs et patterns</p>
+                    <p className="text-sm text-muted-foreground">Analyzing your data...</p>
+                    <p className="text-xs text-muted-foreground/60 mt-1">AI is examining your sessions, goals and patterns</p>
                   </div>
                 ) : error ? (
                   <div className="flex flex-col items-center justify-center py-8">
                     <AlertTriangle className="h-8 w-8 text-amber-400 mb-3" />
                     <p className="text-sm text-muted-foreground">{error}</p>
-                    <button
-                      onClick={fetchInsights}
-                      className="mt-3 text-xs text-primary hover:underline"
-                    >
-                      Réessayer
-                    </button>
+                    {canFetch && (
+                      <button
+                        onClick={fetchInsights}
+                        className="mt-3 text-xs text-primary hover:underline"
+                      >
+                        Try again
+                      </button>
+                    )}
                   </div>
                 ) : insights ? (
                   <>
@@ -230,7 +246,7 @@ export function AIInsights() {
                           <Clock className="h-3.5 w-3.5 text-cyan-400" />
                         </div>
                         <p className="text-lg font-bold">{Math.round(insights.stats.totalMinutes / 60)}h</p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Travaillées</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Worked</p>
                       </div>
                       <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-center">
                         <div className="flex items-center justify-center gap-1 mb-1">
@@ -244,7 +260,7 @@ export function AIInsights() {
                           <Target className="h-3.5 w-3.5 text-orange-400" />
                         </div>
                         <p className="text-lg font-bold">{insights.stats.daysRemaining}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Jours restants</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Days left</p>
                       </div>
                     </div>
 
@@ -253,9 +269,9 @@ export function AIInsights() {
                       <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/10">
                         <TrendingUp className="h-4 w-4 text-primary shrink-0" />
                         <p className="text-sm text-muted-foreground">
-                          Votre pic de productivité :{" "}
+                          Peak productivity:{" "}
                           <span className="text-foreground font-medium">
-                            {insights.stats.peakDay}{insights.stats.peakHour !== null && ` vers ${insights.stats.peakHour}h`}
+                            {insights.stats.peakDay}{insights.stats.peakHour !== null && ` around ${insights.stats.peakHour}:00`}
                           </span>
                         </p>
                       </div>
@@ -285,7 +301,7 @@ export function AIInsights() {
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase tracking-wider mb-3">
                         <ArrowRight className="h-3.5 w-3.5" />
-                        Actions suggérées
+                        Suggested Actions
                       </div>
                       {insights.nextActions.map((action, idx) => (
                         <motion.div
@@ -313,11 +329,41 @@ export function AIInsights() {
                       <Heart className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                       <p className="text-sm italic">{insights.encouragement}</p>
                     </motion.div>
+
+                    {/* Cooldown notice */}
+                    {!canFetch && (
+                      <p className="text-xs text-muted-foreground/60 text-center">
+                        Next analysis available in {hoursRemaining} hours
+                      </p>
+                    )}
                   </>
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-8">
-                    <Brain className="h-8 w-8 text-muted-foreground mb-3" />
-                    <p className="text-sm text-muted-foreground">Cliquez sur Refresh pour générer vos insights</p>
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="p-4 rounded-2xl bg-violet-500/10 border border-violet-500/20 mb-4">
+                      <Brain className="h-10 w-10 text-violet-400" />
+                    </div>
+                    <h4 className="font-semibold mb-2">Get AI-Powered Insights</h4>
+                    <p className="text-sm text-muted-foreground text-center max-w-sm mb-4">
+                      Your personal AI coach will analyze your sessions, progress, and patterns to give you actionable recommendations.
+                    </p>
+                    {canFetch ? (
+                      <button
+                        onClick={fetchInsights}
+                        disabled={isLoading}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-500/20 hover:bg-violet-500/30 border border-violet-500/30 transition-colors text-sm font-medium"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        Request Analysis
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-muted-foreground">
+                        <Lock className="h-4 w-4" />
+                        Available in {hoursRemaining}h
+                      </div>
+                    )}
+                    <p className="text-[10px] text-muted-foreground/50 mt-3">
+                      Limited to 1 analysis per 48 hours
+                    </p>
                   </div>
                 )}
               </div>

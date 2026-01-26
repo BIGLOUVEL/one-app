@@ -1,5 +1,6 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
+import { useState, useEffect } from "react"
 import {
   Objective,
   FourOneOne,
@@ -42,9 +43,20 @@ interface AppStore {
   // Session post-its (persist across page refreshes during session)
   sessionPostIts: Array<{ id: string; text: string; x: number; y: number; rotation: number }>
 
+  // AI Insights cache (rate limited: 1 per 48h)
+  aiInsightsCache: {
+    data: Record<string, unknown> | null
+    lastFetched: string | null
+  }
+
   // Post-it Actions
   setSessionPostIts: (postIts: Array<{ id: string; text: string; x: number; y: number; rotation: number }>) => void
   clearSessionPostIts: () => void
+
+  // AI Insights Actions
+  setAIInsightsCache: (data: Record<string, unknown>) => void
+  canFetchAIInsights: () => boolean
+  getAIInsightsCooldown: () => { canFetch: boolean; hoursRemaining: number }
 
   // AI Actions
   setAIPlan: (plan: AIGeneratedPlan) => void
@@ -133,6 +145,12 @@ export const useAppStore = create<AppStore>()(
       // Session post-its
       sessionPostIts: [],
 
+      // AI Insights cache
+      aiInsightsCache: {
+        data: null,
+        lastFetched: null,
+      },
+
       // Post-it Actions
       setSessionPostIts: (postIts) => {
         set({ sessionPostIts: postIts })
@@ -140,6 +158,35 @@ export const useAppStore = create<AppStore>()(
 
       clearSessionPostIts: () => {
         set({ sessionPostIts: [] })
+      },
+
+      // AI Insights Actions
+      setAIInsightsCache: (data) => {
+        set({
+          aiInsightsCache: {
+            data,
+            lastFetched: new Date().toISOString(),
+          },
+        })
+      },
+
+      canFetchAIInsights: () => {
+        const { aiInsightsCache } = get()
+        if (!aiInsightsCache.lastFetched) return true
+        const lastFetched = new Date(aiInsightsCache.lastFetched)
+        const now = new Date()
+        const hoursSince = (now.getTime() - lastFetched.getTime()) / (1000 * 60 * 60)
+        return hoursSince >= 48
+      },
+
+      getAIInsightsCooldown: () => {
+        const { aiInsightsCache } = get()
+        if (!aiInsightsCache.lastFetched) return { canFetch: true, hoursRemaining: 0 }
+        const lastFetched = new Date(aiInsightsCache.lastFetched)
+        const now = new Date()
+        const hoursSince = (now.getTime() - lastFetched.getTime()) / (1000 * 60 * 60)
+        const hoursRemaining = Math.max(0, Math.ceil(48 - hoursSince))
+        return { canFetch: hoursSince >= 48, hoursRemaining }
       },
 
       // AI Actions
@@ -832,6 +879,28 @@ export const useAppStore = create<AppStore>()(
     }
   )
 )
+
+// Hydration hook - use this to wait for localStorage data to load
+export const useHasHydrated = () => {
+  const [hasHydrated, setHasHydrated] = useState(false)
+
+  useEffect(() => {
+    const unsubFinishHydration = useAppStore.persist.onFinishHydration(() => {
+      setHasHydrated(true)
+    })
+
+    // Check if already hydrated
+    if (useAppStore.persist.hasHydrated()) {
+      setHasHydrated(true)
+    }
+
+    return () => {
+      unsubFinishHydration()
+    }
+  }, [])
+
+  return hasHydrated
+}
 
 // Keep the old store for backwards compatibility
 export { useAppStore as useObjectiveStore }

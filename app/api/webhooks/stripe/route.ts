@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
         if (userId) {
           // Get subscription details
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId) as any
 
           await supabaseAdmin
             .from("profiles")
@@ -49,7 +49,6 @@ export async function POST(request: NextRequest) {
 
           // If promo was applied, schedule price change after first month
           if (promoApplied) {
-            // Update subscription to switch to regular price after current period
             await stripe.subscriptions.update(subscriptionId, {
               items: [
                 {
@@ -66,7 +65,7 @@ export async function POST(request: NextRequest) {
       }
 
       case "customer.subscription.updated": {
-        const subscription = event.data.object as Stripe.Subscription
+        const subscription = event.data.object as any
         const customerId = subscription.customer as string
 
         // Find user by Stripe customer ID
@@ -90,7 +89,7 @@ export async function POST(request: NextRequest) {
       }
 
       case "customer.subscription.deleted": {
-        const subscription = event.data.object as Stripe.Subscription
+        const subscription = event.data.object as any
         const customerId = subscription.customer as string
 
         // Find user by Stripe customer ID

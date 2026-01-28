@@ -62,6 +62,14 @@ export interface FocusBlock {
   duration: number          // minutes: 25, 50, 90, 120
 }
 
+export interface PostIt {
+  id: string
+  text: string
+  x: number
+  y: number
+  rotation: number
+}
+
 export interface FocusSession {
   id: string
   objectiveId: string
@@ -70,6 +78,7 @@ export interface FocusSession {
   duration: number          // planned duration in minutes
   actualDuration?: number   // actual duration if ended early
   distractions: Distraction[]
+  postIts?: PostIt[]        // Post-its captured during session
   reflection?: string       // "What did you move forward?"
   nextAction?: string       // Optional next action
 }

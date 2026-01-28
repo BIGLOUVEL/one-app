@@ -21,6 +21,7 @@ import {
   Settings,
   LogOut,
   User,
+  History,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAppStore } from "@/store/useAppStore"
@@ -64,6 +65,7 @@ const systemNavItems = [
 
 const focusNavItems = [
   { href: "/app/focus", label: "Focus", icon: Timer, description: "Deep work", color: "primary" },
+  { href: "/app/sessions", label: "Sessions", icon: History, description: "Past sessions", color: "primary" },
   { href: "/app/habit", label: "66 Days", icon: Flame, description: "Build habit", color: "orange" },
   { href: "/app/shield", label: "Shield", icon: Shield, description: "Block thieves", color: "cyan" },
   { href: "/app/review", label: "Review", icon: ClipboardCheck, description: "Reflect", color: "violet" },

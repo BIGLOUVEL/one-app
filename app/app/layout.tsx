@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense } from "react"
 import Link from "next/link"
 import { PanelLeft } from "lucide-react"
 import { AppNav, MobileNav } from "@/components/app/app-nav"
@@ -7,6 +8,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { useAppStore } from "@/store/useAppStore"
 import { Logo } from "@/components/ui/logo"
+import { PaymentVerifier } from "@/components/app/payment-verifier"
 
 function AppHeader() {
   const { objective, hasCompletedOnboarding } = useAppStore()
@@ -55,6 +57,11 @@ export default function AppLayout({
 }) {
   return (
     <AppNav>
+      {/* Payment verification on return from Stripe */}
+      <Suspense fallback={null}>
+        <PaymentVerifier />
+      </Suspense>
+
       <div className="min-h-screen bg-background">
         {/* Header - hidden during onboarding */}
         <AppHeader />

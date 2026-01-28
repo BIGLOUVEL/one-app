@@ -475,7 +475,7 @@ export const useAppStore = create<AppStore>()(
       },
 
       endSession: (reflection, nextAction) => {
-        const { currentSession, sessions, habitChallenge, dominoChain, contractMeter } = get()
+        const { currentSession, sessions, habitChallenge, dominoChain, contractMeter, sessionPostIts } = get()
         if (!currentSession) return
 
         const endedSession: FocusSession = {
@@ -484,6 +484,7 @@ export const useAppStore = create<AppStore>()(
           actualDuration: Math.floor(
             (new Date().getTime() - new Date(currentSession.startedAt).getTime()) / 60000
           ),
+          postIts: sessionPostIts.length > 0 ? [...sessionPostIts] : undefined,
           reflection,
           nextAction,
         }
@@ -564,6 +565,7 @@ export const useAppStore = create<AppStore>()(
           sessions: [...sessions, endedSession],
           dominoChain: updatedDominoChain,
           contractMeter: updatedContractMeter,
+          sessionPostIts: [], // Clear post-its after saving to session
         })
       },
 

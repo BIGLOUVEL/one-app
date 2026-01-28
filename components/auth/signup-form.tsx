@@ -50,7 +50,7 @@ export function SignupForm({
 
     try {
       const supabase = createClient()
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -63,6 +63,24 @@ export function SignupForm({
         return
       }
 
+      // If session returned (email confirmation disabled), go straight to app
+      if (data.session) {
+        router.push("/app")
+        return
+      }
+
+      // Try to sign in immediately (works if auto-confirm is on)
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (!signInError) {
+        router.push("/app")
+        return
+      }
+
+      // Email confirmation required — show message with skip option
       setIsSuccess(true)
     } catch {
       setError("An error occurred. Try again.")
@@ -106,13 +124,20 @@ export function SignupForm({
                 We sent a confirmation link to <strong>{email}</strong>.
                 Click the link to complete your registration.
               </p>
-              <Button
-                variant="outline"
-                onClick={() => router.push("/login")}
-                className="mt-4"
-              >
-                Back to sign in
-              </Button>
+              <div className="flex flex-col gap-2 mt-4 w-full max-w-xs">
+                <Button
+                  onClick={() => router.push("/login")}
+                >
+                  Sign in
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => router.push("/app")}
+                  className="text-muted-foreground text-xs"
+                >
+                  Skip, I&apos;ll verify later
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

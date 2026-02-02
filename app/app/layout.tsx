@@ -1,14 +1,36 @@
 "use client"
 
-import { Suspense } from "react"
+import { Suspense, useEffect } from "react"
 import Link from "next/link"
 import { PanelLeft } from "lucide-react"
 import { AppNav, MobileNav } from "@/components/app/app-nav"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
-import { useAppStore } from "@/store/useAppStore"
+import { useAppStore, useHasHydrated } from "@/store/useAppStore"
+import { useAuth } from "@/components/auth/auth-provider"
 import { Logo } from "@/components/ui/logo"
 import { PaymentVerifier } from "@/components/app/payment-verifier"
+
+function UserGuard() {
+  const { user } = useAuth()
+  const hasHydrated = useHasHydrated()
+  const { userId, setUserId, clearAllData } = useAppStore()
+
+  useEffect(() => {
+    if (!hasHydrated || !user) return
+
+    // Different user logged in — clear stale data
+    if (userId && userId !== user.id) {
+      clearAllData()
+    }
+    // Always sync the current user ID
+    if (userId !== user.id) {
+      setUserId(user.id)
+    }
+  }, [hasHydrated, user, userId, setUserId, clearAllData])
+
+  return null
+}
 
 function AppHeader() {
   const { objective, hasCompletedOnboarding } = useAppStore()
@@ -57,6 +79,9 @@ export default function AppLayout({
 }) {
   return (
     <AppNav>
+      {/* Clear stale data when a different user logs in */}
+      <UserGuard />
+
       {/* Payment verification on return from Stripe */}
       <Suspense fallback={null}>
         <PaymentVerifier />

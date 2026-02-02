@@ -24,12 +24,13 @@ import {
   Edit3,
   Zap,
   Shield,
+  X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAppStore } from "@/store/useAppStore"
 import { AIGeneratedPlan, ThiefType } from "@/lib/types"
 
-type Step = 1 | 2 | 3 | 4 | 5
+type Step = 1 | 2 | 3 | 4 | 5 | 6
 
 const contextTypes = [
   { value: "student", label: "Etudiant", icon: GraduationCap },
@@ -68,12 +69,15 @@ export default function OnboardingPage() {
   const [contextType, setContextType] = useState<typeof contextTypes[number]["value"]>("freelance")
   const [horizon, setHorizon] = useState("3 months")
 
-  // Step 3: Constraints
+  // Step 3: Essential Steps
+  const [essentialSteps, setEssentialSteps] = useState<string[]>([""])
+
+  // Step 4: Constraints
   const [hoursPerWeek, setHoursPerWeek] = useState(10)
   const [deadline, setDeadline] = useState("")
   const [resources, setResources] = useState("")
 
-  // Step 5: AI Generated Plan
+  // Step 6: AI Generated Plan
   const [aiPlan, setAIPlan] = useState<AIGeneratedPlan | null>(null)
   const [editingField, setEditingField] = useState<string | null>(null)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["cascade", "focus", "risks"]))
@@ -91,7 +95,7 @@ export default function OnboardingPage() {
   const generatePlan = async () => {
     setIsLoading(true)
     setError(null)
-    setStep(4)
+    setStep(5)
 
     try {
       const response = await fetch("/api/onboarding", {
@@ -99,6 +103,7 @@ export default function OnboardingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           somedayGoal,
+          essentialSteps: essentialSteps.filter(s => s.trim()),
           context: {
             type: contextType,
             horizon,
@@ -117,10 +122,10 @@ export default function OnboardingPage() {
 
       const data = await response.json()
       setAIPlan(data.plan)
-      setStep(5)
+      setStep(6)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Une erreur est survenue")
-      setStep(3)
+      setStep(4)
     } finally {
       setIsLoading(false)
     }
@@ -157,8 +162,10 @@ export default function OnboardingPage() {
       case 2:
         return contextType && horizon
       case 3:
+        return essentialSteps.some(s => s.trim().length > 0)
+      case 4:
         return hoursPerWeek > 0
-      case 5:
+      case 6:
         return aiPlan !== null
       default:
         return false
@@ -190,7 +197,7 @@ export default function OnboardingPage() {
 
         {/* Progress indicator */}
         <div className="flex justify-center gap-2 mb-8">
-          {[1, 2, 3, 4, 5].map((s) => (
+          {[1, 2, 3, 4, 5, 6].map((s) => (
             <motion.div
               key={s}
               className={`h-1.5 rounded-full transition-all duration-300 ${
@@ -314,8 +321,74 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {/* Step 3: Constraints */}
+          {/* Step 3: Essential Steps */}
           {step === 3 && (
+            <motion.div
+              key="step3"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              <div className="text-center space-y-3">
+                <div className="flex justify-center mb-4">
+                  <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+                    <Sparkles className="h-6 w-6 text-emerald-400" />
+                  </div>
+                </div>
+                <h1 className="text-2xl font-semibold">
+                  Quelles sont les <span className="text-emerald-400">etapes cles</span> ?
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  Liste les etapes que tu penses essentielles pour atteindre ton objectif. L'IA s'en servira pour creer ton plan.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {essentialSteps.map((stepText, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <span className="text-xs text-emerald-400 font-bold w-6 text-center shrink-0">{idx + 1}</span>
+                    <div className="liquid-glass p-1 flex-1">
+                      <input
+                        type="text"
+                        value={stepText}
+                        onChange={(e) => {
+                          const updated = [...essentialSteps]
+                          updated[idx] = e.target.value
+                          setEssentialSteps(updated)
+                        }}
+                        placeholder={`Etape ${idx + 1}...`}
+                        className="w-full bg-transparent px-3 py-2.5 text-sm focus:outline-none placeholder:text-muted-foreground/40"
+                        autoFocus={idx === essentialSteps.length - 1}
+                      />
+                    </div>
+                    {essentialSteps.length > 1 && (
+                      <button
+                        onClick={() => setEssentialSteps(essentialSteps.filter((_, i) => i !== idx))}
+                        className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground/40 hover:text-red-400 transition-colors shrink-0"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setEssentialSteps([...essentialSteps, ""])}
+                className="w-full py-2.5 rounded-xl border border-dashed border-white/10 hover:border-emerald-500/30 text-sm text-muted-foreground hover:text-emerald-400 transition-colors"
+              >
+                + Ajouter une etape
+              </button>
+
+              <p className="text-xs text-muted-foreground text-center">
+                Pas besoin d'etre exhaustif — l'IA completera et ordonnera.
+              </p>
+            </motion.div>
+          )}
+
+          {/* Step 4: Constraints */}
+          {step === 4 && (
             <motion.div
               key="step3"
               initial={{ opacity: 0, x: 20 }}
@@ -396,10 +469,10 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {/* Step 4: Loading / AI Generation */}
-          {step === 4 && (
+          {/* Step 5: Loading / AI Generation */}
+          {step === 5 && (
             <motion.div
-              key="step4"
+              key="step5"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -455,10 +528,10 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {/* Step 5: Visual Cascade Presentation */}
-          {step === 5 && aiPlan && (
+          {/* Step 6: Visual Cascade Presentation */}
+          {step === 6 && aiPlan && (
             <motion.div
-              key="step5"
+              key="step6"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
@@ -718,7 +791,7 @@ export default function OnboardingPage() {
         </AnimatePresence>
 
         {/* Navigation buttons */}
-        {step !== 4 && (
+        {step !== 5 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -738,9 +811,9 @@ export default function OnboardingPage() {
 
               <Button
                 onClick={() => {
-                  if (step === 3) {
+                  if (step === 4) {
                     generatePlan()
-                  } else if (step === 5) {
+                  } else if (step === 6) {
                     handleLockIn()
                   } else {
                     setStep((step + 1) as Step)
@@ -753,12 +826,12 @@ export default function OnboardingPage() {
                     : "bg-white/5 text-muted-foreground"
                 }`}
               >
-                {step === 3 ? (
+                {step === 4 ? (
                   <>
                     <Sparkles className="mr-2 h-5 w-5" />
                     Générer mon plan
                   </>
-                ) : step === 5 ? (
+                ) : step === 6 ? (
                   <>
                     Lock it in
                     <ArrowRight className="ml-2 h-5 w-5" />
@@ -772,7 +845,7 @@ export default function OnboardingPage() {
               </Button>
             </div>
 
-            {step === 5 && (
+            {step === 6 && (
               <p className="text-center text-xs text-muted-foreground">
                 Une fois verrouillé, tu ne pourras pas changer d'objectif jusqu'à complétion.
               </p>

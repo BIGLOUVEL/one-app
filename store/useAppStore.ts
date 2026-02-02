@@ -17,11 +17,16 @@ import {
   DominoChain,
   ContractMeter,
   ContractState,
+  PostItCollection,
+  PostIt,
 } from "@/lib/types"
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
 
 interface AppStore {
+  // User tracking (to clear data on user change)
+  userId: string | null
+
   // Core State
   objective: Objective | null
   hasCompletedOnboarding: boolean
@@ -49,9 +54,21 @@ interface AppStore {
     lastFetched: string | null
   }
 
+  // Post-it Collections
+  postItCollections: PostItCollection[]
+
   // Post-it Actions
   setSessionPostIts: (postIts: Array<{ id: string; text: string; x: number; y: number; rotation: number }>) => void
   clearSessionPostIts: () => void
+  togglePostItLike: (sessionId: string, postItId: string) => void
+
+  // Collection Actions
+  createCollection: (name: string, emoji?: string, description?: string) => string
+  deleteCollection: (collectionId: string) => void
+  renameCollection: (collectionId: string, name: string) => void
+  addPostItToCollection: (collectionId: string, postItId: string) => void
+  removePostItFromCollection: (collectionId: string, postItId: string) => void
+  getAllPostIts: () => PostIt[]
 
   // AI Insights Actions
   setAIInsightsCache: (data: Record<string, unknown>) => void
@@ -112,6 +129,10 @@ interface AppStore {
   updateContractState: () => ContractState
   setPlannedSessionsPerDay: (count: number) => void
 
+  // User tracking
+  setUserId: (id: string) => void
+  clearAllData: () => void
+
   // Computed
   isLocked: () => boolean
   canCreateNew: () => boolean
@@ -124,6 +145,9 @@ interface AppStore {
 export const useAppStore = create<AppStore>()(
   persist(
     (set, get) => ({
+      // User tracking
+      userId: null,
+
       // Initial State
       objective: null,
       hasCompletedOnboarding: false,
@@ -151,6 +175,9 @@ export const useAppStore = create<AppStore>()(
         lastFetched: null,
       },
 
+      // Post-it Collections
+      postItCollections: [],
+
       // Post-it Actions
       setSessionPostIts: (postIts) => {
         set({ sessionPostIts: postIts })
@@ -158,6 +185,88 @@ export const useAppStore = create<AppStore>()(
 
       clearSessionPostIts: () => {
         set({ sessionPostIts: [] })
+      },
+
+      togglePostItLike: (sessionId, postItId) => {
+        const { sessions } = get()
+        set({
+          sessions: sessions.map(session => {
+            if (session.id !== sessionId) return session
+            return {
+              ...session,
+              postIts: session.postIts?.map(postIt =>
+                postIt.id === postItId
+                  ? { ...postIt, liked: !postIt.liked }
+                  : postIt
+              ),
+            }
+          }),
+        })
+      },
+
+      createCollection: (name, emoji, description) => {
+        const id = generateId()
+        const { postItCollections } = get()
+        const newCollection: PostItCollection = {
+          id,
+          name,
+          emoji,
+          description,
+          postItIds: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+        set({ postItCollections: [...postItCollections, newCollection] })
+        return id
+      },
+
+      deleteCollection: (collectionId) => {
+        const { postItCollections } = get()
+        set({ postItCollections: postItCollections.filter(c => c.id !== collectionId) })
+      },
+
+      renameCollection: (collectionId, name) => {
+        const { postItCollections } = get()
+        set({
+          postItCollections: postItCollections.map(c =>
+            c.id === collectionId
+              ? { ...c, name, updatedAt: new Date().toISOString() }
+              : c
+          ),
+        })
+      },
+
+      addPostItToCollection: (collectionId, postItId) => {
+        const { postItCollections } = get()
+        set({
+          postItCollections: postItCollections.map(c =>
+            c.id === collectionId && !c.postItIds.includes(postItId)
+              ? { ...c, postItIds: [...c.postItIds, postItId], updatedAt: new Date().toISOString() }
+              : c
+          ),
+        })
+      },
+
+      removePostItFromCollection: (collectionId, postItId) => {
+        const { postItCollections } = get()
+        set({
+          postItCollections: postItCollections.map(c =>
+            c.id === collectionId
+              ? { ...c, postItIds: c.postItIds.filter(id => id !== postItId), updatedAt: new Date().toISOString() }
+              : c
+          ),
+        })
+      },
+
+      getAllPostIts: () => {
+        const { sessions } = get()
+        return sessions.flatMap(session =>
+          (session.postIts || []).map(postIt => ({
+            ...postIt,
+            sessionId: session.id,
+            createdAt: session.endedAt || session.startedAt,
+          }))
+        )
       },
 
       // AI Insights Actions
@@ -187,6 +296,33 @@ export const useAppStore = create<AppStore>()(
         const hoursSince = (now.getTime() - lastFetched.getTime()) / (1000 * 60 * 60)
         const hoursRemaining = Math.max(0, Math.ceil(48 - hoursSince))
         return { canFetch: hoursSince >= 48, hoursRemaining }
+      },
+
+      // User tracking actions
+      setUserId: (id) => {
+        set({ userId: id })
+      },
+
+      clearAllData: () => {
+        set({
+          objective: null,
+          hasCompletedOnboarding: false,
+          fourOneOne: null,
+          gpsPlan: null,
+          focusBlock: null,
+          habitChallenge: null,
+          sessions: [],
+          currentSession: null,
+          reviews: [],
+          thievesAssessment: null,
+          aiPlan: null,
+          dominoChain: null,
+          contractMeter: null,
+          plannedSessionsPerDay: 1,
+          sessionPostIts: [],
+          aiInsightsCache: { data: null, lastFetched: null },
+          postItCollections: [],
+        })
       },
 
       // AI Actions

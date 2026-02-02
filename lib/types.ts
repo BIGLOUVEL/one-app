@@ -68,6 +68,20 @@ export interface PostIt {
   x: number
   y: number
   rotation: number
+  sessionId?: string
+  createdAt?: string
+  liked?: boolean
+  color?: "yellow" | "pink" | "blue" | "green" | "purple"
+}
+
+export interface PostItCollection {
+  id: string
+  name: string
+  description?: string
+  emoji?: string
+  postItIds: string[]
+  createdAt: string
+  updatedAt: string
 }
 
 export interface FocusSession {

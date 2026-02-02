@@ -13,17 +13,54 @@ import {
   ChevronUp,
   Zap,
   CheckCircle2,
+  Heart,
+  Plus,
+  FolderPlus,
+  MoreHorizontal,
+  Play,
+  Trash2,
+  Edit3,
+  X,
+  Sparkles,
+  Library,
 } from "lucide-react"
 import { useAppStore, useHasHydrated } from "@/store/useAppStore"
-import { FocusSession } from "@/lib/types"
+import { FocusSession, PostIt, PostItCollection } from "@/lib/types"
+
+type Tab = "sessions" | "postits" | "collections"
+
+const POST_IT_COLORS = {
+  yellow: "bg-yellow-200 dark:bg-yellow-900/50 text-yellow-900 dark:text-yellow-100",
+  pink: "bg-pink-200 dark:bg-pink-900/50 text-pink-900 dark:text-pink-100",
+  blue: "bg-blue-200 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100",
+  green: "bg-green-200 dark:bg-green-900/50 text-green-900 dark:text-green-100",
+  purple: "bg-purple-200 dark:bg-purple-900/50 text-purple-900 dark:text-purple-100",
+}
 
 export default function SessionsPage() {
   const router = useRouter()
   const hasHydrated = useHasHydrated()
-  const { objective, sessions } = useAppStore()
-  const [expandedSession, setExpandedSession] = useState<string | null>(null)
+  const {
+    objective,
+    sessions,
+    postItCollections,
+    togglePostItLike,
+    createCollection,
+    deleteCollection,
+    renameCollection,
+    addPostItToCollection,
+    removePostItFromCollection,
+    getAllPostIts,
+  } = useAppStore()
 
-  // Redirect if no objective
+  const [activeTab, setActiveTab] = useState<Tab>("sessions")
+  const [expandedSession, setExpandedSession] = useState<string | null>(null)
+  const [selectedCollection, setSelectedCollection] = useState<string | null>(null)
+  const [showNewCollectionModal, setShowNewCollectionModal] = useState(false)
+  const [newCollectionName, setNewCollectionName] = useState("")
+  const [newCollectionEmoji, setNewCollectionEmoji] = useState("📌")
+  const [addingToCollection, setAddingToCollection] = useState<string | null>(null)
+
   useEffect(() => {
     if (hasHydrated && !objective) {
       router.push("/app/define")
@@ -38,23 +75,25 @@ export default function SessionsPage() {
     )
   }
 
-  // Filter sessions for current objective and sort by date (newest first)
   const objectiveSessions = sessions
     .filter((s) => s.objectiveId === objective?.id && s.endedAt)
     .sort((a, b) => new Date(b.endedAt!).getTime() - new Date(a.endedAt!).getTime())
 
+  const allPostIts = getAllPostIts()
+  const likedPostIts = allPostIts.filter(p => p.liked)
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", {
+    return date.toLocaleDateString("fr-FR", {
       weekday: "short",
-      month: "short",
       day: "numeric",
+      month: "short",
     })
   }
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleTimeString("en-US", {
+    return date.toLocaleTimeString("fr-FR", {
       hour: "2-digit",
       minute: "2-digit",
     })
@@ -67,263 +106,715 @@ export default function SessionsPage() {
     return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`
   }
 
-  const getImpactLevel = (session: FocusSession) => {
-    const distractions = session.distractions?.length || 0
-    if (distractions === 0) return { label: "High Impact", color: "text-green-500", bg: "bg-green-500/10" }
-    if (distractions <= 2) return { label: "Medium Impact", color: "text-yellow-500", bg: "bg-yellow-500/10" }
-    return { label: "Low Impact", color: "text-red-500", bg: "bg-red-500/10" }
+  const handleCreateCollection = () => {
+    if (!newCollectionName.trim()) return
+    createCollection(newCollectionName.trim(), newCollectionEmoji)
+    setNewCollectionName("")
+    setNewCollectionEmoji("📌")
+    setShowNewCollectionModal(false)
   }
 
-  const toggleSession = (sessionId: string) => {
-    setExpandedSession(expandedSession === sessionId ? null : sessionId)
+  const handleAddToCollection = (postItId: string, collectionId: string) => {
+    addPostItToCollection(collectionId, postItId)
+    setAddingToCollection(null)
+  }
+
+  const getCollectionPostIts = (collection: PostItCollection): PostIt[] => {
+    return collection.postItIds
+      .map(id => allPostIts.find(p => p.id === id))
+      .filter((p): p is PostIt => p !== undefined)
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="text-3xl font-bold mb-2">My Sessions</h1>
-          <p className="text-muted-foreground">
-            Review your completed focus sessions and notes
-          </p>
-        </motion.div>
+    <div className="min-h-screen bg-background">
+      {/* Header with gradient */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/10 to-transparent" />
+        <div className="relative px-4 md:px-8 pt-8 pb-6">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">My Library</h1>
+            <p className="text-muted-foreground">
+              Tes sessions, notes et collections
+            </p>
+          </motion.div>
 
-        {/* Stats Summary */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
-        >
-          <div className="bg-card border border-border rounded-xl p-4">
-            <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-              <Zap className="w-4 h-4" />
-              Total Sessions
+          {/* Stats bar */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="flex gap-6 mt-6 text-sm"
+          >
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-primary" />
+              <span className="font-semibold">{objectiveSessions.length}</span>
+              <span className="text-muted-foreground">sessions</span>
             </div>
-            <div className="text-2xl font-bold">{objectiveSessions.length}</div>
-          </div>
-          <div className="bg-card border border-border rounded-xl p-4">
-            <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-              <Clock className="w-4 h-4" />
-              Total Time
+            <div className="flex items-center gap-2">
+              <StickyNote className="w-4 h-4 text-yellow-500" />
+              <span className="font-semibold">{allPostIts.length}</span>
+              <span className="text-muted-foreground">notes</span>
             </div>
-            <div className="text-2xl font-bold">
-              {formatDuration(
-                objectiveSessions.reduce((sum, s) => sum + (s.actualDuration || s.duration), 0)
-              )}
+            <div className="flex items-center gap-2">
+              <Heart className="w-4 h-4 text-pink-500" />
+              <span className="font-semibold">{likedPostIts.length}</span>
+              <span className="text-muted-foreground">likes</span>
             </div>
-          </div>
-          <div className="bg-card border border-border rounded-xl p-4">
-            <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-              <CheckCircle2 className="w-4 h-4" />
-              High Impact
+            <div className="flex items-center gap-2">
+              <Library className="w-4 h-4 text-blue-500" />
+              <span className="font-semibold">{postItCollections.length}</span>
+              <span className="text-muted-foreground">collections</span>
             </div>
-            <div className="text-2xl font-bold text-green-500">
-              {objectiveSessions.filter((s) => (s.distractions?.length || 0) === 0).length}
-            </div>
-          </div>
-          <div className="bg-card border border-border rounded-xl p-4">
-            <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-              <StickyNote className="w-4 h-4" />
-              Notes Captured
-            </div>
-            <div className="text-2xl font-bold text-primary">
-              {objectiveSessions.reduce((sum, s) => sum + (s.postIts?.length || 0), 0)}
-            </div>
-          </div>
-        </motion.div>
+          </motion.div>
 
-        {/* Sessions List */}
-        <div className="space-y-4">
-          {objectiveSessions.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-16 bg-card border border-border rounded-xl"
-            >
-              <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No sessions yet</h3>
-              <p className="text-muted-foreground text-sm mb-4">
-                Start your first focus session to see your progress here
-              </p>
+          {/* Tabs */}
+          <div className="flex gap-2 mt-6">
+            {[
+              { id: "sessions", label: "Sessions", icon: Zap },
+              { id: "postits", label: "Post-its", icon: StickyNote },
+              { id: "collections", label: "Collections", icon: Library },
+            ].map((tab) => (
               <button
-                onClick={() => router.push("/app/focus")}
-                className="text-primary hover:underline text-sm"
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as Tab)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  activeTab === tab.id
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-white/5 hover:bg-white/10 text-muted-foreground"
+                }`}
               >
-                Go to Focus Mode
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
               </button>
-            </motion.div>
-          ) : (
-            <AnimatePresence>
-              {objectiveSessions.map((session, index) => {
-                const impact = getImpactLevel(session)
-                const isExpanded = expandedSession === session.id
-                const hasPostIts = session.postIts && session.postIts.length > 0
-
-                return (
-                  <motion.div
-                    key={session.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="bg-card border border-border rounded-xl overflow-hidden"
-                  >
-                    {/* Session Header - Clickable */}
-                    <button
-                      onClick={() => toggleSession(session.id)}
-                      className="w-full p-4 flex items-center justify-between hover:bg-muted/30 transition-colors"
-                    >
-                      <div className="flex items-center gap-4">
-                        {/* Date & Time */}
-                        <div className="text-left">
-                          <div className="font-medium">
-                            {formatDate(session.endedAt!)}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {formatTime(session.startedAt)} - {formatTime(session.endedAt!)}
-                          </div>
-                        </div>
-
-                        {/* Duration */}
-                        <div className="hidden md:flex items-center gap-1 text-sm text-muted-foreground">
-                          <Clock className="w-4 h-4" />
-                          {formatDuration(session.actualDuration || session.duration)}
-                        </div>
-
-                        {/* Impact Badge */}
-                        <div className={`hidden md:flex items-center gap-1 text-xs px-2 py-1 rounded-full ${impact.bg} ${impact.color}`}>
-                          {impact.label}
-                        </div>
-
-                        {/* Post-its indicator */}
-                        {hasPostIts && (
-                          <div className="flex items-center gap-1 text-xs text-primary">
-                            <StickyNote className="w-4 h-4" />
-                            <span className="hidden md:inline">{session.postIts!.length} notes</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Expand/Collapse */}
-                      <div className="flex items-center gap-2">
-                        {session.distractions?.length > 0 && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <AlertTriangle className="w-4 h-4" />
-                            {session.distractions.length}
-                          </div>
-                        )}
-                        {isExpanded ? (
-                          <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                        ) : (
-                          <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                        )}
-                      </div>
-                    </button>
-
-                    {/* Expanded Content */}
-                    <AnimatePresence>
-                      {isExpanded && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="border-t border-border"
-                        >
-                          <div className="p-4 space-y-4">
-                            {/* Mobile stats */}
-                            <div className="flex md:hidden items-center gap-4 text-sm">
-                              <div className="flex items-center gap-1 text-muted-foreground">
-                                <Clock className="w-4 h-4" />
-                                {formatDuration(session.actualDuration || session.duration)}
-                              </div>
-                              <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${impact.bg} ${impact.color}`}>
-                                {impact.label}
-                              </div>
-                            </div>
-
-                            {/* Reflection */}
-                            {session.reflection && (
-                              <div>
-                                <h4 className="text-sm font-medium text-muted-foreground mb-1">
-                                  Reflection
-                                </h4>
-                                <p className="text-sm bg-muted/30 rounded-lg p-3">
-                                  {session.reflection}
-                                </p>
-                              </div>
-                            )}
-
-                            {/* Next Action */}
-                            {session.nextAction && (
-                              <div>
-                                <h4 className="text-sm font-medium text-muted-foreground mb-1">
-                                  Next Action
-                                </h4>
-                                <p className="text-sm bg-primary/10 text-primary rounded-lg p-3">
-                                  {session.nextAction}
-                                </p>
-                              </div>
-                            )}
-
-                            {/* Post-its */}
-                            {hasPostIts && (
-                              <div>
-                                <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
-                                  <StickyNote className="w-4 h-4" />
-                                  Session Notes ({session.postIts!.length})
-                                </h4>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                  {session.postIts!.map((postIt) => (
-                                    <div
-                                      key={postIt.id}
-                                      className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-900 dark:text-yellow-100 rounded-lg p-3 text-sm"
-                                      style={{
-                                        transform: `rotate(${postIt.rotation}deg)`,
-                                      }}
-                                    >
-                                      {postIt.text}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Distractions */}
-                            {session.distractions && session.distractions.length > 0 && (
-                              <div>
-                                <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
-                                  <AlertTriangle className="w-4 h-4" />
-                                  Distractions ({session.distractions.length})
-                                </h4>
-                                <div className="space-y-1">
-                                  {session.distractions.map((distraction) => (
-                                    <div
-                                      key={distraction.id}
-                                      className="text-sm text-muted-foreground bg-muted/30 rounded px-3 py-2"
-                                    >
-                                      {distraction.text}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
-                )
-              })}
-            </AnimatePresence>
-          )}
+            ))}
+          </div>
         </div>
       </div>
+
+      {/* Content */}
+      <div className="px-4 md:px-8 pb-8">
+        <AnimatePresence mode="wait">
+          {/* Sessions Tab */}
+          {activeTab === "sessions" && (
+            <motion.div
+              key="sessions"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-3"
+            >
+              {objectiveSessions.length === 0 ? (
+                <div className="text-center py-16 bg-card border border-border rounded-2xl">
+                  <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">Aucune session</h3>
+                  <p className="text-muted-foreground text-sm mb-4">
+                    Lance ta premiere session de focus
+                  </p>
+                  <button
+                    onClick={() => router.push("/app/focus")}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
+                  >
+                    <Play className="w-4 h-4" />
+                    Go Focus
+                  </button>
+                </div>
+              ) : (
+                objectiveSessions.map((session, index) => (
+                  <SessionCard
+                    key={session.id}
+                    session={session}
+                    index={index}
+                    isExpanded={expandedSession === session.id}
+                    onToggle={() => setExpandedSession(expandedSession === session.id ? null : session.id)}
+                    onLikePostIt={(postItId) => togglePostItLike(session.id, postItId)}
+                    onAddToCollection={(postItId) => setAddingToCollection(postItId)}
+                    formatDate={formatDate}
+                    formatTime={formatTime}
+                    formatDuration={formatDuration}
+                  />
+                ))
+              )}
+            </motion.div>
+          )}
+
+          {/* Post-its Tab */}
+          {activeTab === "postits" && (
+            <motion.div
+              key="postits"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              {/* Liked section */}
+              {likedPostIts.length > 0 && (
+                <div className="mb-8">
+                  <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Heart className="w-5 h-5 text-pink-500 fill-pink-500" />
+                    Notes likees
+                  </h2>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {likedPostIts.map((postIt) => (
+                      <PostItCard
+                        key={postIt.id}
+                        postIt={postIt}
+                        onLike={() => postIt.sessionId && togglePostItLike(postIt.sessionId, postIt.id)}
+                        onAddToCollection={() => setAddingToCollection(postIt.id)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* All post-its */}
+              <div>
+                <h2 className="text-lg font-semibold mb-4">Toutes les notes</h2>
+                {allPostIts.length === 0 ? (
+                  <div className="text-center py-16 bg-card border border-border rounded-2xl">
+                    <StickyNote className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Pas encore de notes</h3>
+                    <p className="text-muted-foreground text-sm">
+                      Tes post-its de session apparaitront ici
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {allPostIts.map((postIt) => (
+                      <PostItCard
+                        key={postIt.id}
+                        postIt={postIt}
+                        onLike={() => postIt.sessionId && togglePostItLike(postIt.sessionId, postIt.id)}
+                        onAddToCollection={() => setAddingToCollection(postIt.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Collections Tab */}
+          {activeTab === "collections" && (
+            <motion.div
+              key="collections"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              {/* Create collection button */}
+              <button
+                onClick={() => setShowNewCollectionModal(true)}
+                className="w-full mb-6 p-4 border-2 border-dashed border-white/10 hover:border-primary/30 rounded-2xl flex items-center justify-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+              >
+                <FolderPlus className="w-5 h-5" />
+                Creer une collection
+              </button>
+
+              {/* Collections grid */}
+              {postItCollections.length === 0 ? (
+                <div className="text-center py-16 bg-card border border-border rounded-2xl">
+                  <Library className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">Pas de collections</h3>
+                  <p className="text-muted-foreground text-sm">
+                    Organise tes notes en collections
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {postItCollections.map((collection) => (
+                    <CollectionCard
+                      key={collection.id}
+                      collection={collection}
+                      postIts={getCollectionPostIts(collection)}
+                      onSelect={() => setSelectedCollection(collection.id)}
+                      onDelete={() => deleteCollection(collection.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* New Collection Modal */}
+      <AnimatePresence>
+        {showNewCollectionModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowNewCollectionModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-card border border-border rounded-2xl p-6 w-full max-w-md"
+            >
+              <h2 className="text-xl font-bold mb-4">Nouvelle collection</h2>
+
+              <div className="space-y-4">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      const emojis = ["📌", "💡", "🎯", "⭐", "🔥", "💎", "🚀", "📝"]
+                      const current = emojis.indexOf(newCollectionEmoji)
+                      setNewCollectionEmoji(emojis[(current + 1) % emojis.length])
+                    }}
+                    className="w-14 h-14 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-2xl transition-colors"
+                  >
+                    {newCollectionEmoji}
+                  </button>
+                  <input
+                    type="text"
+                    value={newCollectionName}
+                    onChange={(e) => setNewCollectionName(e.target.value)}
+                    placeholder="Nom de la collection"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowNewCollectionModal(false)}
+                  className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 font-medium transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleCreateCollection}
+                  disabled={!newCollectionName.trim()}
+                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Creer
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Add to Collection Modal */}
+      <AnimatePresence>
+        {addingToCollection && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setAddingToCollection(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-card border border-border rounded-2xl p-6 w-full max-w-md"
+            >
+              <h2 className="text-xl font-bold mb-4">Ajouter a une collection</h2>
+
+              {postItCollections.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-4">Pas encore de collection</p>
+                  <button
+                    onClick={() => {
+                      setAddingToCollection(null)
+                      setShowNewCollectionModal(true)
+                    }}
+                    className="text-primary hover:underline"
+                  >
+                    Creer une collection
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {postItCollections.map((collection) => (
+                    <button
+                      key={collection.id}
+                      onClick={() => handleAddToCollection(addingToCollection, collection.id)}
+                      className="w-full p-3 rounded-xl bg-white/5 hover:bg-white/10 flex items-center gap-3 transition-colors"
+                    >
+                      <span className="text-xl">{collection.emoji || "📁"}</span>
+                      <span className="font-medium">{collection.name}</span>
+                      <span className="text-xs text-muted-foreground ml-auto">
+                        {collection.postItIds.length} notes
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <button
+                onClick={() => setAddingToCollection(null)}
+                className="w-full mt-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 font-medium transition-colors"
+              >
+                Annuler
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Collection Detail Modal */}
+      <AnimatePresence>
+        {selectedCollection && (
+          <CollectionDetailModal
+            collection={postItCollections.find(c => c.id === selectedCollection)!}
+            postIts={getCollectionPostIts(postItCollections.find(c => c.id === selectedCollection)!)}
+            onClose={() => setSelectedCollection(null)}
+            onRemovePostIt={(postItId) => removePostItFromCollection(selectedCollection, postItId)}
+            onLikePostIt={(sessionId, postItId) => togglePostItLike(sessionId, postItId)}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  )
+}
+
+// Session Card Component
+function SessionCard({
+  session,
+  index,
+  isExpanded,
+  onToggle,
+  onLikePostIt,
+  onAddToCollection,
+  formatDate,
+  formatTime,
+  formatDuration,
+}: {
+  session: FocusSession
+  index: number
+  isExpanded: boolean
+  onToggle: () => void
+  onLikePostIt: (postItId: string) => void
+  onAddToCollection: (postItId: string) => void
+  formatDate: (date: string) => string
+  formatTime: (date: string) => string
+  formatDuration: (minutes: number) => string
+}) {
+  const distractions = session.distractions?.length || 0
+  const impact = distractions === 0
+    ? { label: "Perfect", color: "text-green-500", bg: "bg-green-500/10" }
+    : distractions <= 2
+    ? { label: "Good", color: "text-yellow-500", bg: "bg-yellow-500/10" }
+    : { label: "Tough", color: "text-red-500", bg: "bg-red-500/10" }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.03 }}
+      className="bg-card border border-border rounded-2xl overflow-hidden"
+    >
+      <button
+        onClick={onToggle}
+        className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors"
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Zap className="w-5 h-5 text-primary" />
+          </div>
+          <div className="text-left">
+            <div className="font-medium">{formatDate(session.endedAt!)}</div>
+            <div className="text-sm text-muted-foreground flex items-center gap-2">
+              <span>{formatTime(session.startedAt)}</span>
+              <span>·</span>
+              <span>{formatDuration(session.actualDuration || session.duration)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className={`hidden md:flex items-center gap-1 text-xs px-2.5 py-1 rounded-full ${impact.bg} ${impact.color}`}>
+            {impact.label}
+          </div>
+          {session.postIts && session.postIts.length > 0 && (
+            <div className="flex items-center gap-1 text-xs text-yellow-500">
+              <StickyNote className="w-4 h-4" />
+              {session.postIts.length}
+            </div>
+          )}
+          {isExpanded ? (
+            <ChevronUp className="w-5 h-5 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-muted-foreground" />
+          )}
+        </div>
+      </button>
+
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="border-t border-border"
+          >
+            <div className="p-4 space-y-4">
+              {session.reflection && (
+                <div>
+                  <h4 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Reflection</h4>
+                  <p className="text-sm bg-white/5 rounded-xl p-3">{session.reflection}</p>
+                </div>
+              )}
+
+              {session.nextAction && (
+                <div>
+                  <h4 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Next Action</h4>
+                  <p className="text-sm bg-primary/10 text-primary rounded-xl p-3">{session.nextAction}</p>
+                </div>
+              )}
+
+              {session.postIts && session.postIts.length > 0 && (
+                <div>
+                  <h4 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                    Post-its ({session.postIts.length})
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {session.postIts.map((postIt) => (
+                      <div
+                        key={postIt.id}
+                        className={`${POST_IT_COLORS[postIt.color || "yellow"]} rounded-xl p-3 text-sm relative group`}
+                      >
+                        <p>{postIt.text}</p>
+                        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onLikePostIt(postIt.id)
+                            }}
+                            className="p-1 rounded-full bg-black/20 hover:bg-black/30"
+                          >
+                            <Heart className={`w-3 h-3 ${postIt.liked ? "fill-pink-500 text-pink-500" : ""}`} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onAddToCollection(postIt.id)
+                            }}
+                            className="p-1 rounded-full bg-black/20 hover:bg-black/30"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {session.distractions && session.distractions.length > 0 && (
+                <div>
+                  <h4 className="text-xs uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    Distractions ({session.distractions.length})
+                  </h4>
+                  <div className="space-y-1">
+                    {session.distractions.map((d) => (
+                      <div key={d.id} className="text-sm text-muted-foreground bg-white/5 rounded-lg px-3 py-2">
+                        {d.text}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+}
+
+// Post-it Card Component
+function PostItCard({
+  postIt,
+  onLike,
+  onAddToCollection,
+}: {
+  postIt: PostIt
+  onLike: () => void
+  onAddToCollection: () => void
+}) {
+  return (
+    <motion.div
+      whileHover={{ scale: 1.02, rotate: postIt.rotation * 0.5 }}
+      className={`${POST_IT_COLORS[postIt.color || "yellow"]} rounded-xl p-4 relative group cursor-pointer`}
+      style={{ transform: `rotate(${postIt.rotation}deg)` }}
+    >
+      <p className="text-sm pr-6">{postIt.text}</p>
+      {postIt.createdAt && (
+        <p className="text-[10px] opacity-60 mt-2">
+          {new Date(postIt.createdAt).toLocaleDateString("fr-FR")}
+        </p>
+      )}
+      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onLike()
+          }}
+          className="p-1.5 rounded-full bg-black/20 hover:bg-black/30 transition-colors"
+        >
+          <Heart className={`w-3.5 h-3.5 ${postIt.liked ? "fill-pink-500 text-pink-500" : ""}`} />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onAddToCollection()
+          }}
+          className="p-1.5 rounded-full bg-black/20 hover:bg-black/30 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </motion.div>
+  )
+}
+
+// Collection Card Component
+function CollectionCard({
+  collection,
+  postIts,
+  onSelect,
+  onDelete,
+}: {
+  collection: PostItCollection
+  postIts: PostIt[]
+  onSelect: () => void
+  onDelete: () => void
+}) {
+  return (
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      onClick={onSelect}
+      className="bg-card border border-border rounded-2xl p-4 cursor-pointer group relative overflow-hidden"
+    >
+      {/* Preview grid of post-its */}
+      <div className="grid grid-cols-2 gap-1 mb-4 h-24 overflow-hidden rounded-xl">
+        {postIts.slice(0, 4).map((postIt, i) => (
+          <div
+            key={postIt.id}
+            className={`${POST_IT_COLORS[postIt.color || "yellow"]} p-2 text-[10px] overflow-hidden`}
+          >
+            {postIt.text.slice(0, 30)}...
+          </div>
+        ))}
+        {postIts.length === 0 && (
+          <div className="col-span-2 flex items-center justify-center text-muted-foreground text-sm">
+            Collection vide
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <span className="text-2xl">{collection.emoji || "📁"}</span>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold truncate">{collection.name}</h3>
+          <p className="text-xs text-muted-foreground">{postIts.length} notes</p>
+        </div>
+      </div>
+
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          onDelete()
+        }}
+        className="absolute top-3 right-3 p-2 rounded-full bg-red-500/10 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/20"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
+    </motion.div>
+  )
+}
+
+// Collection Detail Modal
+function CollectionDetailModal({
+  collection,
+  postIts,
+  onClose,
+  onRemovePostIt,
+  onLikePostIt,
+}: {
+  collection: PostItCollection
+  postIts: PostIt[]
+  onClose: () => void
+  onRemovePostIt: (postItId: string) => void
+  onLikePostIt: (sessionId: string, postItId: string) => void
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-card border border-border rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden"
+      >
+        {/* Header */}
+        <div className="p-6 border-b border-border flex items-center gap-4">
+          <span className="text-4xl">{collection.emoji || "📁"}</span>
+          <div className="flex-1">
+            <h2 className="text-2xl font-bold">{collection.name}</h2>
+            <p className="text-muted-foreground text-sm">{postIts.length} notes</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full hover:bg-white/10 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto max-h-[60vh]">
+          {postIts.length === 0 ? (
+            <div className="text-center py-12">
+              <StickyNote className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">Cette collection est vide</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {postIts.map((postIt) => (
+                <div
+                  key={postIt.id}
+                  className={`${POST_IT_COLORS[postIt.color || "yellow"]} rounded-xl p-4 relative group`}
+                >
+                  <p className="text-sm">{postIt.text}</p>
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => postIt.sessionId && onLikePostIt(postIt.sessionId, postIt.id)}
+                      className="p-1.5 rounded-full bg-black/20 hover:bg-black/30"
+                    >
+                      <Heart className={`w-3.5 h-3.5 ${postIt.liked ? "fill-pink-500 text-pink-500" : ""}`} />
+                    </button>
+                    <button
+                      onClick={() => onRemovePostIt(postIt.id)}
+                      className="p-1.5 rounded-full bg-black/20 hover:bg-black/30"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
   )
 }

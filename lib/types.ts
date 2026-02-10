@@ -215,6 +215,125 @@ export interface AIGeneratedPlan {
   why: string
 }
 
+// AI Roadmap Analysis - Generated after onboarding
+export interface AIRoadmap {
+  id: string
+  objectiveId: string
+  generatedAt: string
+
+  // High-level summary
+  summary: {
+    totalWeeks: number
+    totalMilestones: number
+    estimatedCompletionDate: string
+    confidenceLevel: "high" | "medium" | "low"
+    riskLevel: "low" | "moderate" | "high"
+  }
+
+  // Detailed milestones with checkpoints
+  milestones: Milestone[]
+
+  // Weekly targets for trajectory
+  weeklyTargets: WeeklyTarget[]
+
+  // Risk analysis
+  risks: RiskAnalysis[]
+
+  // Key metrics to track
+  keyMetrics: KeyMetric[]
+
+  // AI recommendations
+  recommendations: string[]
+}
+
+export interface Milestone {
+  id: string
+  order: number
+  title: string
+  description: string
+  targetDate: string
+  targetProgress: number // 0-100, cumulative progress at this milestone
+  checkpoints: Checkpoint[]
+  status: "upcoming" | "in_progress" | "completed" | "at_risk"
+  completedAt?: string
+}
+
+export interface Checkpoint {
+  id: string
+  title: string
+  description: string
+  targetDate: string
+  isCompleted: boolean
+  completedAt?: string
+}
+
+export interface WeeklyTarget {
+  weekNumber: number
+  startDate: string
+  endDate: string
+  targetProgress: number // Expected cumulative progress by end of week
+  targetSessions: number // Expected sessions this week
+  focusArea: string // What to focus on this week
+  milestone?: string // If a milestone falls this week
+}
+
+export interface RiskAnalysis {
+  id: string
+  category: "time" | "motivation" | "resources" | "external" | "skill"
+  title: string
+  description: string
+  probability: "low" | "medium" | "high"
+  impact: "low" | "medium" | "high"
+  mitigation: string
+}
+
+export interface KeyMetric {
+  id: string
+  name: string
+  target: number
+  unit: string
+  currentValue: number
+  trend: "up" | "down" | "stable"
+}
+
+// Timetable Analyzer
+export type TimetablePriority = "high" | "medium" | "low"
+
+export interface TimetableBlock {
+  id: string
+  day: "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"
+  startTime: string       // "09:00" (24h format)
+  endTime: string         // "10:30"
+  title: string
+  category: string        // "Deep Work", "Meeting", "Admin", "Personal", "Class", "Break", etc.
+  priority: TimetablePriority
+  reasoning: string
+  suggestion?: string
+}
+
+export interface TimetableAnalysis {
+  id: string
+  objectiveId: string
+  analyzedAt: string
+  blocks: TimetableBlock[]
+  summary: {
+    totalBlocks: number
+    highPriorityCount: number
+    mediumPriorityCount: number
+    lowPriorityCount: number
+    highPriorityHours: number
+    mediumPriorityHours: number
+    lowPriorityHours: number
+    focusScore: number         // 0-100
+  }
+  insights: {
+    topInsight: string
+    biggestTimeWaster: string
+    bestTimeSlot: string
+    recommendations: string[]
+  }
+}
+
 // App State
 export interface AppState {
   objective: Objective | null
@@ -228,6 +347,8 @@ export interface AppState {
   thievesAssessment: ThievesAssessment | null
   // AI Onboarding
   aiPlan: AIGeneratedPlan | null
+  // AI Roadmap - detailed analysis
+  aiRoadmap: AIRoadmap | null
   // Core Mechanic: Domino + Contract
   dominoChain: DominoChain | null
   contractMeter: ContractMeter | null

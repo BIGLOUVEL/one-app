@@ -14,16 +14,31 @@ import {
   ThiefType,
   Distraction,
   AIGeneratedPlan,
+  AIRoadmap,
+  Milestone,
   DominoChain,
   ContractMeter,
   ContractState,
   PostItCollection,
   PostIt,
+  TimetableAnalysis,
 } from "@/lib/types"
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
 
+export type Language = 'en' | 'fr'
+
 interface AppStore {
+  // Language preference
+  language: Language
+  setLanguage: (lang: Language) => void
+
+  // User profile
+  firstName: string
+  setFirstName: (name: string) => void
+  aiName: string
+  setAIName: (name: string) => void
+
   // User tracking (to clear data on user change)
   userId: string | null
 
@@ -39,14 +54,31 @@ interface AppStore {
   reviews: WeeklyReview[]
   thievesAssessment: ThievesAssessment | null
   aiPlan: AIGeneratedPlan | null
+  aiRoadmap: AIRoadmap | null
+  isGeneratingRoadmap: boolean
 
   // Core Mechanic: Domino + Contract
   dominoChain: DominoChain | null
   contractMeter: ContractMeter | null
   plannedSessionsPerDay: number
 
+  // Domino Effect
+  lastDailyCheckDate: string | null
+  needsRecenter: boolean
+
+  // Task completion
+  rightNowCompleted: boolean
+  todayGoalCompleted: boolean
+
   // Session post-its (persist across page refreshes during session)
   sessionPostIts: Array<{ id: string; text: string; x: number; y: number; rotation: number }>
+
+  // Timetable Analyzer
+  timetableAnalysis: TimetableAnalysis | null
+  isAnalyzingTimetable: boolean
+  setTimetableAnalysis: (analysis: TimetableAnalysis) => void
+  clearTimetableAnalysis: () => void
+  setIsAnalyzingTimetable: (value: boolean) => void
 
   // AI Insights cache (rate limited: 1 per 48h)
   aiInsightsCache: {
@@ -56,6 +88,21 @@ interface AppStore {
 
   // Post-it Collections
   postItCollections: PostItCollection[]
+
+  // Visual Preferences (toggleable effects)
+  visualPrefs: {
+    breathingGradient: boolean      // Dashboard hero breathing effect
+    circularProgress: boolean       // Circular progress around lock icon
+    immersiveFocus: boolean         // Dark immersive focus mode
+    confettiOnComplete: boolean     // Confetti when session ends
+    tiltPostIts: boolean            // 3D tilt effect on post-its
+    bouncingHeart: boolean          // Bouncing animation on like
+    bounceIcons: boolean            // Sidebar icons bounce on hover
+    milestoneAnimations: boolean    // Celebrate 25%, 50%, 75%
+    streakFire: boolean             // Fire animation for 7+ day streak
+  }
+  setVisualPref: (key: keyof AppStore['visualPrefs'], value: boolean) => void
+  resetVisualPrefs: () => void
 
   // Post-it Actions
   setSessionPostIts: (postIts: Array<{ id: string; text: string; x: number; y: number; rotation: number }>) => void
@@ -79,6 +126,14 @@ interface AppStore {
   setAIPlan: (plan: AIGeneratedPlan) => void
   setObjectiveFromAI: (plan: AIGeneratedPlan, deadline: string) => void
   clearAIPlan: () => void
+
+  // AI Roadmap Actions
+  setAIRoadmap: (roadmap: AIRoadmap) => void
+  setIsGeneratingRoadmap: (value: boolean) => void
+  updateMilestoneStatus: (milestoneId: string, status: Milestone["status"]) => void
+  completeMilestone: (milestoneId: string) => void
+  completeCheckpoint: (milestoneId: string, checkpointId: string) => void
+  clearAIRoadmap: () => void
 
   // Objective Actions
   setObjective: (data: {
@@ -129,6 +184,16 @@ interface AppStore {
   updateContractState: () => ContractState
   setPlannedSessionsPerDay: (count: number) => void
 
+  // Domino Effect Actions
+  setLastDailyCheckDate: (date: string) => void
+  needsDailyCheck: () => boolean
+  setNeedsRecenter: (value: boolean) => void
+
+  // Task Completion Actions
+  completeRightNow: () => void
+  completeTodayGoal: () => void
+  setNewRightNowAction: (action: string) => void
+
   // User tracking
   setUserId: (id: string) => void
   clearAllData: () => void
@@ -145,6 +210,16 @@ interface AppStore {
 export const useAppStore = create<AppStore>()(
   persist(
     (set, get) => ({
+      // Language
+      language: 'en' as Language,
+      setLanguage: (lang: Language) => set({ language: lang }),
+
+      // User profile
+      firstName: '',
+      setFirstName: (name: string) => set({ firstName: name }),
+      aiName: 'Tony',
+      setAIName: (name: string) => set({ aiName: name }),
+
       // User tracking
       userId: null,
 
@@ -160,11 +235,25 @@ export const useAppStore = create<AppStore>()(
       reviews: [],
       thievesAssessment: null,
       aiPlan: null,
+      aiRoadmap: null,
+      isGeneratingRoadmap: false,
 
       // Core Mechanic
       dominoChain: null,
       contractMeter: null,
       plannedSessionsPerDay: 1,
+
+      // Domino Effect
+      lastDailyCheckDate: null,
+      needsRecenter: false,
+
+      // Task completion
+      rightNowCompleted: false,
+      todayGoalCompleted: false,
+
+      // Timetable Analyzer
+      timetableAnalysis: null,
+      isAnalyzingTimetable: false,
 
       // Session post-its
       sessionPostIts: [],
@@ -177,6 +266,40 @@ export const useAppStore = create<AppStore>()(
 
       // Post-it Collections
       postItCollections: [],
+
+      // Visual Preferences (all enabled by default)
+      visualPrefs: {
+        breathingGradient: true,
+        circularProgress: true,
+        immersiveFocus: true,
+        confettiOnComplete: true,
+        tiltPostIts: true,
+        bouncingHeart: true,
+        bounceIcons: true,
+        milestoneAnimations: true,
+        streakFire: true,
+      },
+
+      setVisualPref: (key, value) => {
+        const { visualPrefs } = get()
+        set({ visualPrefs: { ...visualPrefs, [key]: value } })
+      },
+
+      resetVisualPrefs: () => {
+        set({
+          visualPrefs: {
+            breathingGradient: true,
+            circularProgress: true,
+            immersiveFocus: true,
+            confettiOnComplete: true,
+            tiltPostIts: true,
+            bouncingHeart: true,
+            bounceIcons: true,
+            milestoneAnimations: true,
+            streakFire: true,
+          },
+        })
+      },
 
       // Post-it Actions
       setSessionPostIts: (postIts) => {
@@ -298,6 +421,23 @@ export const useAppStore = create<AppStore>()(
         return { canFetch: hoursSince >= 48, hoursRemaining }
       },
 
+      // Timetable Analyzer Actions
+      setTimetableAnalysis: (analysis) => {
+        const { objective } = get()
+        if (objective) {
+          analysis.objectiveId = objective.id
+        }
+        set({ timetableAnalysis: analysis, isAnalyzingTimetable: false })
+      },
+
+      clearTimetableAnalysis: () => {
+        set({ timetableAnalysis: null, isAnalyzingTimetable: false })
+      },
+
+      setIsAnalyzingTimetable: (value) => {
+        set({ isAnalyzingTimetable: value })
+      },
+
       // User tracking actions
       setUserId: (id) => {
         set({ userId: id })
@@ -316,12 +456,21 @@ export const useAppStore = create<AppStore>()(
           reviews: [],
           thievesAssessment: null,
           aiPlan: null,
+          aiRoadmap: null,
+          isGeneratingRoadmap: false,
           dominoChain: null,
           contractMeter: null,
           plannedSessionsPerDay: 1,
           sessionPostIts: [],
           aiInsightsCache: { data: null, lastFetched: null },
           postItCollections: [],
+          lastDailyCheckDate: null,
+          needsRecenter: false,
+          rightNowCompleted: false,
+          todayGoalCompleted: false,
+          timetableAnalysis: null,
+          isAnalyzingTimetable: false,
+          // Note: visualPrefs are NOT cleared - they're user preferences
         })
       },
 
@@ -387,6 +536,67 @@ export const useAppStore = create<AppStore>()(
 
       clearAIPlan: () => {
         set({ aiPlan: null })
+      },
+
+      // AI Roadmap Actions
+      setAIRoadmap: (roadmap) => {
+        const { objective } = get()
+        if (objective) {
+          roadmap.objectiveId = objective.id
+        }
+        set({ aiRoadmap: roadmap, isGeneratingRoadmap: false })
+      },
+
+      setIsGeneratingRoadmap: (value) => {
+        set({ isGeneratingRoadmap: value })
+      },
+
+      updateMilestoneStatus: (milestoneId, status) => {
+        const { aiRoadmap } = get()
+        if (!aiRoadmap) return
+
+        const updatedMilestones = aiRoadmap.milestones.map((m) =>
+          m.id === milestoneId ? { ...m, status } : m
+        )
+        set({
+          aiRoadmap: { ...aiRoadmap, milestones: updatedMilestones },
+        })
+      },
+
+      completeMilestone: (milestoneId) => {
+        const { aiRoadmap } = get()
+        if (!aiRoadmap) return
+
+        const updatedMilestones = aiRoadmap.milestones.map((m) =>
+          m.id === milestoneId
+            ? { ...m, status: "completed" as const, completedAt: new Date().toISOString() }
+            : m
+        )
+        set({
+          aiRoadmap: { ...aiRoadmap, milestones: updatedMilestones },
+        })
+      },
+
+      completeCheckpoint: (milestoneId, checkpointId) => {
+        const { aiRoadmap } = get()
+        if (!aiRoadmap) return
+
+        const updatedMilestones = aiRoadmap.milestones.map((m) => {
+          if (m.id !== milestoneId) return m
+          const updatedCheckpoints = m.checkpoints.map((c) =>
+            c.id === checkpointId
+              ? { ...c, isCompleted: true, completedAt: new Date().toISOString() }
+              : c
+          )
+          return { ...m, checkpoints: updatedCheckpoints }
+        })
+        set({
+          aiRoadmap: { ...aiRoadmap, milestones: updatedMilestones },
+        })
+      },
+
+      clearAIRoadmap: () => {
+        set({ aiRoadmap: null, isGeneratingRoadmap: false })
       },
 
       // Objective Actions
@@ -611,7 +821,7 @@ export const useAppStore = create<AppStore>()(
       },
 
       endSession: (reflection, nextAction) => {
-        const { currentSession, sessions, habitChallenge, dominoChain, contractMeter, sessionPostIts } = get()
+        const { currentSession, sessions, habitChallenge, dominoChain, contractMeter, sessionPostIts, objective, plannedSessionsPerDay } = get()
         if (!currentSession) return
 
         const endedSession: FocusSession = {
@@ -645,6 +855,26 @@ export const useAppStore = create<AppStore>()(
             lastActivityDate: now,
             tensionLevel: Math.max(0, contractMeter.tensionLevel - 20),
             daysInactive: 0,
+          }
+        }
+
+        // Calculate and update progress based on sessions completed
+        let updatedObjective = objective
+        if (objective && objective.status === "active") {
+          const startDate = new Date(objective.createdAt)
+          const endDate = new Date(objective.deadline)
+          const totalDays = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)))
+          const totalExpectedSessions = totalDays * plannedSessionsPerDay
+
+          // Count sessions for this objective (including the one just ended)
+          const objectiveSessions = sessions.filter(s => s.objectiveId === objective.id).length + 1
+
+          // Calculate progress as percentage of expected sessions completed
+          const newProgress = Math.min(99, Math.round((objectiveSessions / totalExpectedSessions) * 100))
+
+          updatedObjective = {
+            ...objective,
+            progress: newProgress,
           }
         }
 
@@ -702,6 +932,8 @@ export const useAppStore = create<AppStore>()(
           dominoChain: updatedDominoChain,
           contractMeter: updatedContractMeter,
           sessionPostIts: [], // Clear post-its after saving to session
+          objective: updatedObjective,
+          needsRecenter: true,
         })
       },
 
@@ -934,6 +1166,73 @@ export const useAppStore = create<AppStore>()(
             })
           }
         }
+      },
+
+      // Domino Effect Actions
+      setLastDailyCheckDate: (date) => {
+        set({ lastDailyCheckDate: date, rightNowCompleted: false, todayGoalCompleted: false })
+      },
+
+      needsDailyCheck: () => {
+        const { lastDailyCheckDate, objective } = get()
+        if (!objective || objective.status !== "active") return false
+        const today = new Date().toLocaleDateString("en-CA") // YYYY-MM-DD local
+        return lastDailyCheckDate !== today
+      },
+
+      setNeedsRecenter: (value) => {
+        set({ needsRecenter: value })
+      },
+
+      // Task Completion Actions
+      completeRightNow: () => {
+        set({ rightNowCompleted: true })
+      },
+
+      completeTodayGoal: () => {
+        const { dominoChain, contractMeter } = get()
+        const now = new Date().toISOString()
+
+        let updatedDominoChain = dominoChain
+        let updatedContractMeter = contractMeter
+
+        if (dominoChain) {
+          updatedDominoChain = {
+            ...dominoChain,
+            completedDominos: dominoChain.completedDominos + 1,
+            lastSessionDate: now,
+          }
+        }
+
+        if (contractMeter) {
+          updatedContractMeter = {
+            ...contractMeter,
+            state: "stable",
+            lastActivityDate: now,
+            tensionLevel: Math.max(0, contractMeter.tensionLevel - 20),
+            daysInactive: 0,
+          }
+        }
+
+        set({
+          todayGoalCompleted: true,
+          dominoChain: updatedDominoChain,
+          contractMeter: updatedContractMeter,
+        })
+      },
+
+      setNewRightNowAction: (action) => {
+        const { objective } = get()
+        if (!objective) return
+
+        set({
+          objective: {
+            ...objective,
+            rightNowAction: action,
+            title: objective.title,
+          },
+          rightNowCompleted: false,
+        })
       },
 
       // Computed

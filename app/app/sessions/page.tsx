@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
@@ -26,6 +26,7 @@ import {
 } from "lucide-react"
 import { useAppStore, useHasHydrated } from "@/store/useAppStore"
 import { FocusSession, PostIt, PostItCollection } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
 type Tab = "sessions" | "postits" | "collections"
 
@@ -51,6 +52,7 @@ export default function SessionsPage() {
     addPostItToCollection,
     removePostItFromCollection,
     getAllPostIts,
+    visualPrefs,
   } = useAppStore()
 
   const [activeTab, setActiveTab] = useState<Tab>("sessions")
@@ -58,12 +60,15 @@ export default function SessionsPage() {
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null)
   const [showNewCollectionModal, setShowNewCollectionModal] = useState(false)
   const [newCollectionName, setNewCollectionName] = useState("")
-  const [newCollectionEmoji, setNewCollectionEmoji] = useState("📌")
+  const [newCollectionEmoji, setNewCollectionEmoji] = useState("#")
   const [addingToCollection, setAddingToCollection] = useState<string | null>(null)
+
+  const lang = useAppStore(s => s.language)
+  const t = (en: string, fr: string) => lang === 'fr' ? fr : en
 
   useEffect(() => {
     if (hasHydrated && !objective) {
-      router.push("/app/define")
+      router.push("/app/onboarding")
     }
   }, [objective, hasHydrated, router])
 
@@ -84,7 +89,7 @@ export default function SessionsPage() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString("fr-FR", {
+    return date.toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', {
       weekday: "short",
       day: "numeric",
       month: "short",
@@ -93,7 +98,7 @@ export default function SessionsPage() {
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleTimeString("fr-FR", {
+    return date.toLocaleTimeString(lang === 'fr' ? 'fr-FR' : 'en-US', {
       hour: "2-digit",
       minute: "2-digit",
     })
@@ -110,7 +115,7 @@ export default function SessionsPage() {
     if (!newCollectionName.trim()) return
     createCollection(newCollectionName.trim(), newCollectionEmoji)
     setNewCollectionName("")
-    setNewCollectionEmoji("📌")
+    setNewCollectionEmoji("#")
     setShowNewCollectionModal(false)
   }
 
@@ -137,7 +142,7 @@ export default function SessionsPage() {
           >
             <h1 className="text-3xl md:text-4xl font-bold mb-2">My Library</h1>
             <p className="text-muted-foreground">
-              Tes sessions, notes et collections
+              {t("Your sessions, notes and collections", "Tes sessions, notes et collections")}
             </p>
           </motion.div>
 
@@ -209,9 +214,9 @@ export default function SessionsPage() {
               {objectiveSessions.length === 0 ? (
                 <div className="text-center py-16 bg-card border border-border rounded-2xl">
                   <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Aucune session</h3>
+                  <h3 className="text-lg font-medium mb-2">{t("No sessions", "Aucune session")}</h3>
                   <p className="text-muted-foreground text-sm mb-4">
-                    Lance ta premiere session de focus
+                    {t("Start your first focus session", "Lance ta premiere session de focus")}
                   </p>
                   <button
                     onClick={() => router.push("/app/focus")}
@@ -253,7 +258,7 @@ export default function SessionsPage() {
                 <div className="mb-8">
                   <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                     <Heart className="w-5 h-5 text-pink-500 fill-pink-500" />
-                    Notes likees
+                    {t("Liked notes", "Notes likees")}
                   </h2>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {likedPostIts.map((postIt) => (
@@ -262,6 +267,9 @@ export default function SessionsPage() {
                         postIt={postIt}
                         onLike={() => postIt.sessionId && togglePostItLike(postIt.sessionId, postIt.id)}
                         onAddToCollection={() => setAddingToCollection(postIt.id)}
+                        tiltEnabled={visualPrefs.tiltPostIts}
+                        bouncingHeart={visualPrefs.bouncingHeart}
+                        lang={lang}
                       />
                     ))}
                   </div>
@@ -270,13 +278,13 @@ export default function SessionsPage() {
 
               {/* All post-its */}
               <div>
-                <h2 className="text-lg font-semibold mb-4">Toutes les notes</h2>
+                <h2 className="text-lg font-semibold mb-4">{t("All notes", "Toutes les notes")}</h2>
                 {allPostIts.length === 0 ? (
                   <div className="text-center py-16 bg-card border border-border rounded-2xl">
                     <StickyNote className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-medium mb-2">Pas encore de notes</h3>
+                    <h3 className="text-lg font-medium mb-2">{t("No notes yet", "Pas encore de notes")}</h3>
                     <p className="text-muted-foreground text-sm">
-                      Tes post-its de session apparaitront ici
+                      {t("Your session post-its will appear here", "Tes post-its de session apparaitront ici")}
                     </p>
                   </div>
                 ) : (
@@ -287,6 +295,9 @@ export default function SessionsPage() {
                         postIt={postIt}
                         onLike={() => postIt.sessionId && togglePostItLike(postIt.sessionId, postIt.id)}
                         onAddToCollection={() => setAddingToCollection(postIt.id)}
+                        tiltEnabled={visualPrefs.tiltPostIts}
+                        bouncingHeart={visualPrefs.bouncingHeart}
+                        lang={lang}
                       />
                     ))}
                   </div>
@@ -309,16 +320,16 @@ export default function SessionsPage() {
                 className="w-full mb-6 p-4 border-2 border-dashed border-white/10 hover:border-primary/30 rounded-2xl flex items-center justify-center gap-2 text-muted-foreground hover:text-primary transition-colors"
               >
                 <FolderPlus className="w-5 h-5" />
-                Creer une collection
+                {t("Create a collection", "Creer une collection")}
               </button>
 
               {/* Collections grid */}
               {postItCollections.length === 0 ? (
                 <div className="text-center py-16 bg-card border border-border rounded-2xl">
                   <Library className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Pas de collections</h3>
+                  <h3 className="text-lg font-medium mb-2">{t("No collections", "Pas de collections")}</h3>
                   <p className="text-muted-foreground text-sm">
-                    Organise tes notes en collections
+                    {t("Organize your notes into collections", "Organise tes notes en collections")}
                   </p>
                 </div>
               ) : (
@@ -330,6 +341,7 @@ export default function SessionsPage() {
                       postIts={getCollectionPostIts(collection)}
                       onSelect={() => setSelectedCollection(collection.id)}
                       onDelete={() => deleteCollection(collection.id)}
+                      t={t}
                     />
                   ))}
                 </div>
@@ -356,17 +368,17 @@ export default function SessionsPage() {
               onClick={(e) => e.stopPropagation()}
               className="bg-card border border-border rounded-2xl p-6 w-full max-w-md"
             >
-              <h2 className="text-xl font-bold mb-4">Nouvelle collection</h2>
+              <h2 className="text-xl font-bold mb-4">{t("New collection", "Nouvelle collection")}</h2>
 
               <div className="space-y-4">
                 <div className="flex gap-3">
                   <button
                     onClick={() => {
-                      const emojis = ["📌", "💡", "🎯", "⭐", "🔥", "💎", "🚀", "📝"]
-                      const current = emojis.indexOf(newCollectionEmoji)
-                      setNewCollectionEmoji(emojis[(current + 1) % emojis.length])
+                      const icons = ["#", "A", "B", "C", "I", "P", "S", "X"]
+                      const current = icons.indexOf(newCollectionEmoji)
+                      setNewCollectionEmoji(icons[(current + 1) % icons.length])
                     }}
-                    className="w-14 h-14 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-2xl transition-colors"
+                    className="w-14 h-14 rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary/20 flex items-center justify-center text-lg font-bold text-primary transition-colors"
                   >
                     {newCollectionEmoji}
                   </button>
@@ -374,7 +386,7 @@ export default function SessionsPage() {
                     type="text"
                     value={newCollectionName}
                     onChange={(e) => setNewCollectionName(e.target.value)}
-                    placeholder="Nom de la collection"
+                    placeholder={t("Collection name", "Nom de la collection")}
                     className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary"
                     autoFocus
                   />
@@ -386,14 +398,14 @@ export default function SessionsPage() {
                   onClick={() => setShowNewCollectionModal(false)}
                   className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 font-medium transition-colors"
                 >
-                  Annuler
+                  {t("Cancel", "Annuler")}
                 </button>
                 <button
                   onClick={handleCreateCollection}
                   disabled={!newCollectionName.trim()}
                   className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  Creer
+                  {t("Create", "Creer")}
                 </button>
               </div>
             </motion.div>
@@ -418,11 +430,11 @@ export default function SessionsPage() {
               onClick={(e) => e.stopPropagation()}
               className="bg-card border border-border rounded-2xl p-6 w-full max-w-md"
             >
-              <h2 className="text-xl font-bold mb-4">Ajouter a une collection</h2>
+              <h2 className="text-xl font-bold mb-4">{t("Add to a collection", "Ajouter a une collection")}</h2>
 
               {postItCollections.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">Pas encore de collection</p>
+                  <p className="text-muted-foreground mb-4">{t("No collection yet", "Pas encore de collection")}</p>
                   <button
                     onClick={() => {
                       setAddingToCollection(null)
@@ -430,7 +442,7 @@ export default function SessionsPage() {
                     }}
                     className="text-primary hover:underline"
                   >
-                    Creer une collection
+                    {t("Create a collection", "Creer une collection")}
                   </button>
                 </div>
               ) : (
@@ -441,10 +453,10 @@ export default function SessionsPage() {
                       onClick={() => handleAddToCollection(addingToCollection, collection.id)}
                       className="w-full p-3 rounded-xl bg-white/5 hover:bg-white/10 flex items-center gap-3 transition-colors"
                     >
-                      <span className="text-xl">{collection.emoji || "📁"}</span>
+                      <span className="text-xl">{collection.emoji || "#"}</span>
                       <span className="font-medium">{collection.name}</span>
                       <span className="text-xs text-muted-foreground ml-auto">
-                        {collection.postItIds.length} notes
+                        {collection.postItIds.length} {t("notes", "notes")}
                       </span>
                     </button>
                   ))}
@@ -455,7 +467,7 @@ export default function SessionsPage() {
                 onClick={() => setAddingToCollection(null)}
                 className="w-full mt-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 font-medium transition-colors"
               >
-                Annuler
+                {t("Cancel", "Annuler")}
               </button>
             </motion.div>
           </motion.div>
@@ -471,6 +483,7 @@ export default function SessionsPage() {
             onClose={() => setSelectedCollection(null)}
             onRemovePostIt={(postItId) => removePostItFromCollection(selectedCollection, postItId)}
             onLikePostIt={(sessionId, postItId) => togglePostItLike(sessionId, postItId)}
+            t={t}
           />
         )}
       </AnimatePresence>
@@ -634,38 +647,86 @@ function SessionCard({
   )
 }
 
-// Post-it Card Component
+// Post-it Card Component with 3D tilt effect
 function PostItCard({
   postIt,
   onLike,
   onAddToCollection,
+  tiltEnabled = false,
+  bouncingHeart = false,
+  lang = 'en',
 }: {
   postIt: PostIt
   onLike: () => void
   onAddToCollection: () => void
+  tiltEnabled?: boolean
+  bouncingHeart?: boolean
+  lang?: string
 }) {
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [tilt, setTilt] = useState({ x: 0, y: 0 })
+  const [isLiking, setIsLiking] = useState(false)
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!tiltEnabled || !cardRef.current) return
+    const rect = cardRef.current.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    const centerX = rect.width / 2
+    const centerY = rect.height / 2
+    const rotateX = (y - centerY) / 10
+    const rotateY = (centerX - x) / 10
+    setTilt({ x: rotateX, y: rotateY })
+  }
+
+  const handleMouseLeave = () => {
+    setTilt({ x: 0, y: 0 })
+  }
+
+  const handleLike = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (bouncingHeart) {
+      setIsLiking(true)
+      setTimeout(() => setIsLiking(false), 400)
+    }
+    onLike()
+  }
+
   return (
     <motion.div
-      whileHover={{ scale: 1.02, rotate: postIt.rotation * 0.5 }}
-      className={`${POST_IT_COLORS[postIt.color || "yellow"]} rounded-xl p-4 relative group cursor-pointer`}
-      style={{ transform: `rotate(${postIt.rotation}deg)` }}
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      whileHover={{ scale: tiltEnabled ? 1.05 : 1.02, rotate: postIt.rotation * 0.5 }}
+      className={cn(
+        POST_IT_COLORS[postIt.color || "yellow"],
+        "rounded-xl p-4 relative group cursor-pointer transition-shadow duration-300",
+        tiltEnabled && "hover:shadow-xl hover:shadow-black/20"
+      )}
+      style={{
+        transform: `rotate(${postIt.rotation}deg) perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+        transformStyle: "preserve-3d",
+      }}
     >
       <p className="text-sm pr-6">{postIt.text}</p>
       {postIt.createdAt && (
         <p className="text-[10px] opacity-60 mt-2">
-          {new Date(postIt.createdAt).toLocaleDateString("fr-FR")}
+          {new Date(postIt.createdAt).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US')}
         </p>
       )}
       <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onLike()
-          }}
+        <motion.button
+          onClick={handleLike}
+          animate={isLiking ? { scale: [1, 1.4, 0.9, 1.2, 1] } : {}}
+          transition={{ duration: 0.4 }}
           className="p-1.5 rounded-full bg-black/20 hover:bg-black/30 transition-colors"
         >
-          <Heart className={`w-3.5 h-3.5 ${postIt.liked ? "fill-pink-500 text-pink-500" : ""}`} />
-        </button>
+          <Heart className={cn(
+            "w-3.5 h-3.5 transition-all",
+            postIt.liked && "fill-pink-500 text-pink-500",
+            isLiking && "scale-110"
+          )} />
+        </motion.button>
         <button
           onClick={(e) => {
             e.stopPropagation()
@@ -686,11 +747,13 @@ function CollectionCard({
   postIts,
   onSelect,
   onDelete,
+  t,
 }: {
   collection: PostItCollection
   postIts: PostIt[]
   onSelect: () => void
   onDelete: () => void
+  t: (en: string, fr: string) => string
 }) {
   return (
     <motion.div
@@ -710,16 +773,16 @@ function CollectionCard({
         ))}
         {postIts.length === 0 && (
           <div className="col-span-2 flex items-center justify-center text-muted-foreground text-sm">
-            Collection vide
+            {t("Empty collection", "Collection vide")}
           </div>
         )}
       </div>
 
       <div className="flex items-center gap-3">
-        <span className="text-2xl">{collection.emoji || "📁"}</span>
+        <span className="text-2xl">{collection.emoji || "#"}</span>
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold truncate">{collection.name}</h3>
-          <p className="text-xs text-muted-foreground">{postIts.length} notes</p>
+          <p className="text-xs text-muted-foreground">{postIts.length} {t("notes", "notes")}</p>
         </div>
       </div>
 
@@ -743,12 +806,14 @@ function CollectionDetailModal({
   onClose,
   onRemovePostIt,
   onLikePostIt,
+  t,
 }: {
   collection: PostItCollection
   postIts: PostIt[]
   onClose: () => void
   onRemovePostIt: (postItId: string) => void
   onLikePostIt: (sessionId: string, postItId: string) => void
+  t: (en: string, fr: string) => string
 }) {
   return (
     <motion.div
@@ -767,10 +832,10 @@ function CollectionDetailModal({
       >
         {/* Header */}
         <div className="p-6 border-b border-border flex items-center gap-4">
-          <span className="text-4xl">{collection.emoji || "📁"}</span>
+          <span className="text-4xl">{collection.emoji || "#"}</span>
           <div className="flex-1">
             <h2 className="text-2xl font-bold">{collection.name}</h2>
-            <p className="text-muted-foreground text-sm">{postIts.length} notes</p>
+            <p className="text-muted-foreground text-sm">{postIts.length} {t("notes", "notes")}</p>
           </div>
           <button
             onClick={onClose}
@@ -785,7 +850,7 @@ function CollectionDetailModal({
           {postIts.length === 0 ? (
             <div className="text-center py-12">
               <StickyNote className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">Cette collection est vide</p>
+              <p className="text-muted-foreground">{t("This collection is empty", "Cette collection est vide")}</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">

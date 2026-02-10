@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -22,6 +23,8 @@ import {
   LogOut,
   User,
   History,
+  Library,
+  LayoutGrid,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAppStore } from "@/store/useAppStore"
@@ -54,18 +57,19 @@ import { Logo } from "@/components/ui/logo"
 
 const mainNavItems = [
   { href: "/app", label: "Dashboard", icon: Target, description: "Your ONE thing", color: "primary" },
-  { href: "/app/define", label: "Define", icon: Plus, description: "Set objective", color: "primary", locked: true },
+  { href: "/app/onboarding", label: "Define", icon: Plus, description: "Set objective", color: "primary" },
 ]
 
 const systemNavItems = [
-  { href: "/app/domino", label: "Domino", icon: GitBranch, description: "Goal cascade", color: "violet" },
+  { href: "/app/domino", label: "Domino", icon: GitBranch, description: "Progress & alignment", color: "violet" },
+  { href: "/app/timetable", label: "Timetable", icon: LayoutGrid, description: "Schedule analysis", color: "cyan" },
   { href: "/app/411", label: "4-1-1", icon: Calendar, description: "Weekly goals", color: "cyan" },
   { href: "/app/gps", label: "GPS", icon: Map, description: "Purpose & goals", color: "orange" },
 ]
 
 const focusNavItems = [
   { href: "/app/focus", label: "Focus", icon: Timer, description: "Deep work", color: "primary" },
-  { href: "/app/sessions", label: "Sessions", icon: History, description: "Past sessions", color: "primary" },
+  { href: "/app/sessions", label: "My Library", icon: Library, description: "Sessions & Post-its", color: "violet" },
   { href: "/app/habit", label: "66 Days", icon: Flame, description: "Build habit", color: "orange" },
   { href: "/app/shield", label: "Shield", icon: Shield, description: "Block thieves", color: "cyan" },
   { href: "/app/review", label: "Review", icon: ClipboardCheck, description: "Reflect", color: "violet" },
@@ -76,9 +80,10 @@ function NavItem({ item, isActive, isLocked }: {
   isActive: boolean,
   isLocked: boolean
 }) {
-  const isDisabled = item.locked && isLocked
+  const isDisabled = false
   const { state } = useSidebar()
   const isCollapsed = state === "collapsed"
+  const { visualPrefs } = useAppStore()
 
   const colorClasses: Record<string, { bg: string, text: string, border: string, glow: string }> = {
     primary: {
@@ -129,14 +134,19 @@ function NavItem({ item, isActive, isLocked }: {
               onClick={(e) => isDisabled && e.preventDefault()}
               className={cn(isCollapsed && "justify-center")}
             >
-              {/* Icon */}
+              {/* Icon with optional bounce */}
               {isDisabled ? (
                 <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
               ) : (
-                <item.icon className={cn(
-                  "h-4 w-4 shrink-0 transition-colors duration-300",
-                  isActive ? colors.text : "text-muted-foreground group-hover:text-foreground"
-                )} />
+                <motion.div
+                  whileHover={visualPrefs.bounceIcons ? { scale: [1, 1.2, 0.9, 1.1, 1], rotate: [0, -10, 10, -5, 0] } : {}}
+                  transition={{ duration: 0.4 }}
+                >
+                  <item.icon className={cn(
+                    "h-4 w-4 shrink-0 transition-colors duration-300",
+                    isActive ? colors.text : "text-muted-foreground group-hover:text-foreground"
+                  )} />
+                </motion.div>
               )}
 
               {/* Label - hidden when collapsed */}
@@ -216,11 +226,14 @@ function ObjectiveCard() {
           objective.status === "active" ? "bg-primary/20" :
           objective.status === "completed" ? "bg-emerald-500/20" : "bg-red-500/20"
         )}>
-          <Icon className={cn(
-            "h-3.5 w-3.5",
-            objective.status === "active" ? "text-primary" :
-            objective.status === "completed" ? "text-emerald-400" : "text-red-400"
-          )} />
+          {objective.status === "active" ? (
+            <Image src="/cadenas.png" alt="Locked" width={22} height={22} />
+          ) : (
+            <Icon className={cn(
+              "h-3.5 w-3.5",
+              objective.status === "completed" ? "text-emerald-400" : "text-red-400"
+            )} />
+          )}
         </div>
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
           {config.label}
@@ -351,7 +364,7 @@ function AppSidebarContent() {
           {user && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/30 group-data-[collapsible=icon]:hidden">
               <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 border border-primary/20">
-                <User className="h-3 w-3 text-primary" />
+                <Image src="/profile.png" alt="Profile" width={16} height={16} />
               </div>
               <span className="text-xs text-muted-foreground truncate flex-1">
                 {user.email}

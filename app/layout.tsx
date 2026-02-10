@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { Outfit, Fraunces } from "next/font/google"
+import { Outfit, Fraunces, Cormorant_Garamond, Crimson_Pro, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/components/auth/auth-provider"
@@ -17,6 +17,26 @@ const fraunces = Fraunces({
   axes: ["SOFT", "WONK", "opsz"],
 })
 
+// STOIC - Classical fonts (Cormorant Garamond + Crimson Pro)
+const cormorantGaramond = Cormorant_Garamond({
+  subsets: ["latin"],
+  variable: "--font-stoic-display",
+  weight: ["300", "400", "500", "600", "700"],
+})
+
+const crimsonPro = Crimson_Pro({
+  subsets: ["latin"],
+  variable: "--font-stoic-body",
+  weight: ["300", "400", "500", "600", "700"],
+})
+
+// MONK - Terminal monospace (JetBrains Mono)
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-monk",
+  weight: ["300", "400", "500", "600", "700"],
+})
+
 export const metadata: Metadata = {
   title: "ONE - One Objective. Total Focus.",
   description: "Not a task manager. A focus operating system. Pick ONE objective. Lock it in. Execute daily.",
@@ -30,7 +50,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${outfit.variable} ${fraunces.variable} font-sans antialiased`}
+        className={`${outfit.variable} ${fraunces.variable} ${cormorantGaramond.variable} ${crimsonPro.variable} ${jetbrainsMono.variable} font-sans antialiased`}
       >
         <ThemeProvider defaultTheme="modern">
           <AuthProvider>

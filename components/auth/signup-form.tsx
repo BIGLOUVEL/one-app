@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { createClient } from "@/lib/supabase"
+import { useAppStore } from "@/store/useAppStore"
 
 export function SignupForm({
   className,
@@ -32,17 +33,20 @@ export function SignupForm({
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
 
+  const lang = useAppStore(s => s.language)
+  const t = (en: string, fr: string) => lang === 'fr' ? fr : en
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match")
+      setError(t("Passwords do not match", "Les mots de passe ne correspondent pas"))
       return
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters")
+      setError(t("Password must be at least 6 characters", "Le mot de passe doit contenir au moins 6 caractères"))
       return
     }
 
@@ -63,27 +67,23 @@ export function SignupForm({
         return
       }
 
+      // Add to newsletter list (non-blocking)
+      fetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      }).catch(() => {})
+
       // If session returned (email confirmation disabled), go straight to app
       if (data.session) {
         router.push("/app")
         return
       }
 
-      // Try to sign in immediately (works if auto-confirm is on)
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
-      if (!signInError) {
-        router.push("/app")
-        return
-      }
-
-      // Email confirmation required — show message with skip option
+      // Email confirmation required — show message
       setIsSuccess(true)
     } catch {
-      setError("An error occurred. Try again.")
+      setError(t("An error occurred. Please try again.", "Une erreur est survenue. Réessayez."))
     } finally {
       setIsLoading(false)
     }
@@ -104,7 +104,7 @@ export function SignupForm({
         setError(error.message)
       }
     } catch {
-      setError("An error occurred. Try again.")
+      setError(t("An error occurred. Please try again.", "Une erreur est survenue. Réessayez."))
     } finally {
       setIsLoading(false)
     }
@@ -119,23 +119,16 @@ export function SignupForm({
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 border border-primary/20">
                 <CheckCircle2 className="h-8 w-8 text-primary" />
               </div>
-              <h1 className="text-2xl font-bold">Check your email</h1>
+              <h1 className="text-2xl font-bold">{t("Check your email", "Vérifiez votre email")}</h1>
               <p className="text-muted-foreground text-sm max-w-sm">
-                We sent a confirmation link to <strong>{email}</strong>.
-                Click the link to complete your registration.
+                {t(`A confirmation link has been sent to`, `Un lien de confirmation a été envoyé à`)} <strong>{email}</strong>.
+                {t("Click the link to complete your registration.", "Cliquez sur le lien pour terminer votre inscription.")}
               </p>
               <div className="flex flex-col gap-2 mt-4 w-full max-w-xs">
                 <Button
                   onClick={() => router.push("/login")}
                 >
-                  Sign in
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => router.push("/app")}
-                  className="text-muted-foreground text-xs"
-                >
-                  Skip, I&apos;ll verify later
+                  {t("Sign in", "Se connecter")}
                 </Button>
               </div>
             </div>
@@ -155,9 +148,9 @@ export function SignupForm({
                 <div className="mb-2">
                   <Logo size="lg" className="drop-shadow-[0_0_10px_rgba(0,255,136,0.3)]" />
                 </div>
-                <h1 className="text-2xl font-bold">Create your account</h1>
+                <h1 className="text-2xl font-bold">{t("Create your account", "Créez votre compte")}</h1>
                 <p className="text-muted-foreground text-balance text-sm">
-                  Start your journey with ONE
+                  {t("Start your journey with ONE", "Commencez votre parcours avec ONE")}
                 </p>
               </div>
 
@@ -172,7 +165,7 @@ export function SignupForm({
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder={t("you@example.com", "vous@exemple.com")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -182,11 +175,11 @@ export function SignupForm({
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="password">Password</FieldLabel>
+                <FieldLabel htmlFor="password">{t("Password", "Mot de passe")}</FieldLabel>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="At least 6 characters"
+                  placeholder={t("At least 6 characters", "Au moins 6 caractères")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -196,11 +189,11 @@ export function SignupForm({
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="confirmPassword">Confirm password</FieldLabel>
+                <FieldLabel htmlFor="confirmPassword">{t("Confirm password", "Confirmer le mot de passe")}</FieldLabel>
                 <Input
                   id="confirmPassword"
                   type="password"
-                  placeholder="Repeat your password"
+                  placeholder={t("Repeat your password", "Répétez votre mot de passe")}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
@@ -218,16 +211,16 @@ export function SignupForm({
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating account...
+                      {t("Creating account...", "Création du compte...")}
                     </>
                   ) : (
-                    "Create account"
+                    t("Create account", "Créer un compte")
                   )}
                 </Button>
               </Field>
 
               <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
-                Or continue with
+                {t("Or continue with", "Ou continuer avec")}
               </FieldSeparator>
 
               <Field>
@@ -253,12 +246,12 @@ export function SignupForm({
               </Field>
 
               <FieldDescription className="text-center">
-                Already have an account?{" "}
+                {t("Already have an account?", "Déjà un compte ?")}{" "}
                 <Link
                   href="/login"
                   className="text-foreground underline underline-offset-4 hover:text-primary"
                 >
-                  Sign in
+                  {t("Sign in", "Se connecter")}
                 </Link>
               </FieldDescription>
             </FieldGroup>
@@ -274,7 +267,7 @@ export function SignupForm({
               </div>
               <h2 className="text-xl font-semibold">Focus Operating System</h2>
               <p className="text-sm text-muted-foreground max-w-[200px] mx-auto">
-                One objective. One priority. One action. Nothing else matters.
+                {t("One objective. One priority. One action. Nothing else matters.", "Un objectif. Une priorité. Une action. Rien d'autre ne compte.")}
               </p>
             </div>
           </div>
@@ -282,13 +275,13 @@ export function SignupForm({
       </Card>
 
       <FieldDescription className="px-6 text-center text-xs">
-        By creating an account, you agree to our{" "}
+        {t("By creating an account, you agree to our", "En créant un compte, vous acceptez nos")}{" "}
         <Link href="/terms" className="underline underline-offset-4 hover:text-foreground">
-          Terms of Service
+          {t("Terms of Service", "Conditions d'utilisation")}
         </Link>{" "}
-        and{" "}
+        {t("and our", "et notre")}{" "}
         <Link href="/privacy" className="underline underline-offset-4 hover:text-foreground">
-          Privacy Policy
+          {t("Privacy Policy", "Politique de confidentialité")}
         </Link>
         .
       </FieldDescription>

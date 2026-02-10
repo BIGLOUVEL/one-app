@@ -124,7 +124,7 @@ RULES:
 
     const userPrompt = `USER DATA:
 
-📎 OBJECTIVE:
+OBJECTIVE:
 - Big goal (Someday): "${input.objective.somedayGoal}"
 - Month goal: "${input.objective.monthGoal}"
 - Week goal: "${input.objective.weekGoal}"
@@ -133,33 +133,33 @@ RULES:
 - Why: "${input.objective.why}"
 - Progress: ${input.objective.progress}%
 
-⏱️ TIME:
+TIME:
 - Deadline: ${deadline.toLocaleDateString('en-US')} (${daysRemaining} days remaining)
 - Days elapsed: ${daysElapsed}/${totalDays}
 - Expected progress: ~${Math.round((daysElapsed / totalDays) * 100)}%
 
-📊 WORK SESSIONS:
+WORK SESSIONS:
 - Total sessions: ${totalSessions}
 - Total time: ${totalMinutes} minutes (~${Math.round(totalMinutes / 60)} hours)
 - Average session duration: ${avgSessionMinutes} minutes
 - Preferred work hour: ${peakHour ? `${peakHour}:00` : 'No data yet'}
 - Most productive day: ${peakDay || 'No data yet'}
 
-🎯 66-DAY CHALLENGE:
+66-DAY CHALLENGE:
 - Current streak: ${input.habitChallenge?.currentStreak || 0} days
 - Best streak: ${input.habitChallenge?.longestStreak || 0} days
 
-⚠️ PRIMARY FOCUS THIEF:
+PRIMARY FOCUS THIEF:
 ${input.primaryThief || 'Not identified'}
 
-📝 RECENT DISTRACTIONS:
+RECENT DISTRACTIONS:
 ${distractionSummary}
 
-💭 USER REFLECTIONS:
+USER REFLECTIONS:
 ${reflections || 'No reflections recorded yet'}
 
 ${input.reviews.length > 0 ? `
-📋 LATEST REVIEW:
+LATEST REVIEW:
 - Accomplishments: ${input.reviews[input.reviews.length - 1]?.accomplishments || 'N/A'}
 - Blockers: ${input.reviews[input.reviews.length - 1]?.blockers || 'N/A'}
 ` : ''}

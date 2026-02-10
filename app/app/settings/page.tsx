@@ -1,11 +1,41 @@
 "use client"
 
-import { motion } from "framer-motion"
-import { Settings, Palette, Check } from "lucide-react"
+import { useState, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { Settings, Palette, Check, Sparkles, RotateCcw, Crown, Lock, X, CreditCard, ExternalLink, Loader2, Globe, User, Bot } from "lucide-react"
+import Image from "next/image"
 import { useTheme, UITheme } from "@/components/theme-provider"
+import { useAppStore } from "@/store/useAppStore"
+import { useAuth } from "@/components/auth/auth-provider"
 import { cn } from "@/lib/utils"
 
-const themes: { id: UITheme; name: string; description: string; preview: { bg: string; accent: string; text: string } }[] = [
+const getVisualEffects = (lang: string) => [
+  { key: "breathingGradient", label: lang === 'fr' ? "Gradient animé" : "Breathing gradient", description: lang === 'fr' ? "Effet de respiration sur la carte objectif" : "Breathing effect on the objective card" },
+  { key: "circularProgress", label: lang === 'fr' ? "Progress circulaire" : "Circular progress", description: lang === 'fr' ? "Barre de progression autour du cadenas" : "Progress bar around the lock" },
+  { key: "immersiveFocus", label: lang === 'fr' ? "Mode immersif" : "Immersive mode", description: lang === 'fr' ? "Écran noir total pendant les sessions focus" : "Full black screen during focus sessions" },
+  { key: "confettiOnComplete", label: lang === 'fr' ? "Confettis" : "Confetti", description: lang === 'fr' ? "Explosion de confettis à la fin des sessions" : "Confetti burst at the end of sessions" },
+  { key: "tiltPostIts", label: lang === 'fr' ? "Post-its 3D" : "3D Post-its", description: lang === 'fr' ? "Effet de rotation 3D au survol des post-its" : "3D tilt effect on post-it hover" },
+  { key: "bouncingHeart", label: lang === 'fr' ? "Cœur rebondissant" : "Bouncing heart", description: lang === 'fr' ? "Animation quand tu likes un post-it" : "Animation when you like a post-it" },
+  { key: "bounceIcons", label: lang === 'fr' ? "Icônes animées" : "Animated icons", description: lang === 'fr' ? "Rebond des icônes de la sidebar au survol" : "Sidebar icons bounce on hover" },
+  { key: "milestoneAnimations", label: lang === 'fr' ? "Célébrations" : "Celebrations", description: lang === 'fr' ? "Animations à 25%, 50%, 75% de progression" : "Animations at 25%, 50%, 75% progress" },
+  { key: "streakFire", label: lang === 'fr' ? "Flamme streak" : "Streak flame", description: lang === 'fr' ? "Animation feu pour 7+ jours consécutifs" : "Fire animation for 7+ consecutive days" },
+] as const
+
+// Stoic quotes for the theme preview
+const stoicQuotes = [
+  { text: "We suffer more often in imagination than in reality.", author: "Seneca" },
+  { text: "The obstacle is the way.", author: "Marcus Aurelius" },
+  { text: "No man is free who is not master of himself.", author: "Epictetus" },
+  { text: "First say to yourself what you would be; then do what you have to do.", author: "Epictetus" },
+]
+
+const themes: {
+  id: UITheme
+  name: string
+  description: string
+  premium?: boolean
+  preview: { bg: string; accent: string; text: string }
+}[] = [
   {
     id: "modern",
     name: "Modern",
@@ -28,8 +58,524 @@ const themes: { id: UITheme; name: string; description: string; preview: { bg: s
   },
 ]
 
+// Stoic Theme Preview - special rich preview card
+function StoicThemePreview({ isSelected, onSelect }: { isSelected: boolean; onSelect: () => void }) {
+  const [showUnlockModal, setShowUnlockModal] = useState(false)
+  const quote = stoicQuotes[Math.floor(Date.now() / 86400000) % stoicQuotes.length]
+
+  // For now, the theme is always unlocked (premium logic can be added later)
+  const isUnlocked = true
+
+  const handleClick = () => {
+    if (isUnlocked) {
+      onSelect()
+    } else {
+      setShowUnlockModal(true)
+    }
+  }
+
+  return (
+    <>
+      <motion.button
+        onClick={handleClick}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
+        className={cn(
+          "relative col-span-full rounded-xl border-2 text-left transition-all duration-300 overflow-hidden group",
+          isSelected
+            ? "border-[hsl(42,72%,52%)] shadow-[0_0_30px_hsl(42,72%,52%,0.15)]"
+            : "border-border hover:border-[hsl(42,72%,52%,0.4)]"
+        )}
+      >
+        {/* Premium badge */}
+        <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[hsl(42,72%,52%)] text-[hsl(228,18%,7%)]">
+          <Crown className="h-3 w-3" />
+          <span className="text-[10px] font-bold uppercase tracking-wider">Premium</span>
+        </div>
+
+        {/* Selected indicator */}
+        {isSelected && (
+          <div className="absolute top-3 right-3 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(42,72%,52%)]">
+            <Check className="h-3.5 w-3.5 text-[hsl(228,18%,7%)]" />
+          </div>
+        )}
+
+        {/* Theme Preview - Rich immersive card */}
+        <div className="relative h-48 sm:h-56 bg-[hsl(228,18%,7%)] overflow-hidden">
+          {/* Marble texture overlay */}
+          <div
+            className="absolute inset-0 opacity-[0.04]"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+              mixBlendMode: "soft-light",
+            }}
+          />
+
+          {/* Gold gradient atmosphere */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[hsl(42,72%,52%,0.08)] via-transparent to-[hsl(28,55%,42%,0.06)]" />
+
+          {/* Subtle radial glow */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[hsl(42,72%,52%,0.06)] rounded-full blur-3xl" />
+
+          {/* Decorative gold line at top */}
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(42,72%,52%,0.5)] to-transparent" />
+
+          {/* Content: Mini preview of UI elements */}
+          <div className="relative z-10 h-full p-6 flex flex-col justify-between">
+            {/* Top: Mini nav preview */}
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 rounded-md border border-[hsl(42,72%,52%,0.3)] bg-[hsl(42,72%,52%,0.1)] flex items-center justify-center">
+                <div className="w-2.5 h-2.5 rounded-sm bg-[hsl(42,72%,52%,0.6)]" />
+              </div>
+              <div className="space-y-1">
+                <div className="h-1.5 w-8 rounded-full bg-[hsl(40,25%,90%,0.5)]" />
+                <div className="h-1 w-14 rounded-full bg-[hsl(40,25%,90%,0.15)]" />
+              </div>
+              <div className="ml-auto flex gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-[hsl(42,72%,52%,0.4)]" />
+                <div className="w-1.5 h-1.5 rounded-full bg-[hsl(40,25%,90%,0.15)]" />
+                <div className="w-1.5 h-1.5 rounded-full bg-[hsl(40,25%,90%,0.15)]" />
+              </div>
+            </div>
+
+            {/* Center: Stoic quote */}
+            <div className="text-center space-y-3 px-4">
+              <div className="inline-block">
+                <p
+                  className="text-sm sm:text-base italic leading-relaxed"
+                  style={{
+                    fontFamily: "'Cormorant Garamond', Georgia, serif",
+                    color: "hsl(40, 25%, 88%)",
+                    letterSpacing: "0.01em",
+                  }}
+                >
+                  &ldquo;{quote.text}&rdquo;
+                </p>
+                <div className="mt-2 flex items-center justify-center gap-3">
+                  <div className="h-px w-6 bg-[hsl(42,72%,52%,0.4)]" />
+                  <p
+                    className="text-[11px] uppercase tracking-[0.2em]"
+                    style={{
+                      fontFamily: "'Crimson Pro', Georgia, serif",
+                      color: "hsl(42, 72%, 52%)",
+                    }}
+                  >
+                    {quote.author}
+                  </p>
+                  <div className="h-px w-6 bg-[hsl(42,72%,52%,0.4)]" />
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom: Mini cards preview */}
+            <div className="flex gap-2">
+              <div className="flex-1 h-8 rounded-md bg-[hsl(228,15%,10%)] border border-[hsl(228,12%,16%)] flex items-center px-2.5 gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-[hsl(82,38%,38%)]" />
+                <div className="h-1 flex-1 rounded-full bg-[hsl(40,25%,90%,0.1)]" />
+              </div>
+              <div className="flex-1 h-8 rounded-md bg-[hsl(228,15%,10%)] border border-[hsl(228,12%,16%)] flex items-center px-2.5 gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-[hsl(42,72%,52%)]" />
+                <div className="h-1 flex-1 rounded-full bg-[hsl(42,72%,52%,0.15)]" />
+              </div>
+              <div className="hidden sm:flex flex-1 h-8 rounded-md bg-[hsl(228,15%,10%)] border border-[hsl(228,12%,16%)] items-center px-2.5 gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-[hsl(28,55%,42%)]" />
+                <div className="h-1 flex-1 rounded-full bg-[hsl(40,25%,90%,0.1)]" />
+              </div>
+            </div>
+          </div>
+
+          {/* Decorative gold line at bottom */}
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(42,72%,52%,0.3)] to-transparent" />
+        </div>
+
+        {/* Info section */}
+        <div className="p-4 bg-[hsl(228,18%,7%)] border-t border-[hsl(228,12%,16%)]">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3
+                className="text-base font-semibold mb-1"
+                style={{
+                  fontFamily: "'Cormorant Garamond', Georgia, serif",
+                  color: "hsl(40, 25%, 90%)",
+                  letterSpacing: "0.02em",
+                }}
+              >
+                Stoica
+              </h3>
+              <p className="text-xs" style={{ color: "hsl(30, 8%, 50%)" }}>
+                Ancient marble, gold accents, philosophical depth. Stoic discipline meets timeless aesthetics.
+              </p>
+            </div>
+            {!isUnlocked && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(42,72%,52%,0.1)] border border-[hsl(42,72%,52%,0.2)]">
+                <Lock className="h-3.5 w-3.5 text-[hsl(42,72%,52%)]" />
+                <span className="text-xs font-medium text-[hsl(42,72%,52%)]">Unlock</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Hover glow effect */}
+        <motion.div
+          className="absolute inset-0 pointer-events-none rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+          style={{
+            boxShadow: "inset 0 0 40px hsl(42, 72%, 52%, 0.04)",
+          }}
+        />
+      </motion.button>
+
+      {/* Unlock Modal (for future premium gating) */}
+      <AnimatePresence>
+        {showUnlockModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80"
+            onClick={() => setShowUnlockModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-sm rounded-xl overflow-hidden"
+              style={{ background: "hsl(228, 18%, 8%)", border: "1px solid hsl(42, 72%, 52%, 0.2)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Gold top line */}
+              <div className="h-px bg-gradient-to-r from-transparent via-[hsl(42,72%,52%,0.6)] to-transparent" />
+
+              <div className="p-6 text-center space-y-4">
+                <div className="flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-full bg-[hsl(42,72%,52%,0.1)] border border-[hsl(42,72%,52%,0.2)] flex items-center justify-center">
+                    <Crown className="h-6 w-6 text-[hsl(42,72%,52%)]" />
+                  </div>
+                </div>
+
+                <div>
+                  <h3
+                    className="text-lg font-semibold mb-1"
+                    style={{
+                      fontFamily: "'Cormorant Garamond', Georgia, serif",
+                      color: "hsl(40, 25%, 90%)",
+                    }}
+                  >
+                    Unlock Stoica
+                  </h3>
+                  <p className="text-sm" style={{ color: "hsl(30, 8%, 50%)" }}>
+                    This premium theme is available with ONE Pro.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setShowUnlockModal(false)}
+                  className="w-full h-11 rounded-lg font-medium text-sm transition-all"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(42, 72%, 52%), hsl(28, 55%, 42%))",
+                    color: "hsl(228, 18%, 7%)",
+                  }}
+                >
+                  Upgrade to Pro
+                </button>
+
+                <button
+                  onClick={() => setShowUnlockModal(false)}
+                  className="text-xs transition-colors"
+                  style={{ color: "hsl(30, 8%, 50%)" }}
+                >
+                  Maybe later
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  )
+}
+
+// Monk Mode quotes
+const monkQuotes = [
+  { text: "Discipline equals freedom.", author: "Jocko Willink" },
+  { text: "The pain you feel today will be the strength you feel tomorrow.", author: "Arnold" },
+  { text: "No shortcuts. No excuses. No mercy.", author: "David Goggins" },
+  { text: "You are your only limit.", author: "Unknown" },
+]
+
+// Monk Mode Theme Preview - brutal, raw, terminal aesthetic
+function MonkModePreview({ isSelected, onSelect }: { isSelected: boolean; onSelect: () => void }) {
+  const [showUnlockModal, setShowUnlockModal] = useState(false)
+  const quote = monkQuotes[Math.floor(Date.now() / 86400000) % monkQuotes.length]
+
+  const isUnlocked = true
+
+  const handleClick = () => {
+    if (isUnlocked) {
+      onSelect()
+    } else {
+      setShowUnlockModal(true)
+    }
+  }
+
+  return (
+    <>
+      <motion.button
+        onClick={handleClick}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
+        className={cn(
+          "relative col-span-full rounded-sm border-2 text-left transition-all duration-300 overflow-hidden group",
+          isSelected
+            ? "border-[hsl(0,72%,50%)] shadow-[0_0_20px_hsl(0,72%,50%,0.15)]"
+            : "border-[hsl(0,0%,10%)] hover:border-[hsl(0,72%,50%,0.4)]"
+        )}
+      >
+        {/* Premium badge */}
+        <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-sm bg-[hsl(0,72%,50%)] text-white">
+          <Crown className="h-3 w-3" />
+          <span className="text-[10px] font-bold uppercase tracking-[0.15em]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Premium</span>
+        </div>
+
+        {/* Selected indicator */}
+        {isSelected && (
+          <div className="absolute top-3 right-3 z-20 flex h-6 w-6 items-center justify-center rounded-sm bg-[hsl(0,72%,50%)]">
+            <Check className="h-3.5 w-3.5 text-white" />
+          </div>
+        )}
+
+        {/* Theme Preview - Dark terminal aesthetic */}
+        <div className="relative h-48 sm:h-56 bg-[hsl(0,0%,2%)] overflow-hidden">
+          {/* Scanline effect */}
+          <div
+            className="absolute inset-0 opacity-[0.03] pointer-events-none"
+            style={{
+              backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px)",
+            }}
+          />
+
+          {/* Subtle red vignette */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,hsl(0,72%,50%,0.04)_100%)]" />
+
+          {/* Content */}
+          <div className="relative z-10 h-full p-6 flex flex-col justify-between">
+            {/* Top: Terminal-style header */}
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1">
+                <div className="w-2 h-2 rounded-full bg-[hsl(0,72%,50%,0.6)]" />
+                <div className="w-2 h-2 rounded-full bg-[hsl(0,0%,20%)]" />
+                <div className="w-2 h-2 rounded-full bg-[hsl(0,0%,20%)]" />
+              </div>
+              <div
+                className="text-[10px] uppercase tracking-[0.2em] ml-2"
+                style={{
+                  fontFamily: "'JetBrains Mono', 'Consolas', monospace",
+                  color: "hsl(0, 0%, 30%)",
+                }}
+              >
+                monk_mode.exe
+              </div>
+            </div>
+
+            {/* Center: Quote in brutal monospace */}
+            <div className="text-center space-y-3 px-2">
+              <p
+                className="text-sm sm:text-base font-medium leading-tight"
+                style={{
+                  fontFamily: "'JetBrains Mono', 'Consolas', monospace",
+                  color: "hsl(0, 0%, 75%)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                &ldquo;{quote.text}&rdquo;
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <div className="h-px w-8 bg-[hsl(0,72%,50%,0.4)]" />
+                <p
+                  className="text-[10px] uppercase tracking-[0.25em]"
+                  style={{
+                    fontFamily: "'JetBrains Mono', 'Consolas', monospace",
+                    color: "hsl(0, 72%, 50%)",
+                  }}
+                >
+                  {quote.author}
+                </p>
+                <div className="h-px w-8 bg-[hsl(0,72%,50%,0.4)]" />
+              </div>
+            </div>
+
+            {/* Bottom: Fake terminal progress bars */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] uppercase tracking-wider" style={{ fontFamily: "'JetBrains Mono', monospace", color: "hsl(0,0%,25%)" }}>focus</span>
+                <div className="flex-1 h-1 bg-[hsl(0,0%,6%)] rounded-none overflow-hidden">
+                  <div className="h-full w-[85%] bg-[hsl(0,72%,50%,0.7)]" />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] uppercase tracking-wider" style={{ fontFamily: "'JetBrains Mono', monospace", color: "hsl(0,0%,25%)" }}>grind</span>
+                <div className="flex-1 h-1 bg-[hsl(0,0%,6%)] rounded-none overflow-hidden">
+                  <div className="h-full w-[62%] bg-[hsl(0,0%,20%)]" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Red line at bottom */}
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(0,72%,50%,0.5)] to-transparent" />
+        </div>
+
+        {/* Info section */}
+        <div className="p-4 bg-[hsl(0,0%,2%)] border-t border-[hsl(0,0%,8%)]">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3
+                className="text-base font-bold mb-1 uppercase tracking-wider"
+                style={{
+                  fontFamily: "'JetBrains Mono', 'Consolas', monospace",
+                  color: "hsl(0, 0%, 85%)",
+                  fontSize: "13px",
+                }}
+              >
+                Monk Mode
+              </h3>
+              <p className="text-xs" style={{ color: "hsl(0, 0%, 35%)", fontFamily: "'JetBrains Mono', monospace", fontSize: "10px" }}>
+                Pure black. Blood red. Zero distraction. For those who chose discipline over comfort.
+              </p>
+            </div>
+            {!isUnlocked && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-[hsl(0,72%,50%,0.1)] border border-[hsl(0,72%,50%,0.2)]">
+                <Lock className="h-3.5 w-3.5 text-[hsl(0,72%,50%)]" />
+                <span className="text-xs font-medium text-[hsl(0,72%,50%)]">Unlock</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Hover glow effect - red */}
+        <motion.div
+          className="absolute inset-0 pointer-events-none rounded-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+          style={{
+            boxShadow: "inset 0 0 40px hsl(0, 72%, 50%, 0.03)",
+          }}
+        />
+      </motion.button>
+
+      {/* Unlock Modal */}
+      <AnimatePresence>
+        {showUnlockModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90"
+            onClick={() => setShowUnlockModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-sm rounded-sm overflow-hidden"
+              style={{ background: "hsl(0, 0%, 3%)", border: "1px solid hsl(0, 72%, 50%, 0.2)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="h-px bg-gradient-to-r from-transparent via-[hsl(0,72%,50%,0.6)] to-transparent" />
+              <div className="p-6 text-center space-y-4">
+                <div className="flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-sm bg-[hsl(0,72%,50%,0.1)] border border-[hsl(0,72%,50%,0.2)] flex items-center justify-center">
+                    <Crown className="h-6 w-6 text-[hsl(0,72%,50%)]" />
+                  </div>
+                </div>
+                <div>
+                  <h3
+                    className="text-lg font-bold mb-1 uppercase tracking-wider"
+                    style={{ fontFamily: "'JetBrains Mono', monospace", color: "hsl(0, 0%, 85%)" }}
+                  >
+                    Unlock Monk Mode
+                  </h3>
+                  <p className="text-sm" style={{ color: "hsl(0, 0%, 40%)" }}>
+                    This premium theme is available with ONE Pro.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowUnlockModal(false)}
+                  className="w-full h-11 rounded-sm font-bold text-sm uppercase tracking-wider transition-all"
+                  style={{
+                    background: "hsl(0, 72%, 50%)",
+                    color: "white",
+                    fontFamily: "'JetBrains Mono', monospace",
+                  }}
+                >
+                  Upgrade to Pro
+                </button>
+                <button
+                  onClick={() => setShowUnlockModal(false)}
+                  className="text-xs transition-colors"
+                  style={{ color: "hsl(0, 0%, 35%)" }}
+                >
+                  Maybe later
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  )
+}
+
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
+  const { visualPrefs, setVisualPref, resetVisualPrefs, language, setLanguage, firstName, setFirstName, aiName, setAIName } = useAppStore()
+  const { session, user } = useAuth()
+
+  const lang = language
+  const t = (en: string, fr: string) => lang === 'fr' ? fr : en
+  const visualEffects = getVisualEffects(lang)
+  const [subStatus, setSubStatus] = useState<{ status: string; active: boolean; currentPeriodEnd: string | null; promoUsed?: boolean } | null>(null)
+  const [subLoading, setSubLoading] = useState(true)
+  const [portalLoading, setPortalLoading] = useState(false)
+
+  useEffect(() => {
+    async function fetchStatus() {
+      if (!session?.access_token) {
+        setSubLoading(false)
+        return
+      }
+      try {
+        const res = await fetch("/api/stripe/status", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        })
+        if (res.ok) {
+          setSubStatus(await res.json())
+        }
+      } catch {
+        // silently fail
+      } finally {
+        setSubLoading(false)
+      }
+    }
+    fetchStatus()
+  }, [session?.access_token])
+
+  const openPortal = async () => {
+    if (!session?.access_token) return
+    setPortalLoading(true)
+    try {
+      const res = await fetch("/api/stripe/portal", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      if (res.ok) {
+        const { url } = await res.json()
+        window.open(url, "_blank")
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setPortalLoading(false)
+    }
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
@@ -62,6 +608,7 @@ export default function SettingsPage() {
             </p>
 
             <div className="grid gap-4 sm:grid-cols-2">
+              {/* Standard themes */}
               {themes.map((t) => (
                 <motion.button
                   key={t.id}
@@ -104,16 +651,332 @@ export default function SettingsPage() {
                   <p className="text-xs text-muted-foreground">{t.description}</p>
                 </motion.button>
               ))}
+
+              {/* Stoic Premium Theme - Full-width rich card */}
+              <StoicThemePreview
+                isSelected={theme === "stoic"}
+                onSelect={() => setTheme("stoic")}
+              />
+
+              {/* Monk Mode Premium Theme - Full-width brutal card */}
+              <MonkModePreview
+                isSelected={theme === "monk"}
+                onSelect={() => setTheme("monk")}
+              />
             </div>
           </div>
         </section>
 
-        {/* More settings sections can be added here */}
-        <div className="mt-6 p-4 rounded-xl bg-muted/30 border border-border">
-          <p className="text-sm text-muted-foreground text-center">
-            More settings coming soon
+        {/* Language Section */}
+        <section className="glass-panel rounded-2xl p-6 mt-6">
+          <div className="flex items-center gap-2 mb-6">
+            <Globe className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">{t("Language", "Langue")}</h2>
+          </div>
+
+          <p className="text-sm text-muted-foreground mb-4">
+            {t("Choose your preferred language", "Choisissez votre langue préférée")}
           </p>
-        </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {([
+              { id: "en" as const, name: "English", flag: "🇺🇸" },
+              { id: "fr" as const, name: "Français", flag: "🇫🇷" },
+            ]).map((l) => (
+              <motion.button
+                key={l.id}
+                onClick={() => setLanguage(l.id)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={cn(
+                  "relative rounded-xl border-2 p-4 text-left transition-all duration-200 flex items-center gap-3",
+                  language === l.id
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/50"
+                )}
+              >
+                {language === l.id && (
+                  <div className="absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full bg-primary">
+                    <Check className="h-3 w-3 text-primary-foreground" />
+                  </div>
+                )}
+                <span className="text-2xl">{l.flag}</span>
+                <span className="font-semibold">{l.name}</span>
+              </motion.button>
+            ))}
+          </div>
+        </section>
+
+        {/* Profile Section */}
+        <section className="glass-panel rounded-2xl p-6 mt-6">
+          <div className="flex items-center gap-2 mb-6">
+            <User className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">{t("Profile", "Profil")}</h2>
+          </div>
+
+          <div className="space-y-4">
+            {/* First name */}
+            <div className="space-y-2">
+              <label className="text-sm text-muted-foreground">{t("Your first name", "Ton prénom")}</label>
+              <input
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder={t("Enter your first name", "Entre ton prénom")}
+                className="w-full h-11 px-4 rounded-xl bg-white/5 border border-border text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
+              />
+            </div>
+
+            {/* AI name */}
+            <div className="space-y-2">
+              <label className="text-sm text-muted-foreground">{t("Your AI assistant's name", "Le nom de ton assistant IA")}</label>
+              <div className="flex items-center gap-3">
+                <Bot className="h-5 w-5 text-violet-400 shrink-0" />
+                <input
+                  type="text"
+                  value={aiName}
+                  onChange={(e) => setAIName(e.target.value)}
+                  placeholder="Tony"
+                  className="w-full h-11 px-4 rounded-xl bg-white/5 border border-border text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground/60">{t("This is the name used by your AI during onboarding and coaching", "C'est le nom utilisé par ton IA pendant l'onboarding et le coaching")}</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Visual Effects Section */}
+        <section className="glass-panel rounded-2xl p-6 mt-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-violet-400" />
+              <h2 className="text-lg font-semibold">{t("Visual effects", "Effets visuels")}</h2>
+            </div>
+            <button
+              onClick={resetVisualPrefs}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              {t("Reset", "Réinitialiser")}
+            </button>
+          </div>
+
+          <p className="text-sm text-muted-foreground mb-4">
+            {t("Toggle animations and visual effects", "Active ou désactive les animations et effets visuels")}
+          </p>
+
+          <div className="space-y-3">
+            {visualEffects.map((effect) => (
+              <div
+                key={effect.key}
+                className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
+              >
+                <div className="flex-1 min-w-0 mr-4">
+                  <p className="font-medium text-sm">{effect.label}</p>
+                  <p className="text-xs text-muted-foreground truncate">{effect.description}</p>
+                </div>
+                <button
+                  onClick={() => setVisualPref(effect.key, !visualPrefs[effect.key])}
+                  className={cn(
+                    "relative w-11 h-6 rounded-full transition-colors duration-200",
+                    visualPrefs[effect.key] ? "bg-primary" : "bg-white/20"
+                  )}
+                >
+                  <motion.div
+                    animate={{ x: visualPrefs[effect.key] ? 20 : 2 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm"
+                  />
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Subscription Section */}
+        <section className="glass-panel rounded-2xl p-6 mt-6">
+          <div className="flex items-center gap-2 mb-6">
+            <CreditCard className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">{t("My subscription", "Mon abonnement")}</h2>
+          </div>
+
+          {subLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : !subStatus || subStatus.status === "none" ? (
+            <div className="flex flex-col items-center text-center py-6 space-y-3">
+              <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
+                <CreditCard className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">{t("No active subscription", "Aucun abonnement actif")}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("Subscribe to ONE Pro to unlock all features", "Souscris à ONE Pro pour débloquer toutes les fonctionnalités")}</p>
+              </div>
+              <a
+                href="/pricing"
+                className="inline-flex items-center gap-2 h-10 px-5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-sm font-medium hover:bg-primary/15 transition-colors"
+              >
+                {t("View plans", "Voir les offres")}
+              </a>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {/* Mini Member Card */}
+              <div className="relative rounded-xl overflow-hidden" style={{ perspective: 800 }}>
+                <div className="relative" style={{ paddingBottom: "56%" }}>
+                  {/* Card background */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-[hsl(0,0%,11%)] via-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)]" />
+                  <div className="absolute inset-0 rounded-xl border border-white/[0.08]" />
+
+                  {/* Holographic sheen - subtle idle animation */}
+                  <motion.div
+                    className="absolute inset-0 pointer-events-none"
+                    animate={{
+                      background: [
+                        "radial-gradient(ellipse at 30% 40%, rgba(255,215,0,0.12) 0%, rgba(139,92,246,0.08) 30%, transparent 60%)",
+                        "radial-gradient(ellipse at 60% 50%, rgba(139,92,246,0.12) 0%, rgba(0,255,136,0.06) 30%, transparent 60%)",
+                        "radial-gradient(ellipse at 40% 60%, rgba(0,255,136,0.1) 0%, rgba(255,215,0,0.08) 30%, transparent 60%)",
+                        "radial-gradient(ellipse at 30% 40%, rgba(255,215,0,0.12) 0%, rgba(139,92,246,0.08) 30%, transparent 60%)",
+                      ],
+                    }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                  />
+
+                  {/* Gold top line */}
+                  <motion.div
+                    className="absolute top-0 left-0 right-0 h-[2px]"
+                    style={{ background: "linear-gradient(90deg, transparent, rgba(255,215,0,0.4), rgba(139,92,246,0.4), transparent)" }}
+                    animate={{ opacity: [0.3, 0.7, 0.3] }}
+                    transition={{ duration: 4, repeat: Infinity }}
+                  />
+
+                  {/* Grain */}
+                  <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }} />
+
+                  {/* Content */}
+                  <div className="absolute inset-0 z-10 p-4 sm:p-5 flex flex-col justify-between">
+                    {/* Top: Logo + Pro badge */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <Image src="/LOGO.png" alt="ONE" width={22} height={22} className="opacity-90" />
+                        <div>
+                          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/90">ONE</p>
+                          <p className="text-[6px] tracking-[0.15em] uppercase text-white/25">Focus Operating System</p>
+                        </div>
+                      </div>
+                      <div
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-full border"
+                        style={{
+                          background: "linear-gradient(135deg, rgba(255,215,0,0.15), rgba(139,92,246,0.15))",
+                          borderColor: "rgba(255,215,0,0.25)",
+                        }}
+                      >
+                        <Crown className="h-2.5 w-2.5 text-amber-400" />
+                        <span className="text-[8px] font-bold tracking-[0.15em] uppercase bg-gradient-to-r from-amber-300 to-violet-400 bg-clip-text text-transparent">Pro</span>
+                      </div>
+                    </div>
+
+                    {/* Center: Chip */}
+                    <div className="flex items-center gap-3">
+                      <div className="relative w-9 h-6 rounded-[4px] overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-br from-amber-200/60 via-amber-300/50 to-amber-400/60" />
+                        <div className="absolute inset-[1px] rounded-[3px] bg-gradient-to-br from-amber-100/25 to-amber-300/35" />
+                        <div className="absolute top-[45%] left-0 right-0 h-[1px] bg-amber-600/30" />
+                        <div className="absolute top-0 bottom-0 left-[30%] w-[1px] bg-amber-600/25" />
+                        <div className="absolute top-0 bottom-0 left-[65%] w-[1px] bg-amber-600/25" />
+                      </div>
+                    </div>
+
+                    {/* Bottom: Name + date */}
+                    <div className="flex items-end justify-between">
+                      <div>
+                        <p className="text-[8px] text-white/25 tracking-[0.1em] uppercase mb-0.5">{t("Member", "Membre")}</p>
+                        <p className="text-[11px] font-medium tracking-[0.08em] text-white/70 uppercase">
+                          {firstName || user?.email?.split("@")[0] || "Member"}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[8px] text-white/25 tracking-[0.1em] uppercase mb-0.5">{t("Since", "Depuis")}</p>
+                        <p className="text-[11px] font-medium tabular-nums text-white/70">
+                          {new Date().toLocaleDateString(lang === 'fr' ? "fr-FR" : "en-US", { month: "2-digit", year: "2-digit" })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Billing details */}
+              <div className="space-y-3">
+                {/* Status */}
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/5">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "w-2 h-2 rounded-full",
+                      subStatus.active ? "bg-emerald-400" : "bg-orange-400"
+                    )} />
+                    <p className="text-sm text-muted-foreground">{t("Status", "Statut")}</p>
+                  </div>
+                  <div className={cn(
+                    "px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider",
+                    subStatus.active
+                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                      : "bg-orange-500/10 text-orange-400 border border-orange-500/20"
+                  )}>
+                    {subStatus.status === "active" ? t("Active", "Actif") : subStatus.status === "canceled" ? t("Canceled", "Annulé") : subStatus.status === "past_due" ? t("Past due", "En retard") : subStatus.status}
+                  </div>
+                </div>
+
+                {/* Monthly amount */}
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/5">
+                  <p className="text-sm text-muted-foreground">{t("Monthly amount", "Montant mensuel")}</p>
+                  <p className="text-sm font-semibold">
+                    {subStatus.promoUsed ? (
+                      <span className="flex items-center gap-2">
+                        <span className="line-through text-muted-foreground/50 font-normal text-xs">9,99€</span>
+                        <span className="text-primary">4,99€</span>
+                      </span>
+                    ) : (
+                      <span>9,99€</span>
+                    )}
+                    <span className="text-xs text-muted-foreground font-normal">/{t("month", "mois")}</span>
+                  </p>
+                </div>
+
+                {/* Next billing */}
+                {subStatus.currentPeriodEnd && (
+                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/5">
+                    <p className="text-sm text-muted-foreground">
+                      {subStatus.status === "canceled" ? t("Access until", "Accès jusqu'au") : t("Next billing", "Prochain prélèvement")}
+                    </p>
+                    <p className="text-sm font-medium">
+                      {new Date(subStatus.currentPeriodEnd).toLocaleDateString(lang === 'fr' ? "fr-FR" : "en-US", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Manage button */}
+              <button
+                onClick={openPortal}
+                disabled={portalLoading}
+                className="w-full flex items-center justify-center gap-2 h-11 rounded-xl border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+              >
+                {portalLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ExternalLink className="h-4 w-4" />
+                )}
+                {t("Manage subscription", "Gérer mon abonnement")}
+              </button>
+            </div>
+          )}
+        </section>
       </motion.div>
     </div>
   )

@@ -6,7 +6,8 @@ import { ArrowRight, Lock, Zap, Target, Shield, Flame, GitMerge } from "lucide-r
 import { Button } from "@/components/ui/button"
 import { IconTarget, IconBolt, IconShield, IconFlame, IconMolecule } from "@/components/ui/custom-icons"
 import { Logo } from "@/components/ui/logo"
-import { useRef, useEffect, useState } from "react"
+import { useTheme, UITheme } from "@/components/theme-provider"
+import { useRef, useEffect, useState, useLayoutEffect } from "react"
 
 // Animated counter component
 function AnimatedCounter({
@@ -185,6 +186,26 @@ export default function LandingPage() {
   const { scrollYProgress } = useScroll()
   const heroOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0])
   const heroScale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95])
+  const { setTheme } = useTheme()
+  const savedThemeRef = useRef<string | null>(null)
+
+  // Force modern theme on landing page
+  useEffect(() => {
+    const stored = localStorage.getItem("one-ui-theme")
+    savedThemeRef.current = stored
+    setTheme("modern")
+    // Preserve the user's stored preference in localStorage
+    if (stored) {
+      localStorage.setItem("one-ui-theme", stored)
+    }
+    return () => {
+      // Restore user's theme when leaving landing page
+      const toRestore = savedThemeRef.current as UITheme | null
+      if (toRestore && toRestore !== "modern") {
+        setTheme(toRestore)
+      }
+    }
+  }, [setTheme])
 
   return (
     <div ref={containerRef} className="min-h-screen bg-background overflow-x-hidden">
@@ -266,7 +287,7 @@ export default function LandingPage() {
             transition={{ duration: 0.6, delay: 0.8 }}
             className="flex flex-col sm:flex-row gap-4 justify-center"
           >
-            <Link href="/app/define">
+            <Link href="/app/onboarding">
               <Button size="lg" className="group relative overflow-hidden bg-primary text-primary-foreground px-8 py-6 text-base font-semibold">
                 <span className="relative z-10 flex items-center gap-2">
                   DEFINE YOUR ONE THING
@@ -486,7 +507,7 @@ export default function LandingPage() {
               Lock in. Execute. Win.
             </p>
 
-            <Link href="/app/define">
+            <Link href="/app/onboarding">
               <Button size="lg" className="group relative overflow-hidden bg-primary text-primary-foreground px-12 py-7 text-lg font-bold">
                 <span className="relative z-10 flex items-center gap-3">
                   START NOW — FREE

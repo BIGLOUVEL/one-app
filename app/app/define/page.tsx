@@ -17,6 +17,8 @@ import {
   Wand2,
   Loader2,
   Quote,
+  RotateCcw,
+  AlertTriangle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAppStore } from "@/store/useAppStore"
@@ -92,10 +94,10 @@ const stepConfigs: Record<Step, StepConfig> = {
     icon: Calendar,
     iconColor: "text-orange-400",
     bgColor: "bg-orange-500/10 border-orange-500/20",
-    title: "Quand veux-tu atteindre ton objectif ?",
-    subtitle: "Choisis la deadline de ton GRAND objectif.",
+    title: "When do you want to reach your objective?",
+    subtitle: "Set the deadline for your BIG objective.",
     placeholder: "",
-    helperText: "Une date réaliste mais ambitieuse.",
+    helperText: "A realistic but ambitious date.",
   },
   7: {
     icon: Sparkles,
@@ -110,9 +112,12 @@ const stepConfigs: Record<Step, StepConfig> = {
 
 export default function DefinePage() {
   const router = useRouter()
-  const { objective, isLocked, setObjective } = useAppStore()
+  const { objective, isLocked, setObjective, failObjective, resetObjective } = useAppStore()
+  const lang = useAppStore(s => s.language)
+  const t = (en: string, fr: string) => lang === 'fr' ? fr : en
 
   const [step, setStep] = useState<Step>(1)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [somedayGoal, setSomedayGoal] = useState("")
   const [monthGoal, setMonthGoal] = useState("")
   const [weekGoal, setWeekGoal] = useState("")
@@ -159,11 +164,12 @@ export default function DefinePage() {
   // If already locked, show message
   const locked = isLocked()
 
+  // No objective → redirect to elimination onboarding
   useEffect(() => {
-    if (locked) {
-      // Already have an active objective
+    if (!objective) {
+      router.push("/app/onboarding")
     }
-  }, [locked])
+  }, [objective, router])
 
   const getCurrentValue = () => {
     switch (step) {
@@ -288,6 +294,12 @@ export default function DefinePage() {
 
   const config = stepConfigs[step]
 
+  const handleRedefine = () => {
+    failObjective()
+    resetObjective()
+    router.push("/app/onboarding")
+  }
+
   // If locked, show locked state
   if (locked) {
     return (
@@ -299,18 +311,62 @@ export default function DefinePage() {
             </div>
           </div>
           <div>
-            <h1 className="text-2xl font-bold mb-2">Objective Locked</h1>
+            <h1 className="text-2xl font-bold mb-2">{t("Objective locked", "Objectif verrouillé")}</h1>
             <p className="text-muted-foreground">
-              You already have an active objective. Finish or fail it first.
+              {t("You already have an active objective. Complete it or redefine your essential.", "Tu as déjà un objectif actif. Termine-le ou redéfinis ton essentiel.")}
             </p>
           </div>
           <div className="liquid-glass p-4">
-            <p className="text-sm text-muted-foreground mb-1">Current Objective</p>
-            <p className="font-medium">{objective?.title}</p>
+            <p className="text-sm text-muted-foreground mb-1">{t("Current objective", "Objectif actuel")}</p>
+            <p className="font-medium">{objective?.somedayGoal}</p>
           </div>
-          <Button onClick={() => router.push("/app")} className="glow-green">
-            Go to Dashboard
+          <Button onClick={() => router.push("/app")} className="glow-green w-full">
+            {t("Back to Dashboard", "Retour au Dashboard")}
           </Button>
+
+          {/* Redefinir */}
+          <div className="pt-2">
+            {!showResetConfirm ? (
+              <button
+                onClick={() => setShowResetConfirm(true)}
+                className="text-sm text-muted-foreground hover:text-red-400 transition-colors flex items-center gap-2 mx-auto"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                {t("Redefine my ONE Thing", "Redéfinir mon ONE Thing")}
+              </button>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 space-y-4"
+              >
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
+                  <div className="text-left">
+                    <p className="text-sm font-medium text-red-400">{t("Abandon this objective?", "Abandonner cet objectif ?")}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {t("Your current objective will be marked as abandoned. You'll start over with the elimination process to find your true essential.", "Ton objectif actuel sera marqué comme abandonné. Tu repartiras de zéro avec le processus d'élimination pour trouver ton vrai essentiel.")}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setShowResetConfirm(false)}
+                    variant="outline"
+                    className="flex-1 h-10 rounded-xl bg-white/5 border-white/10 hover:bg-white/10 text-sm"
+                  >
+                    {t("Cancel", "Annuler")}
+                  </Button>
+                  <Button
+                    onClick={handleRedefine}
+                    className="flex-1 h-10 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 text-sm"
+                  >
+                    {t("Abandon and redefine", "Abandonner et redéfinir")}
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </div>
         </div>
       </div>
     )
@@ -399,10 +455,10 @@ export default function DefinePage() {
                   {/* Quick select buttons */}
                   <div className="grid grid-cols-4 gap-2">
                     {[
-                      { label: "1 sem", days: 7 },
-                      { label: "1 mois", days: 30 },
-                      { label: "3 mois", days: 90 },
-                      { label: "6 mois", days: 180 },
+                      { label: t("1 wk", "1 sem"), days: 7 },
+                      { label: t("1 mo", "1 mois"), days: 30 },
+                      { label: t("3 mo", "3 mois"), days: 90 },
+                      { label: t("6 mo", "6 mois"), days: 180 },
                     ].map((option) => (
                       <button
                         key={option.days}
@@ -427,9 +483,9 @@ export default function DefinePage() {
 
                   {deadline && (
                     <div className="text-center p-4 rounded-xl bg-primary/10 border border-primary/20">
-                      <p className="text-sm text-muted-foreground mb-1">Deadline fixée au</p>
+                      <p className="text-sm text-muted-foreground mb-1">{t("Deadline set to", "Deadline fixée au")}</p>
                       <p className="text-lg font-semibold text-primary">
-                        {new Date(deadline).toLocaleDateString("fr-FR", {
+                        {new Date(deadline).toLocaleDateString(lang === 'fr' ? "fr-FR" : "en-US", {
                           weekday: "long",
                           year: "numeric",
                           month: "long",
@@ -437,7 +493,7 @@ export default function DefinePage() {
                         })}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {Math.ceil((new Date(deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} jours à partir d'aujourd'hui
+                        {Math.ceil((new Date(deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} {t("days from today", "jours à partir d'aujourd'hui")}
                       </p>
                     </div>
                   )}
@@ -484,7 +540,7 @@ export default function DefinePage() {
                     className="w-full p-3 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 hover:border-amber-500/40 transition-all flex items-center justify-center gap-2 text-sm text-amber-300 hover:text-amber-200"
                   >
                     <Quote className="h-4 w-4" />
-                    <span>Générer une citation stoïcienne</span>
+                    <span>{t("Generate a Stoic quote", "Générer une citation stoïcienne")}</span>
                   </button>
                 </div>
               )}
@@ -498,7 +554,7 @@ export default function DefinePage() {
                       className="w-full p-3 rounded-xl bg-gradient-to-r from-violet-500/10 to-primary/10 border border-violet-500/20 hover:border-violet-500/40 transition-all flex items-center justify-center gap-2 text-sm text-violet-300 hover:text-violet-200"
                     >
                       <Wand2 className="h-4 w-4" />
-                      <span>Pas d'idée ? L'IA te suggère</span>
+                      <span>{t("No idea? AI suggests", "Pas d'idée ? L'IA te suggère")}</span>
                     </button>
                   ) : (
                     <motion.div
@@ -510,7 +566,7 @@ export default function DefinePage() {
                         <div className="flex items-center gap-2">
                           <Wand2 className="h-4 w-4 text-violet-400" />
                           <span className="text-xs font-medium text-violet-400 uppercase tracking-wider">
-                            Suggestions IA
+                            {t("AI Suggestions", "Suggestions IA")}
                           </span>
                         </div>
                         <button
@@ -520,14 +576,14 @@ export default function DefinePage() {
                           }}
                           className="text-xs text-muted-foreground hover:text-foreground"
                         >
-                          Fermer
+                          {t("Close", "Fermer")}
                         </button>
                       </div>
 
                       {isLoadingSuggestions ? (
                         <div className="flex items-center justify-center py-6">
                           <Loader2 className="h-5 w-5 text-violet-400 animate-spin" />
-                          <span className="ml-2 text-sm text-muted-foreground">Génération en cours...</span>
+                          <span className="ml-2 text-sm text-muted-foreground">{t("Generating...", "Génération en cours...")}</span>
                         </div>
                       ) : suggestions.length > 0 ? (
                         <div className="space-y-2">
@@ -544,12 +600,12 @@ export default function DefinePage() {
                             onClick={fetchSuggestions}
                             className="w-full p-2 text-xs text-muted-foreground hover:text-violet-400 transition-colors"
                           >
-                            Générer d'autres suggestions
+                            {t("Generate more suggestions", "Générer d'autres suggestions")}
                           </button>
                         </div>
                       ) : (
                         <p className="text-sm text-muted-foreground text-center py-4">
-                          Aucune suggestion générée
+                          {t("No suggestions generated", "Aucune suggestion générée")}
                         </p>
                       )}
                     </motion.div>

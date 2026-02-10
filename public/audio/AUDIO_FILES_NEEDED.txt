@@ -1,0 +1,98 @@
+===============================================
+SOUND DESIGN - FILES NEEDED FOR ONE CINEMATIC AD
+===============================================
+
+Download these FREE audio files and place them in this folder (public/audio/):
+
+
+1. BACKGROUND MUSIC
+-------------------
+File: music-ambient.mp3
+Style: Calm, corporate, tech-forward ambient music (24+ seconds)
+Source: https://pixabay.com/music/search/corporate%20ambient/
+Recommended tracks:
+  - "Ambient Corporate"
+  - "Inspiring Cinematic Ambient"
+  - "Technology Corporate"
+
+
+2. CINEMATIC IMPACT (Logo reveal)
+---------------------------------
+File: sfx-impact.mp3
+Style: Deep, powerful cinematic hit/boom
+Source: https://pixabay.com/sound-effects/search/cinematic%20impact/
+or: https://mixkit.co/free-sound-effects/boom/
+
+
+3. WHOOSH TRANSITION
+--------------------
+File: sfx-whoosh.mp3
+Style: Smooth, elegant swoosh sound
+Source: https://pixabay.com/sound-effects/search/whoosh/
+or: https://mixkit.co/free-sound-effects/whoosh/
+
+
+4. UI CLICK
+-----------
+File: sfx-click.mp3
+Style: Soft, modern UI click/tap sound
+Source: https://pixabay.com/sound-effects/search/ui%20click/
+or: https://mixkit.co/free-sound-effects/click/
+
+
+5. RISING TONE
+--------------
+File: sfx-rise.mp3
+Style: Ascending cinematic riser/swell
+Source: https://pixabay.com/sound-effects/search/cinematic%20riser/
+or: https://mixkit.co/free-sound-effects/rise/
+
+
+6. FINAL HIT
+------------
+File: sfx-hit.mp3
+Style: Punchy cinematic hit for CTA moment
+Source: https://pixabay.com/sound-effects/search/cinematic%20hit/
+
+
+7. SPARKLE/SHINE
+----------------
+File: sfx-sparkle.mp3
+Style: Magical sparkle/shimmer sound
+Source: https://pixabay.com/sound-effects/search/sparkle/
+or: https://mixkit.co/free-sound-effects/magic/
+
+
+===============================================
+QUICK SETUP (Copy-paste these URLs)
+===============================================
+
+Visit these direct searches on Pixabay (all free, no attribution required):
+
+Music: https://pixabay.com/music/search/ambient%20corporate%20technology/
+Impact: https://pixabay.com/sound-effects/search/cinematic%20boom/
+Whoosh: https://pixabay.com/sound-effects/search/whoosh%20transition/
+Click: https://pixabay.com/sound-effects/search/interface%20click/
+Rise: https://pixabay.com/sound-effects/search/cinematic%20rise/
+Hit: https://pixabay.com/sound-effects/search/impact%20hit/
+Sparkle: https://pixabay.com/sound-effects/search/magic%20shine/
+
+
+===============================================
+ALTERNATIVE: MIXKIT (Also 100% free)
+===============================================
+
+https://mixkit.co/free-sound-effects/
+
+
+===============================================
+NOTES
+===============================================
+
+- All files should be MP3 format
+- Background music should be at least 24 seconds long
+- Sound effects should be short (0.5-3 seconds)
+- After downloading, rename files to match the names above
+- Volume levels are pre-configured in the code
+
+Once files are in place, refresh Remotion Studio to hear the audio!

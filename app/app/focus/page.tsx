@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
+import confetti from "canvas-confetti"
 import {
   Play,
   Pause,
@@ -20,15 +21,18 @@ import {
   Sparkles,
   Quote,
   Pencil,
+  HelpCircle,
+  Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { IconBolt, IconTarget } from "@/components/ui/custom-icons"
 import { useAppStore, useHasHydrated } from "@/store/useAppStore"
+import { cn } from "@/lib/utils"
 
 // ============================================
 // TYPES
 // ============================================
-type SessionState = "idle" | "bunker-checklist" | "session-setup" | "active" | "paused" | "reflection"
+type SessionState = "idle" | "bunker-checklist" | "session-setup" | "pareto" | "active" | "paused" | "reflection" | "recenter"
 
 interface BunkerItem {
   id: string
@@ -190,7 +194,13 @@ export default function FocusPage() {
     sessionPostIts,
     setSessionPostIts,
     clearSessionPostIts,
+    visualPrefs,
+    updateCascade,
+    setNeedsRecenter,
   } = useAppStore()
+
+  const lang = useAppStore(s => s.language)
+  const t = (en: string, fr: string) => lang === 'fr' ? fr : en
 
   // States
   const [sessionState, setSessionState] = useState<SessionState>("idle")
@@ -226,6 +236,13 @@ export default function FocusPage() {
 
   // Editable focus objective during session
   const [isEditingFocus, setIsEditingFocus] = useState(false)
+
+  // Recenter state
+  const [newRightNowAction, setNewRightNowAction] = useState("")
+
+  // Pareto elimination state
+  const [paretoActions, setParetoActions] = useState<Array<{ id: string; text: string; eliminated: boolean }>>([])
+  const [newParetoAction, setNewParetoAction] = useState("")
 
   // Hydration check
   const hasHydrated = useHasHydrated()
@@ -273,10 +290,40 @@ export default function FocusPage() {
   // Redirect if no objective - ONLY after hydration
   useEffect(() => {
     if (hasHydrated && !objective) {
-      router.push("/app/define")
+      router.push("/app/onboarding")
     }
   }, [hasHydrated, objective, router])
 
+  // Confetti on session complete
+  useEffect(() => {
+    if (sessionState === "reflection" && visualPrefs.confettiOnComplete) {
+      // Fire confetti from both sides
+      const duration = 2000
+      const end = Date.now() + duration
+
+      const frame = () => {
+        confetti({
+          particleCount: 3,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0, y: 0.7 },
+          colors: ["#00ff88", "#8b5cf6", "#06b6d4"],
+        })
+        confetti({
+          particleCount: 3,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1, y: 0.7 },
+          colors: ["#00ff88", "#8b5cf6", "#06b6d4"],
+        })
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame)
+        }
+      }
+      frame()
+    }
+  }, [sessionState, visualPrefs.confettiOnComplete])
 
   // Rotate motivational quotes during active session
   useEffect(() => {
@@ -335,13 +382,24 @@ export default function FocusPage() {
   const handleCompleteSession = () => {
     // Note: Post-its are NOT cleared here - they persist until a new session starts
     endSession(reflectionText, nextActionText)
-    setSessionState("idle")
     setReflectionText("")
     setNextActionText("")
     setBunkerChecklist(initialBunkerChecklist)
     setShowMotivationalQuotes(false)
     setIsEditingFocus(false)
     setObjectiveCompleted(false)
+    setNewRightNowAction(objective?.rightNowAction || "")
+    setSessionState("recenter")
+  }
+
+  const handleConfirmRecenter = () => {
+    const trimmed = newRightNowAction.trim()
+    if (trimmed && trimmed !== objective?.rightNowAction) {
+      updateCascade("rightNowAction", trimmed)
+    }
+    setNeedsRecenter(false)
+    setSessionState("idle")
+    setNewRightNowAction("")
     router.push("/app")
   }
 
@@ -413,6 +471,16 @@ export default function FocusPage() {
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [sessionState])
 
+  // Prevent tab/window close during active session
+  useEffect(() => {
+    if (sessionState !== "active" && sessionState !== "paused") return
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [sessionState])
+
   // Loading state
   if (isLoading) {
     return (
@@ -435,21 +503,47 @@ export default function FocusPage() {
   }
 
   const progress = timeLeft > 0 ? ((sessionDuration * 60 - timeLeft) / (sessionDuration * 60)) * 100 : 100
+  const isImmersive = visualPrefs.immersiveFocus && (sessionState === "active" || sessionState === "paused")
+  const isBunkerLocked = sessionState !== "idle" && sessionState !== "recenter"
 
   return (
     <div
       ref={containerRef}
-      className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-hidden"
+      className={cn(
+        "min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-hidden transition-all duration-700",
+        isBunkerLocked && "fixed inset-0 z-50 bg-background min-h-screen",
+        isImmersive && "bg-black"
+      )}
     >
-      {/* Ambient glow */}
+      {/* Immersive mode breathing background */}
+      {isImmersive && (
+        <motion.div
+          className="absolute inset-0 pointer-events-none"
+          animate={{
+            background: [
+              "radial-gradient(circle at 50% 50%, rgba(0,255,136,0.03) 0%, transparent 50%)",
+              "radial-gradient(circle at 50% 50%, rgba(0,255,136,0.06) 0%, transparent 60%)",
+              "radial-gradient(circle at 50% 50%, rgba(0,255,136,0.03) 0%, transparent 50%)",
+            ],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+      )}
+
+      {/* Ambient glow (hidden in immersive mode) */}
       <div
-        className={`fixed top-0 left-1/2 -translate-x-1/2 w-[600px] sm:w-[800px] h-[300px] sm:h-[400px] blur-[120px] rounded-full pointer-events-none transition-all duration-1000 ${
-          sessionState === "active"
+        className={cn(
+          "fixed top-0 left-1/2 -translate-x-1/2 w-[600px] sm:w-[800px] h-[300px] sm:h-[400px] blur-[120px] rounded-full pointer-events-none transition-all duration-1000",
+          isImmersive ? "opacity-0" : sessionState === "active"
             ? "bg-emerald-500/20"
             : sessionState === "paused"
             ? "bg-orange-500/15"
             : "bg-primary/5"
-        }`}
+        )}
       />
 
       {/* Post-it Notes Layer */}
@@ -635,9 +729,13 @@ export default function FocusPage() {
                     rows={2}
                     className="w-full bg-white/5 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Default: Today's goal. Change if you want to focus on something specific.
-                  </p>
+                  <button
+                    onClick={() => setSessionState("pareto")}
+                    className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                    {t("I don't know what to do — help me choose", "Je ne sais pas quoi faire — m'aider à choisir")}
+                  </button>
                 </div>
 
                 {/* Duration Selection */}
@@ -700,6 +798,195 @@ export default function FocusPage() {
                   <Play className="mr-2 h-5 w-5" />
                   Start {customDuration || sessionDuration} min Session
                 </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ============================================
+              PARETO EXTREME — ELIMINATION
+              ============================================ */}
+          {sessionState === "pareto" && (
+            <motion.div
+              key="pareto"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              <div className="text-center space-y-2">
+                <h1 className="text-2xl sm:text-3xl font-bold">{t("Extreme Pareto", "Pareto Extrême")}</h1>
+                <p className="text-muted-foreground text-sm">
+                  {t("List everything you could do, then eliminate until only ONE action remains.", "Liste tout ce que tu pourrais faire, puis élimine jusqu'à ce qu'il ne reste qu'UNE action.")}
+                </p>
+              </div>
+
+              {/* Input */}
+              <div className="liquid-glass p-4">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newParetoAction}
+                    onChange={(e) => setNewParetoAction(e.target.value)}
+                    placeholder={t("A possible action...", "Une action possible...")}
+                    className="flex-1 bg-white/5 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newParetoAction.trim()) {
+                        setParetoActions([
+                          ...paretoActions,
+                          { id: Date.now().toString(), text: newParetoAction.trim(), eliminated: false },
+                        ])
+                        setNewParetoAction("")
+                      }
+                    }}
+                  />
+                  <Button
+                    onClick={() => {
+                      if (newParetoAction.trim()) {
+                        setParetoActions([
+                          ...paretoActions,
+                          { id: Date.now().toString(), text: newParetoAction.trim(), eliminated: false },
+                        ])
+                        setNewParetoAction("")
+                      }
+                    }}
+                    disabled={!newParetoAction.trim()}
+                    className="h-12 px-4 rounded-xl"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Actions list */}
+              {paretoActions.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider px-1">
+                    {paretoActions.filter((a) => !a.eliminated).length} {t("action(s) remaining", `action${paretoActions.filter((a) => !a.eliminated).length > 1 ? "s" : ""} restante${paretoActions.filter((a) => !a.eliminated).length > 1 ? "s" : ""}`)}
+                    {paretoActions.filter((a) => !a.eliminated).length > 1 && (
+                      <span className="text-primary ml-1">{t("— click to eliminate", "— clique pour éliminer")}</span>
+                    )}
+                  </p>
+
+                  <AnimatePresence>
+                    {paretoActions
+                      .filter((a) => !a.eliminated)
+                      .map((action) => {
+                        const remaining = paretoActions.filter((a) => !a.eliminated)
+                        const isLast = remaining.length === 1
+
+                        return (
+                          <motion.button
+                            key={action.id}
+                            layout
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{
+                              opacity: 1,
+                              scale: isLast ? 1.02 : 1,
+                              borderColor: isLast ? "rgba(0,255,136,0.4)" : undefined,
+                            }}
+                            exit={{ opacity: 0, x: -30, scale: 0.9 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                            onClick={() => {
+                              if (isLast) return
+                              setParetoActions(
+                                paretoActions.map((a) =>
+                                  a.id === action.id ? { ...a, eliminated: true } : a
+                                )
+                              )
+                            }}
+                            className={cn(
+                              "w-full text-left p-4 rounded-xl border transition-all flex items-center gap-3 group",
+                              isLast
+                                ? "bg-primary/10 border-primary/30"
+                                : "bg-white/[0.03] border-white/[0.06] hover:bg-red-500/5 hover:border-red-500/20 cursor-pointer"
+                            )}
+                            style={
+                              isLast
+                                ? { boxShadow: "0 0 20px rgba(0,255,136,0.15)" }
+                                : undefined
+                            }
+                          >
+                            {isLast ? (
+                              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                                <Check className="w-4 h-4 text-primary" />
+                              </div>
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0 group-hover:bg-red-500/10 transition-colors">
+                                <Trash2 className="w-4 h-4 text-muted-foreground group-hover:text-red-400 transition-colors" />
+                              </div>
+                            )}
+                            <span className={cn(
+                              "flex-1 font-medium",
+                              isLast && "text-primary"
+                            )}>
+                              {action.text}
+                            </span>
+                            {isLast && (
+                              <span className="text-xs text-primary/60">{t("YOUR action", "TON action")}</span>
+                            )}
+                          </motion.button>
+                        )
+                      })}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {/* Prompt based on count */}
+              {(() => {
+                const remaining = paretoActions.filter((a) => !a.eliminated).length
+                if (remaining === 0) return null
+                if (remaining === 1) return (
+                  <p className="text-center text-primary font-medium text-sm">
+                    {t("There's your ONE action. That's your focus.", "Voilà ta ONE action. C'est ça ton focus.")}
+                  </p>
+                )
+                if (remaining === 2) return (
+                  <p className="text-center text-muted-foreground text-sm">
+                    {t("One left to eliminate. Which will move your objective forward the most?", "Plus qu'une à éliminer. Laquelle fera le plus avancer ton objectif ?")}
+                  </p>
+                )
+                if (remaining > 4) return (
+                  <p className="text-center text-muted-foreground text-sm">
+                    {t("Which could wait until tomorrow without consequences?", "Laquelle pourrait attendre demain sans conséquences ?")}
+                  </p>
+                )
+                return (
+                  <p className="text-center text-muted-foreground text-sm">
+                    {t("Which excites you the least?", "Laquelle t'enthousiasme le moins ?")}
+                  </p>
+                )
+              })()}
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setParetoActions([])
+                    setNewParetoAction("")
+                    setSessionState("session-setup")
+                  }}
+                  className="h-14 px-6 rounded-2xl"
+                >
+                  {t("Back", "Retour")}
+                </Button>
+                {paretoActions.filter((a) => !a.eliminated).length === 1 && (
+                  <Button
+                    onClick={() => {
+                      const winner = paretoActions.find((a) => !a.eliminated)
+                      if (winner) {
+                        setSessionObjective(winner.text)
+                      }
+                      setParetoActions([])
+                      setNewParetoAction("")
+                      setSessionState("session-setup")
+                    }}
+                    className="flex-1 h-14 rounded-2xl text-base font-medium glow-green"
+                  >
+                    <Check className="mr-2 h-5 w-5" />
+                    {t("That's my focus", "C'est mon focus")}
+                  </Button>
+                )}
               </div>
             </motion.div>
           )}
@@ -986,6 +1273,70 @@ export default function FocusPage() {
               >
                 <Check className="mr-2 h-5 w-5" />
                 Complete Session
+              </Button>
+            </motion.div>
+          )}
+
+          {/* ============================================
+              RECENTER STATE
+              ============================================ */}
+          {sessionState === "recenter" && (
+            <motion.div
+              key="recenter"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              <div className="text-center space-y-2">
+                <div className="flex justify-center mb-4">
+                  <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
+                    <IconTarget size="lg" className="drop-shadow-[0_0_10px_rgba(0,255,136,0.4)]" />
+                  </div>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold">{t("Refocus", "Recentrage")}</h1>
+                <p className="text-muted-foreground">
+                  {t("One more domino. Before continuing, refocus.", "Un domino de plus. Avant de continuer, recentre-toi.")}
+                </p>
+              </div>
+
+              {/* Current cascade context */}
+              <div className="liquid-glass p-6 space-y-4">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{t("Week objective", "Objectif de la semaine")}</p>
+                  <p className="text-base font-medium">{objective?.weekGoal}</p>
+                </div>
+                <div className="pt-3 border-t border-white/10">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{t("Today's objective", "Objectif du jour")}</p>
+                  <p className="text-base font-medium">{objective?.todayGoal}</p>
+                </div>
+              </div>
+
+              {/* Next right-now action */}
+              <div className="liquid-glass p-6 space-y-3">
+                <label className="text-sm text-muted-foreground block">
+                  {t("What's your next immediate action?", "Quelle est ta prochaine action immédiate ?")}
+                </label>
+                <input
+                  type="text"
+                  value={newRightNowAction}
+                  onChange={(e) => setNewRightNowAction(e.target.value)}
+                  placeholder={t("Your next action...", "Ta prochaine action...")}
+                  className="w-full bg-white/5 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleConfirmRecenter()
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t("Leave as is if your action stays the same.", "Laisse tel quel si ton action reste la même.")}
+                </p>
+              </div>
+
+              <Button
+                onClick={handleConfirmRecenter}
+                className="w-full h-14 rounded-2xl text-base font-medium glow-green"
+              >
+                {t("Refocused. Continue.", "Recentré. Continuer.")}
               </Button>
             </motion.div>
           )}

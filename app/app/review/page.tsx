@@ -58,7 +58,7 @@ export default function ReviewPage() {
   // Redirect if no objective
   useEffect(() => {
     if (!isLoading && !objective) {
-      router.push("/app/define")
+      router.push("/app/onboarding")
     }
   }, [objective, isLoading, router])
 

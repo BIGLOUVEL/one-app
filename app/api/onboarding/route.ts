@@ -13,6 +13,7 @@ interface OnboardingInput {
     deadline?: string
     resources?: string
   }
+  language?: "en" | "fr"
 }
 
 interface AIGeneratedPlan {
@@ -51,8 +52,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const input: OnboardingInput = await request.json()
+    const lang = input.language || "en"
+    const isFr = lang === "fr"
 
-    const systemPrompt = `Tu es un coach de productivité expert en "The ONE Thing" de Gary Keller. Tu aides les utilisateurs à clarifier leur objectif et à le découper en actions concrètes.
+    const systemPrompt = isFr
+      ? `Tu es un coach de productivité expert en "The ONE Thing" de Gary Keller. Tu aides les utilisateurs à clarifier leur objectif et à le découper en actions concrètes.
 
 CONTEXTE:
 - L'utilisateur est: ${input.context.type}
@@ -71,10 +75,34 @@ RÈGLES STRICTES:
    - "poor-health": Mauvaise santé (sommeil, énergie, exercice)
    - "unsupportive-environment": Environnement non supportif (distractions, personnes négatives)
 5. Le focus block plan est pour une session de 90 minutes avec 3 étapes claires
+6. RÉPONDS EN FRANÇAIS
 
 RÉPONDS UNIQUEMENT EN JSON VALIDE (pas de markdown, pas de commentaires).`
+      : `You are a productivity coach expert in "The ONE Thing" by Gary Keller. You help users clarify their objective and break it down into concrete actions.
 
-    const userPrompt = `Objectif Someday de l'utilisateur: "${input.somedayGoal}"
+CONTEXT:
+- User profile: ${input.context.type}
+- Time horizon: ${input.context.horizon}
+- Availability: ${input.constraints.hoursPerWeek}h/week
+${input.constraints.deadline ? `- Deadline: ${input.constraints.deadline}` : ""}
+${input.constraints.resources ? `- Resources/constraints: ${input.constraints.resources}` : ""}
+
+STRICT RULES:
+1. Each cascade level must be MORE SPECIFIC than the previous one
+2. The "rightNowAction" must be ULTRA ATOMIC (doable in 5-15 minutes)
+3. The "ONE Thing Statement" follows the format: "What is the ONE thing I can do such that by doing it, everything else becomes easier or unnecessary?"
+4. The Four Thieves are:
+   - "say-no": Inability to say no to others
+   - "fear-chaos": Fear of chaos (perfectionism, procrastination)
+   - "poor-health": Poor health (sleep, energy, exercise)
+   - "unsupportive-environment": Unsupportive environment (distractions, negative people)
+5. The focus block plan is for a 90-minute session with 3 clear steps
+6. RESPOND IN ENGLISH
+
+RESPOND ONLY IN VALID JSON (no markdown, no comments).`
+
+    const userPrompt = isFr
+      ? `${input.somedayGoal ? `Objectif Someday de l'utilisateur: "${input.somedayGoal}"` : `L'utilisateur n'a pas encore d'objectif précis. En te basant sur son profil (${input.context.type}, horizon ${input.context.horizon}, ${input.constraints.hoursPerWeek}h/semaine), propose-lui un objectif ambitieux mais réaliste et construis le plan autour.`}
 
 Génère un plan complet en JSON avec cette structure exacte:
 {
@@ -101,6 +129,34 @@ Génère un plan complet en JSON avec cette structure exacte:
     "parade": "stratégie concrète pour contrer ce voleur"
   },
   "why": "une phrase de motivation qui capture l'essence du pourquoi"
+}`
+      : `${input.somedayGoal ? `User's Someday Goal: "${input.somedayGoal}"` : `The user doesn't have a clear objective yet. Based on their profile (${input.context.type}, horizon ${input.context.horizon}, ${input.constraints.hoursPerWeek}h/week), suggest an ambitious but realistic objective and build the plan around it.`}
+
+Generate a complete plan in JSON with this exact structure:
+{
+  "cascade": {
+    "somedayGoal": "long-term goal rephrased and clarified",
+    "yearGoal": "what needs to be accomplished this year to get there",
+    "monthGoal": "what needs to be accomplished this month",
+    "weekGoal": "what needs to be accomplished this week",
+    "todayGoal": "what needs to be accomplished today",
+    "rightNowAction": "the ultra-specific immediate action to do now (5-15 min)"
+  },
+  "oneThingStatement": "The personalized focusing question",
+  "focusBlockPlan": {
+    "duration": 90,
+    "steps": [
+      { "order": 1, "action": "concrete action 1", "duration": 30 },
+      { "order": 2, "action": "concrete action 2", "duration": 30 },
+      { "order": 3, "action": "concrete action 3", "duration": 30 }
+    ]
+  },
+  "risks": {
+    "primaryThief": "one of the 4 thieves",
+    "thiefDescription": "why this thief is the most probable for this user",
+    "parade": "concrete strategy to counter this thief"
+  },
+  "why": "a motivational sentence that captures the essence of why"
 }`
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {

@@ -140,6 +140,114 @@
     --sidebar-ring: 150 100% 42%;
   }
 
+  /* Stoic Theme - Ancient Greece, Marble & Gold, Philosophical */
+  .theme-stoic {
+    --background: 228 18% 7%;
+    --foreground: 40 25% 90%;
+
+    --card: 228 15% 10%;
+    --card-foreground: 40 25% 90%;
+
+    --popover: 228 15% 10%;
+    --popover-foreground: 40 25% 90%;
+
+    /* Primary - Antique Gold */
+    --primary: 42 72% 52%;
+    --primary-foreground: 228 18% 7%;
+
+    /* Secondary - Warm dark stone */
+    --secondary: 228 12% 14%;
+    --secondary-foreground: 40 20% 80%;
+
+    /* Muted - Weathered stone */
+    --muted: 228 10% 18%;
+    --muted-foreground: 30 8% 50%;
+
+    /* Accent - Deep Bronze */
+    --accent: 28 55% 42%;
+    --accent-foreground: 40 30% 95%;
+
+    /* Destructive - Roman Blood Red */
+    --destructive: 0 50% 38%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Success - Olive Laurel */
+    --success: 82 38% 38%;
+    --success-foreground: 0 0% 98%;
+
+    /* Borders - Subtle warm edge */
+    --border: 228 12% 16%;
+    --input: 228 12% 14%;
+    --ring: 42 72% 52%;
+
+    /* Radius - Architectural, sharp stone blocks */
+    --radius: 0.375rem;
+
+    /* Sidebar */
+    --sidebar-background: 228 18% 6%;
+    --sidebar-foreground: 40 25% 90%;
+    --sidebar-primary: 42 72% 52%;
+    --sidebar-primary-foreground: 228 18% 7%;
+    --sidebar-accent: 228 12% 12%;
+    --sidebar-accent-foreground: 40 25% 90%;
+    --sidebar-border: 228 12% 13%;
+    --sidebar-ring: 42 72% 52%;
+  }
+
+  /* Monk Mode Theme - Pure Black, Zero Distraction, Total Discipline */
+  .theme-monk {
+    --background: 0 0% 2%;
+    --foreground: 0 0% 85%;
+
+    --card: 0 0% 4%;
+    --card-foreground: 0 0% 85%;
+
+    --popover: 0 0% 4%;
+    --popover-foreground: 0 0% 85%;
+
+    /* Primary - Blood red, urgency */
+    --primary: 0 72% 50%;
+    --primary-foreground: 0 0% 98%;
+
+    /* Secondary - Pure dark */
+    --secondary: 0 0% 7%;
+    --secondary-foreground: 0 0% 70%;
+
+    /* Muted - Charcoal */
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 40%;
+
+    /* Accent - Warm amber for rare highlights */
+    --accent: 35 90% 50%;
+    --accent-foreground: 0 0% 2%;
+
+    /* Destructive */
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Success - Muted green, no celebration */
+    --success: 120 25% 35%;
+    --success-foreground: 0 0% 98%;
+
+    /* Borders - Nearly invisible */
+    --border: 0 0% 10%;
+    --input: 0 0% 8%;
+    --ring: 0 72% 50%;
+
+    /* Radius - Sharp, no softness */
+    --radius: 0.25rem;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 2%;
+    --sidebar-foreground: 0 0% 85%;
+    --sidebar-primary: 0 72% 50%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 0 0% 6%;
+    --sidebar-accent-foreground: 0 0% 85%;
+    --sidebar-border: 0 0% 8%;
+    --sidebar-ring: 0 72% 50%;
+  }
+
   /* Elegant Theme - Swiss Editorial, Warm Paper */
   .theme-elegant {
     --background: 42 33% 96%;
@@ -349,6 +457,64 @@
      Satoshi (local font)
      Clean, modern, pro - pour entrepreneurs
      ============================================ */
+  /* ============================================
+     FONT PRESET: STOIC
+     Cormorant Garamond + Crimson Pro
+     Classical, philosophical, timeless gravitas
+     ============================================ */
+  .font-preset-stoic {
+    font-family: var(--font-stoic-body), 'Crimson Pro', 'Georgia', serif;
+  }
+
+  .font-preset-stoic h1,
+  .font-preset-stoic h2,
+  .font-preset-stoic h3,
+  .font-preset-stoic h4,
+  .font-preset-stoic h5,
+  .font-preset-stoic h6 {
+    font-family: var(--font-stoic-display), 'Cormorant Garamond', 'Georgia', serif;
+  }
+
+  .font-preset-stoic h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.1;
+  }
+
+  .font-preset-stoic h2 {
+    @apply text-3xl md:text-4xl;
+    font-weight: 600;
+    letter-spacing: 0.005em;
+    line-height: 1.15;
+  }
+
+  .font-preset-stoic h3 {
+    @apply text-xl md:text-2xl;
+    font-weight: 500;
+    letter-spacing: 0;
+    line-height: 1.25;
+  }
+
+  .font-preset-stoic h4 {
+    @apply text-lg md:text-xl;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+
+  .font-preset-stoic p,
+  .font-preset-stoic span,
+  .font-preset-stoic li,
+  .font-preset-stoic label {
+    font-weight: 400;
+    letter-spacing: 0.01em;
+  }
+
+  .font-preset-stoic strong,
+  .font-preset-stoic b {
+    font-weight: 700;
+  }
+
   .font-preset-founder {
     font-family: 'Satoshi', system-ui, sans-serif;
   }
@@ -401,7 +567,54 @@
   .font-preset-founder b {
     font-weight: 700;
   }
+
+  /* ============================================
+     FONT PRESET: MONK
+     JetBrains Mono (monospace) — raw, terminal
+     ============================================ */
+  .font-preset-monk {
+    font-family: var(--font-monk), 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  }
+
+  .font-preset-monk h1,
+  .font-preset-monk h2,
+  .font-preset-monk h3,
+  .font-preset-monk h4,
+  .font-preset-monk h5,
+  .font-preset-monk h6 {
+    font-family: var(--font-monk), 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .font-preset-monk h1 {
+    @apply text-3xl md:text-4xl lg:text-5xl;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .font-preset-monk h2 {
+    @apply text-2xl md:text-3xl;
+    font-weight: 700;
+    line-height: 1.05;
+  }
+
+  .font-preset-monk h3 {
+    @apply text-lg md:text-xl;
+    font-weight: 600;
+    line-height: 1.15;
+  }
+
+  .font-preset-monk p,
+  .font-preset-monk span,
+  .font-preset-monk li,
+  .font-preset-monk label {
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    font-size: 0.875rem;
+  }
 }
+
 
 @layer utilities {
   .text-balance {
@@ -431,6 +644,49 @@
       0 0 80px -20px rgba(0, 255, 136, 0.1);
   }
 
+  .theme-stoic .glass-panel {
+    @apply border-border;
+    background: linear-gradient(
+      135deg,
+      hsl(228 15% 10% / 0.95) 0%,
+      hsl(228 15% 9% / 0.9) 50%,
+      hsl(228 15% 11% / 0.95) 100%
+    );
+    box-shadow:
+      0 0 0 1px hsl(42 72% 52% / 0.04) inset,
+      0 1px 0 0 hsl(40 25% 90% / 0.03) inset,
+      0 4px 24px -4px rgba(0, 0, 0, 0.6);
+  }
+
+  .theme-stoic .liquid-glass {
+    background: linear-gradient(
+      145deg,
+      hsl(228 15% 11% / 0.95) 0%,
+      hsl(228 15% 9% / 0.9) 40%,
+      hsl(228 12% 12% / 0.95) 100%
+    );
+    @apply border-border rounded-lg;
+    box-shadow:
+      0 0 0 1px hsl(42 72% 52% / 0.06) inset,
+      0 1px 0 0 hsl(40 25% 90% / 0.04) inset,
+      0 8px 32px -8px rgba(0, 0, 0, 0.7),
+      0 0 60px -20px hsl(42 72% 52% / 0.06);
+  }
+
+  .theme-stoic .liquid-glass-green {
+    background: linear-gradient(
+      145deg,
+      hsl(42 72% 52% / 0.06) 0%,
+      hsl(228 15% 10% / 0.9) 100%
+    );
+    @apply border rounded-lg;
+    border-color: hsl(42 72% 52% / 0.15);
+    box-shadow:
+      0 0 0 1px hsl(42 72% 52% / 0.05) inset,
+      0 8px 32px -8px rgba(0, 0, 0, 0.6),
+      0 0 60px -20px hsl(42 72% 52% / 0.1);
+  }
+
   .theme-elegant .liquid-glass {
     @apply bg-card border-border;
     box-shadow:
@@ -446,10 +702,44 @@
       0 0 60px -20px rgba(0, 255, 136, 0.15);
   }
 
+  .theme-stoic .liquid-glass-green {
+    background: linear-gradient(
+      145deg,
+      hsl(42 72% 52% / 0.06) 0%,
+      hsl(228 15% 10% / 0.9) 100%
+    );
+    @apply border rounded-lg;
+    border-color: hsl(42 72% 52% / 0.15);
+    box-shadow:
+      0 0 0 1px hsl(42 72% 52% / 0.05) inset,
+      0 8px 32px -8px rgba(0, 0, 0, 0.6),
+      0 0 60px -20px hsl(42 72% 52% / 0.1);
+  }
+
   .theme-elegant .liquid-glass-green {
     @apply bg-accent/[0.08] border-accent/20;
     box-shadow:
       0 4px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Monk Mode - Stripped-down, raw, no gloss */
+  .theme-monk .glass-panel {
+    @apply border-border;
+    background: hsl(0 0% 4%);
+    box-shadow: none;
+  }
+
+  .theme-monk .liquid-glass {
+    background: hsl(0 0% 4%);
+    @apply border-border rounded-sm;
+    box-shadow: none;
+  }
+
+  .theme-monk .liquid-glass-green {
+    background: hsl(0 72% 50% / 0.04);
+    @apply border rounded-sm;
+    border-color: hsl(0 72% 50% / 0.15);
+    box-shadow: none;
   }
 
   /* Glow effects - Modern theme */
@@ -464,6 +754,28 @@
     box-shadow:
       0 0 30px rgba(0, 255, 136, 0.4),
       0 0 60px rgba(0, 255, 136, 0.2);
+  }
+
+  .theme-stoic .glow-green {
+    box-shadow:
+      0 0 20px hsl(42 72% 52% / 0.2),
+      0 0 40px hsl(42 72% 52% / 0.08);
+    transition: box-shadow 0.3s ease;
+  }
+
+  .theme-stoic .glow-green:hover {
+    box-shadow:
+      0 0 30px hsl(42 72% 52% / 0.3),
+      0 0 60px hsl(42 72% 52% / 0.12);
+  }
+
+  .theme-monk .glow-green {
+    box-shadow: 0 0 12px hsl(0 72% 50% / 0.25);
+    transition: box-shadow 0.3s ease;
+  }
+
+  .theme-monk .glow-green:hover {
+    box-shadow: 0 0 20px hsl(0 72% 50% / 0.35);
   }
 
   .theme-elegant .glow-green {
@@ -529,6 +841,94 @@
     opacity: 0.03;
     pointer-events: none;
     mix-blend-mode: multiply;
+  }
+
+  /* Marble texture - Stoic theme */
+  .theme-stoic .texture-grain::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='marble'%3E%3CfeTurbulence type='turbulence' baseFrequency='0.015' numOctaves='5' seed='3' stitchTiles='stitch' result='turbulence'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='turbulence' scale='15' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23grain)'/%3E%3C/svg%3E");
+    opacity: 0.025;
+    pointer-events: none;
+    mix-blend-mode: soft-light;
+  }
+
+  /* Stoic gold line accent - top border decoration */
+  .theme-stoic .card-feature::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      hsl(42 72% 52% / 0.6) 20%,
+      hsl(42 72% 52% / 0.8) 50%,
+      hsl(42 72% 52% / 0.6) 80%,
+      transparent 100%
+    );
+    height: 1px;
+  }
+
+  /* Stoic scrollbar */
+  .theme-stoic ::-webkit-scrollbar-thumb {
+    background: hsl(42 72% 52% / 0.15);
+    border-radius: 4px;
+  }
+
+  .theme-stoic ::-webkit-scrollbar-thumb:hover {
+    background: hsl(42 72% 52% / 0.25);
+  }
+
+  /* Stoic selection */
+  .theme-stoic ::selection {
+    background: hsl(42 72% 52% / 0.2);
+    color: hsl(40 25% 95%);
+  }
+
+  /* Stoic quote block - column-style left border */
+  .theme-stoic .quote-block {
+    border-left: 2px solid hsl(42 72% 52% / 0.5);
+    font-style: italic;
+    font-family: var(--font-stoic-display), 'Cormorant Garamond', serif;
+  }
+
+  /* ============================================
+     MONK MODE - Scrollbar, Selection, Card
+     ============================================ */
+
+  /* Monk scrollbar - thin, nearly invisible */
+  .theme-monk ::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .theme-monk ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .theme-monk ::-webkit-scrollbar-thumb {
+    background: hsl(0 0% 15%);
+    border-radius: 0;
+  }
+
+  .theme-monk ::-webkit-scrollbar-thumb:hover {
+    background: hsl(0 72% 50% / 0.3);
+  }
+
+  /* Monk selection - red flash */
+  .theme-monk ::selection {
+    background: hsl(0 72% 50% / 0.25);
+    color: hsl(0 0% 95%);
+  }
+
+  /* Monk card-feature - red top line, no decoration */
+  .theme-monk .card-feature::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      hsl(0 72% 50% / 0.5) 20%,
+      hsl(0 72% 50% / 0.7) 50%,
+      hsl(0 72% 50% / 0.5) 80%,
+      transparent 100%
+    );
+    height: 1px;
   }
 
   /* Status indicators */

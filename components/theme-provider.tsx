@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-export type UITheme = "modern" | "elegant"
+export type UITheme = "modern" | "elegant" | "stoic" | "monk"
 
 type ThemeProviderProps = {
   children: React.ReactNode
@@ -14,6 +14,8 @@ type ThemeProviderState = {
   theme: UITheme
   setTheme: (theme: UITheme) => void
 }
+
+const VALID_THEMES: UITheme[] = ["modern", "elegant", "stoic", "monk"]
 
 const initialState: ThemeProviderState = {
   theme: "modern",
@@ -34,7 +36,7 @@ export function ThemeProvider({
   React.useEffect(() => {
     setMounted(true)
     const stored = localStorage.getItem(storageKey) as UITheme | null
-    if (stored && (stored === "modern" || stored === "elegant")) {
+    if (stored && VALID_THEMES.includes(stored)) {
       setThemeState(stored)
     }
   }, [storageKey])
@@ -45,11 +47,19 @@ export function ThemeProvider({
     const root = window.document.documentElement
 
     // Remove all theme classes
-    root.classList.remove("theme-modern", "theme-elegant")
+    root.classList.remove("theme-modern", "theme-elegant", "theme-stoic", "theme-monk")
 
-    // Add the current theme class (only for elegant, modern is default/root)
-    if (theme === "elegant") {
-      root.classList.add("theme-elegant")
+    // Add the current theme class (modern is default/root, others get explicit class)
+    if (theme !== "modern") {
+      root.classList.add(`theme-${theme}`)
+    }
+
+    // Add/remove font preset classes
+    root.classList.remove("font-preset-stoic", "font-preset-monk")
+    if (theme === "stoic") {
+      root.classList.add("font-preset-stoic")
+    } else if (theme === "monk") {
+      root.classList.add("font-preset-monk")
     }
 
     // Store preference

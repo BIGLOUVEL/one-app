@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { createClient } from "@/lib/supabase"
+import { useAppStore } from "@/store/useAppStore"
 
 export function LoginForm({
   className,
@@ -31,6 +32,9 @@ export function LoginForm({
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+
+  const lang = useAppStore(s => s.language)
+  const t = (en: string, fr: string) => lang === 'fr' ? fr : en
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,7 +56,7 @@ export function LoginForm({
       router.push(redirect)
       router.refresh()
     } catch {
-      setError("An error occurred. Try again.")
+      setError(t("An error occurred. Please try again.", "Une erreur est survenue. Réessayez."))
     } finally {
       setIsLoading(false)
     }
@@ -73,7 +77,7 @@ export function LoginForm({
         setError(error.message)
       }
     } catch {
-      setError("An error occurred. Try again.")
+      setError(t("An error occurred. Please try again.", "Une erreur est survenue. Réessayez."))
     } finally {
       setIsLoading(false)
     }
@@ -89,9 +93,9 @@ export function LoginForm({
                 <div className="mb-2">
                   <Logo size="lg" className="drop-shadow-[0_0_10px_rgba(0,255,136,0.3)]" />
                 </div>
-                <h1 className="text-2xl font-bold">Welcome back</h1>
+                <h1 className="text-2xl font-bold">{t("Welcome back", "Content de vous revoir")}</h1>
                 <p className="text-muted-foreground text-balance text-sm">
-                  Sign in to continue to ONE
+                  {t("Sign in to continue", "Connectez-vous pour continuer")}
                 </p>
               </div>
 
@@ -106,7 +110,7 @@ export function LoginForm({
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder={t("you@example.com", "vous@exemple.com")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -117,12 +121,12 @@ export function LoginForm({
 
               <Field>
                 <div className="flex items-center">
-                  <FieldLabel htmlFor="password">Password</FieldLabel>
+                  <FieldLabel htmlFor="password">{t("Password", "Mot de passe")}</FieldLabel>
                   <Link
                     href="/forgot-password"
                     className="ml-auto text-sm text-muted-foreground underline-offset-2 hover:underline hover:text-foreground"
                   >
-                    Forgot password?
+                    {t("Forgot password?", "Mot de passe oublié ?")}
                   </Link>
                 </div>
                 <Input
@@ -145,16 +149,16 @@ export function LoginForm({
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
+                      {t("Signing in...", "Connexion...")}
                     </>
                   ) : (
-                    "Sign in"
+                    t("Sign in", "Se connecter")
                   )}
                 </Button>
               </Field>
 
               <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
-                Or continue with
+                {t("Or continue with", "Ou continuer avec")}
               </FieldSeparator>
 
               <Field>
@@ -180,12 +184,12 @@ export function LoginForm({
               </Field>
 
               <FieldDescription className="text-center">
-                Don&apos;t have an account?{" "}
+                {t("Don't have an account?", "Pas encore de compte ?")}{" "}
                 <Link
                   href="/signup"
                   className="text-foreground underline underline-offset-4 hover:text-primary"
                 >
-                  Sign up
+                  {t("Sign up", "S'inscrire")}
                 </Link>
               </FieldDescription>
             </FieldGroup>
@@ -201,7 +205,7 @@ export function LoginForm({
               </div>
               <h2 className="text-xl font-semibold">Focus Operating System</h2>
               <p className="text-sm text-muted-foreground max-w-[200px] mx-auto">
-                One objective. One priority. One action. Nothing else matters.
+                {t("One objective. One priority. One action. Nothing else matters.", "Un objectif. Une priorité. Une action. Rien d'autre ne compte.")}
               </p>
             </div>
           </div>
@@ -209,13 +213,13 @@ export function LoginForm({
       </Card>
 
       <FieldDescription className="px-6 text-center text-xs">
-        By continuing, you agree to our{" "}
+        {t("By continuing, you agree to our", "En continuant, vous acceptez nos")}{" "}
         <Link href="/terms" className="underline underline-offset-4 hover:text-foreground">
-          Terms of Service
+          {t("Terms of Service", "Conditions d'utilisation")}
         </Link>{" "}
-        and{" "}
+        {t("and our", "et notre")}{" "}
         <Link href="/privacy" className="underline underline-offset-4 hover:text-foreground">
-          Privacy Policy
+          {t("Privacy Policy", "Politique de confidentialité")}
         </Link>
         .
       </FieldDescription>

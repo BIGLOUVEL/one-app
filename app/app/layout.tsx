@@ -10,6 +10,7 @@ import { useAppStore, useHasHydrated } from "@/store/useAppStore"
 import { useAuth } from "@/components/auth/auth-provider"
 import { Logo } from "@/components/ui/logo"
 import { PaymentVerifier } from "@/components/app/payment-verifier"
+import { DailyDominoCheck } from "@/components/app/daily-domino-check"
 
 function UserGuard() {
   const { user } = useAuth()
@@ -33,11 +34,11 @@ function UserGuard() {
 }
 
 function AppHeader() {
-  const { objective, hasCompletedOnboarding } = useAppStore()
+  const { objective, hasCompletedOnboarding, currentSession } = useAppStore()
   const isOnboarding = !objective || !hasCompletedOnboarding
 
-  // Hide header during onboarding
-  if (isOnboarding) return null
+  // Hide header during onboarding or active focus session (bunker mode)
+  if (isOnboarding || currentSession) return null
 
   return (
     <header className="sticky top-0 z-40 flex items-center justify-between h-14 px-4 border-b border-border bg-background/80 backdrop-blur-xl">
@@ -63,11 +64,11 @@ function AppHeader() {
 }
 
 function AppMobileNav() {
-  const { objective, hasCompletedOnboarding } = useAppStore()
+  const { objective, hasCompletedOnboarding, currentSession } = useAppStore()
   const isOnboarding = !objective || !hasCompletedOnboarding
 
-  // Hide mobile nav during onboarding
-  if (isOnboarding) return null
+  // Hide mobile nav during onboarding or active focus session (bunker mode)
+  if (isOnboarding || currentSession) return null
 
   return <MobileNav />
 }
@@ -81,6 +82,9 @@ export default function AppLayout({
     <AppNav>
       {/* Clear stale data when a different user logs in */}
       <UserGuard />
+
+      {/* Daily domino check - first visit of the day */}
+      <DailyDominoCheck />
 
       {/* Payment verification on return from Stripe */}
       <Suspense fallback={null}>

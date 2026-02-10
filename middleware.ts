@@ -35,13 +35,15 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const isAuthPage = request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/signup")
+    request.nextUrl.pathname.startsWith("/signup") ||
+    request.nextUrl.pathname.startsWith("/forgot-password")
   const isProtectedRoute = request.nextUrl.pathname.startsWith("/app")
   const isAuthCallback = request.nextUrl.pathname.startsWith("/auth/callback")
+  const isAuthReset = request.nextUrl.pathname.startsWith("/auth/reset-password")
   const isPricingPage = request.nextUrl.pathname === "/pricing"
 
-  // Allow auth callback
-  if (isAuthCallback) {
+  // Allow auth callback and reset password
+  if (isAuthCallback || isAuthReset) {
     return supabaseResponse
   }
 
@@ -54,7 +56,11 @@ export async function middleware(request: NextRequest) {
   }
 
   // Check subscription for protected routes (production only)
-  if (isProtectedRoute && user) {
+  // Onboarding and analysis are free — paywall is on the analysis results page
+  const isFreeRoute = request.nextUrl.pathname.startsWith("/app/onboarding") ||
+    request.nextUrl.pathname.startsWith("/app/analysis")
+
+  if (isProtectedRoute && user && !isFreeRoute) {
     // Allow access if returning from Stripe checkout (session_id present)
     const hasSessionId = request.nextUrl.searchParams.has("session_id")
     if (hasSessionId) {

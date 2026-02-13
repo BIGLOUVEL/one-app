@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import { stripe, PRICES } from "@/lib/stripe"
+import { stripe } from "@/lib/stripe"
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -54,41 +54,47 @@ export async function POST(request: NextRequest) {
         .eq("id", user.id)
     }
 
-    // Check if user already used promo
-    const promoUsed = profile?.promo_used || false
+    // Get price ID - use env var, or find active price from Stripe
+    let priceId = process.env.STRIPE_PRICE_ID_PROMO || process.env.STRIPE_PRICE_ID_REGULAR
+
+    if (!priceId) {
+      // Fallback: fetch the first active recurring price from Stripe
+      const prices = await stripe.prices.list({ active: true, type: "recurring", limit: 10 })
+      if (prices.data.length === 0) {
+        return NextResponse.json(
+          { error: "No active prices found in Stripe. Create a product with a recurring price first." },
+          { status: 500 }
+        )
+      }
+      // Pick the cheapest one (promo) or the first available
+      priceId = prices.data.sort((a, b) => (a.unit_amount || 0) - (b.unit_amount || 0))[0].id
+    }
 
     // Create checkout session
-    // If promo not used: $1.99 first month, then $6.99/month
-    // If promo used: $6.99/month directly
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: [
         {
-          price: promoUsed ? PRICES.REGULAR : PRICES.PROMO,
+          price: priceId,
           quantity: 1,
         },
       ],
-      subscription_data: promoUsed ? undefined : {
-        // After first month at $1.99, switch to $6.99
-        metadata: {
-          promo_applied: "true",
-        },
-      },
       success_url: `${baseUrl}/app?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/pricing`,
       metadata: {
         user_id: user.id,
-        promo_applied: promoUsed ? "false" : "true",
       },
     })
 
     return NextResponse.json({ url: session.url })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Checkout error:", error)
+    // Return the actual Stripe error message for debugging
+    const message = error?.message || error?.raw?.message || "Unknown error"
     return NextResponse.json(
-      { error: "Failed to create checkout session" },
+      { error: `Checkout failed: ${message}` },
       { status: 500 }
     )
   }

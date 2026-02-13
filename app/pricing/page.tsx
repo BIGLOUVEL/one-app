@@ -250,8 +250,8 @@ export default function PricingPage() {
       if (data.url) {
         window.location.href = data.url
       }
-    } catch {
-      setError("Une erreur est survenue. Reessaie.")
+    } catch (err: any) {
+      setError(err?.message || "Une erreur est survenue. Reessaie.")
     } finally {
       setLoading(false)
     }

@@ -876,7 +876,8 @@ export default function DashboardPage() {
   // Real data
   const objectiveSessions = sessions.filter(s => s.objectiveId === objective.id)
   const completedSessions = objectiveSessions.length
-  const totalFocusMinutes = objectiveSessions.reduce((acc, s) => acc + (s.actualDuration || s.duration || 0), 0)
+  // Only count ACTUAL time worked (from session start to end), never the planned duration
+  const totalFocusMinutes = objectiveSessions.reduce((acc, s) => acc + (s.actualDuration ?? 0), 0)
   const streak = habitChallenge?.currentStreak ?? 0
 
   // Dynamic insight

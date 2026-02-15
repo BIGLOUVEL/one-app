@@ -296,42 +296,38 @@ export interface KeyMetric {
   trend: "up" | "down" | "stable"
 }
 
-// Timetable Analyzer
+// Timetable
 export type TimetablePriority = "high" | "medium" | "low"
+export type TimetableEventSource = "manual" | "ai-extracted" | "google"
+export type TimetableDay = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"
 
-export interface TimetableBlock {
+export interface TimetableEvent {
   id: string
-  day: "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"
-  startTime: string       // "09:00" (24h format)
-  endTime: string         // "10:30"
+  day: TimetableDay
+  startTime: string          // "09:00" (24h)
+  endTime: string            // "10:30"
   title: string
-  category: string        // "Deep Work", "Meeting", "Admin", "Personal", "Class", "Break", etc.
+  category: string           // "Deep Work", "Meeting", "Class", "Personal", "Break"...
   priority: TimetablePriority
-  reasoning: string
-  suggestion?: string
+  source: TimetableEventSource
+  reasoning?: string         // AI-only
+  suggestion?: string        // AI-only
+  color?: string             // Manual color override
+  googleEventId?: string     // Google Calendar event ID for deduplication
+  createdAt: string
 }
 
-export interface TimetableAnalysis {
-  id: string
-  objectiveId: string
+export interface TimetableInsights {
+  focusScore: number         // 0-100
+  totalHours: number
+  highPriorityHours: number
+  mediumPriorityHours: number
+  lowPriorityHours: number
+  topInsight: string
+  biggestTimeWaster: string
+  bestTimeSlot: string
+  recommendations: string[]
   analyzedAt: string
-  blocks: TimetableBlock[]
-  summary: {
-    totalBlocks: number
-    highPriorityCount: number
-    mediumPriorityCount: number
-    lowPriorityCount: number
-    highPriorityHours: number
-    mediumPriorityHours: number
-    lowPriorityHours: number
-    focusScore: number         // 0-100
-  }
-  insights: {
-    topInsight: string
-    biggestTimeWaster: string
-    bestTimeSlot: string
-    recommendations: string[]
-  }
 }
 
 // App State

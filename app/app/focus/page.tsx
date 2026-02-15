@@ -380,8 +380,13 @@ export default function FocusPage() {
   }
 
   const handleCompleteSession = () => {
+    // Calculate actual minutes worked from timer (excludes paused time)
+    const plannedSeconds = (currentSession?.duration ?? sessionDuration) * 60
+    const elapsedSeconds = plannedSeconds - timeLeft
+    const actualMinutes = Math.max(1, Math.floor(elapsedSeconds / 60))
+
     // Note: Post-its are NOT cleared here - they persist until a new session starts
-    endSession(reflectionText, nextActionText)
+    endSession(reflectionText, nextActionText, actualMinutes)
     setReflectionText("")
     setNextActionText("")
     setBunkerChecklist(initialBunkerChecklist)

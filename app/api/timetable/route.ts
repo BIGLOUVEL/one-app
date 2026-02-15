@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from "next/server"
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 
 interface TimetableInput {
-  image: string
+  image?: string
+  mode?: "image" | "analyze"
   objective: {
     somedayGoal: string
     monthGoal: string
@@ -13,6 +14,7 @@ interface TimetableInput {
     why: string
   }
   language?: "en" | "fr"
+  existingEvents?: { day: string; startTime: string; endTime: string; title: string; category?: string }[]
 }
 
 export async function POST(request: NextRequest) {
@@ -26,125 +28,134 @@ export async function POST(request: NextRequest) {
   try {
     const input: TimetableInput = await request.json()
     const isFr = input.language === "fr"
+    const isAnalyzeMode = input.mode === "analyze"
 
-    if (!input.image || !input.image.startsWith("data:image/")) {
+    // In image mode, require an image
+    if (!isAnalyzeMode && (!input.image || !input.image.startsWith("data:image/"))) {
       return NextResponse.json(
         { error: "Invalid image format" },
         { status: 400 }
       )
     }
 
-    const systemPrompt = isFr
-      ? `Tu es un expert en gestion du temps et en méthodologie "The ONE Thing" de Gary Keller. L'utilisateur t'envoie une capture d'écran de son emploi du temps hebdomadaire. Tu dois:
+    // In analyze mode, require existing events
+    if (isAnalyzeMode && (!input.existingEvents || input.existingEvents.length === 0)) {
+      return NextResponse.json(
+        { error: "No events to analyze" },
+        { status: 400 }
+      )
+    }
 
-1. EXTRAIRE chaque bloc de temps visible dans l'image (jour, heure début, heure fin, activité)
-2. ANALYSER chaque bloc par rapport à l'objectif ONE de l'utilisateur
-3. ATTRIBUER une priorité: "high" (vert: avance directement l'objectif), "medium" (jaune: neutre/supportif), "low" (rouge: perte de temps/ne sert pas l'objectif)
-4. FOURNIR un résumé avec des insights actionnables
-
-OBJECTIF ONE DE L'UTILISATEUR:
-- Vision long terme: ${input.objective.somedayGoal}
-- Objectif du mois: ${input.objective.monthGoal}
-- Objectif de la semaine: ${input.objective.weekGoal}
-- Action aujourd'hui: ${input.objective.todayGoal}
-- Action immédiate: ${input.objective.rightNowAction}
-- Pourquoi: ${input.objective.why}
-
-RÈGLES:
-- Sois HONNÊTE et DIRECT. Si un bloc est du temps perdu, dis-le.
-- Catégorise: "Deep Work", "Meeting", "Admin", "Personal", "Class", "Break", "Commute", "Exercise", "Social", "Other"
-- Les heures doivent être en format 24h (ex: "09:00", "14:30")
-- Les jours en anglais lowercase: "monday", "tuesday", etc.
-- RÉPONDS EN FRANÇAIS pour les textes libres, mais garde les clés JSON et valeurs d'enum en anglais
-- RÉPONDS UNIQUEMENT EN JSON VALIDE`
-      : `You are an expert in time management and "The ONE Thing" methodology by Gary Keller. The user sends you a screenshot of their weekly timetable/schedule. You must:
-
-1. EXTRACT every visible time block from the image (day, start time, end time, activity)
-2. ANALYZE each block against the user's ONE objective
-3. ASSIGN a priority: "high" (green: directly advances the objective), "medium" (yellow: neutral/supportive), "low" (red: time waster/doesn't serve the goal)
-4. PROVIDE a summary with actionable insights
-
-USER'S ONE OBJECTIVE:
+    const objectiveContext = `USER'S ONE OBJECTIVE:
 - Long-term vision: ${input.objective.somedayGoal}
-- Monthly goal: ${input.objective.monthGoal}
-- Weekly goal: ${input.objective.weekGoal}
+- This month's focus: ${input.objective.monthGoal}
+- This week's goal: ${input.objective.weekGoal}
 - Today's action: ${input.objective.todayGoal}
-- Immediate action: ${input.objective.rightNowAction}
-- Why: ${input.objective.why}
+- Why it matters: ${input.objective.why}`
+
+    const jsonFormat = `{
+  "events": [
+    {
+      "day": "monday",
+      "startTime": "09:00",
+      "endTime": "10:30",
+      "title": "Event name",
+      "category": "Class",
+      "priority": "medium",
+      "reasoning": "${isFr ? "Explication spécifique de pourquoi cette priorité par rapport à l'objectif de l'utilisateur" : "Specific explanation of why this priority relative to the user's objective"}",
+      "suggestion": "${isFr ? "Suggestion concrète d'optimisation ou null" : "Concrete optimization suggestion or null"}"
+    }
+  ],
+  "insights": {
+    "focusScore": 65,
+    "totalHours": 30,
+    "highPriorityHours": 12,
+    "mediumPriorityHours": 10.5,
+    "lowPriorityHours": 7.5,
+    "topInsight": "${isFr ? "L'observation la plus importante sur cet emploi du temps" : "The most important observation about this schedule"}",
+    "biggestTimeWaster": "${isFr ? "Le plus gros gouffre de temps identifié" : "The biggest time sink identified"}",
+    "bestTimeSlot": "${isFr ? "Le meilleur créneau pour avancer sur l'objectif" : "The best time slot for the objective"}",
+    "recommendations": ["${isFr ? "3-5 recommandations concrètes" : "3-5 concrete recommendations"}"]
+  }
+}`
+
+    let systemPrompt: string
+    let userContent: Array<{ type: string; text?: string; image_url?: { url: string; detail: string } }>
+
+    if (isAnalyzeMode) {
+      // TEXT-ONLY MODE: Analyze existing events against the objective
+      const eventsListText = input.existingEvents!.map(e =>
+        `- ${e.day} ${e.startTime}-${e.endTime}: "${e.title}" (${e.category || "Other"})`
+      ).join("\n")
+
+      systemPrompt = `You are an expert schedule analyst using "The ONE Thing" methodology by Gary Keller.
+
+You will receive a list of events from the user's weekly schedule. Your job is to analyze EACH event and determine how relevant it is to the user's ONE objective.
+
+For EACH event, assign a priority:
+- "high" = This activity DIRECTLY advances the user's main goal. It's productive time that moves the needle.
+- "medium" = This is necessary but doesn't directly advance the goal (meals, admin, commute). Neutral.
+- "low" = This is wasted time or actively harms progress toward the goal.
+
+For EACH event, provide:
+- "reasoning": A specific 1-2 sentence explanation of WHY you assigned this priority level, referencing the user's actual objective
+- "suggestion": A concrete suggestion to optimize this time slot (can be null if already optimal)
+
+${objectiveContext}
 
 RULES:
-- Be HONEST and DIRECT. If a block is wasted time, say so.
-- Categorize: "Deep Work", "Meeting", "Admin", "Personal", "Class", "Break", "Commute", "Exercise", "Social", "Other"
-- Times in 24h format (e.g., "09:00", "14:30")
-- Days in lowercase English: "monday", "tuesday", etc.
-- RESPOND IN ENGLISH
-- RESPOND ONLY IN VALID JSON`
+- Return ALL events from the input with their analysis
+- Keep the exact same day, startTime, endTime, title, category from the input
+- Be BRUTALLY HONEST. If something doesn't serve the goal, say so.
+- ${isFr ? "Write reasoning, suggestions, and insights text in FRENCH. Keep JSON keys and enum values in English." : "Write all text in English."}
+- RESPOND ONLY WITH VALID JSON, no markdown, no backticks.`
 
-    const userPrompt = isFr
-      ? `Analyse cette image d'emploi du temps et génère un JSON avec cette structure exacte:
-{
-  "blocks": [
-    {
-      "id": "b1",
-      "day": "monday",
-      "startTime": "09:00",
-      "endTime": "10:30",
-      "title": "Nom de l'activité",
-      "category": "Deep Work",
-      "priority": "high",
-      "reasoning": "Pourquoi cette priorité",
-      "suggestion": "Suggestion optionnelle d'amélioration"
+      userContent = [{
+        type: "text",
+        text: `Analyze these events against the user's objective:\n\n${eventsListText}\n\nReturn this EXACT JSON structure:\n${jsonFormat}\n\nIMPORTANT: Return ALL events listed above with their priority analysis. The focusScore (0-100) represents what percentage of the schedule is dedicated to high-impact activities.`
+      }]
+    } else {
+      // IMAGE MODE: Extract events from image + analyze
+      const existingEventsContext = input.existingEvents && input.existingEvents.length > 0
+        ? `\n\nEXISTING EVENTS ALREADY IN THE USER'S TIMETABLE (DO NOT include these in your response — only extract NEW events visible in the image that are NOT in this list):\n${input.existingEvents.map(e => `- ${e.day} ${e.startTime}-${e.endTime}: "${e.title}"`).join("\n")}`
+        : ""
+
+      systemPrompt = `You are an expert schedule analyst using "The ONE Thing" methodology by Gary Keller.
+
+YOUR TASK:
+1. CAREFULLY read the schedule/timetable image. Pay extreme attention to:
+   - The COLUMN HEADERS: they tell you which day each column represents (Monday/Lundi, Tuesday/Mardi, etc.)
+   - The TIME LABELS on the left/right side: they tell you the exact start and end times
+   - The TEXT INSIDE each block: that's the event title/activity name
+   - If the image shows days in French (Lundi, Mardi, Mercredi, Jeudi, Vendredi, Samedi, Dimanche), map them to: monday, tuesday, wednesday, thursday, friday, saturday, sunday
+
+2. For EACH event you extract, ANALYZE its relevance to the user's ONE objective:
+   - "high" = This activity DIRECTLY advances the user's main goal. It's productive time that moves the needle.
+   - "medium" = This is necessary but doesn't directly advance the goal (meals, admin, some classes, commute). Neutral.
+   - "low" = This is wasted time or actively harms progress toward the goal (excessive social media, pointless meetings, etc.)
+
+3. For EACH event, provide:
+   - "reasoning": A specific 1-2 sentence explanation of WHY you assigned this priority level, referencing the user's actual objective
+   - "suggestion": A concrete suggestion to optimize this time slot (can be null if the slot is already optimal)
+
+${objectiveContext}
+${existingEventsContext}
+
+CRITICAL RULES:
+- READ THE IMAGE CAREFULLY. Match each event to the CORRECT day column and CORRECT time row.
+- Days MUST be lowercase English: "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"
+- Times MUST be 24h format: "08:00", "13:30", "17:45"
+- If you can't read a time precisely, round to the nearest 15 minutes
+- Category must be one of: "Deep Work", "Meeting", "Admin", "Personal", "Class", "Break", "Commute", "Exercise", "Social", "Other"
+- Be BRUTALLY HONEST in your priority analysis. If something doesn't serve the goal, say so.
+- ${isFr ? "Write reasoning, suggestions, and insights text in FRENCH. Keep JSON keys and enum values in English." : "Write all text in English."}
+- RESPOND ONLY WITH VALID JSON, no markdown, no backticks, no explanation outside the JSON.`
+
+      userContent = [
+        { type: "text", text: `Extract ALL events from this schedule image and analyze each one against the user's objective.\n\nReturn this EXACT JSON structure:\n${jsonFormat}\n\nIMPORTANT: The insights should analyze the ENTIRE schedule holistically (including any existing events). The focusScore (0-100) represents what percentage of the schedule is dedicated to high-impact activities for the user's ONE objective.` },
+        { type: "image_url", image_url: { url: input.image!, detail: "high" } },
+      ]
     }
-  ],
-  "summary": {
-    "totalBlocks": 20,
-    "highPriorityCount": 8,
-    "mediumPriorityCount": 7,
-    "lowPriorityCount": 5,
-    "highPriorityHours": 12,
-    "mediumPriorityHours": 10.5,
-    "lowPriorityHours": 7.5,
-    "focusScore": 65
-  },
-  "insights": {
-    "topInsight": "Observation principale sur l'emploi du temps",
-    "biggestTimeWaster": "Le plus gros gouffre de temps identifié",
-    "bestTimeSlot": "Le meilleur créneau pour avancer sur l'objectif",
-    "recommendations": ["Recommandation 1", "Recommandation 2", "Recommandation 3"]
-  }
-}`
-      : `Analyze this timetable image and generate JSON with this exact structure:
-{
-  "blocks": [
-    {
-      "id": "b1",
-      "day": "monday",
-      "startTime": "09:00",
-      "endTime": "10:30",
-      "title": "Activity name",
-      "category": "Deep Work",
-      "priority": "high",
-      "reasoning": "Why this priority level",
-      "suggestion": "Optional improvement suggestion"
-    }
-  ],
-  "summary": {
-    "totalBlocks": 20,
-    "highPriorityCount": 8,
-    "mediumPriorityCount": 7,
-    "lowPriorityCount": 5,
-    "highPriorityHours": 12,
-    "mediumPriorityHours": 10.5,
-    "lowPriorityHours": 7.5,
-    "focusScore": 65
-  },
-  "insights": {
-    "topInsight": "Main observation about the schedule",
-    "biggestTimeWaster": "The biggest time sink identified",
-    "bestTimeSlot": "The best slot for advancing the ONE objective",
-    "recommendations": ["Recommendation 1", "Recommendation 2", "Recommendation 3"]
-  }
-}`
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -156,22 +167,10 @@ RULES:
         model: "gpt-4o",
         messages: [
           { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: userPrompt },
-              {
-                type: "image_url",
-                image_url: {
-                  url: input.image,
-                  detail: "high",
-                },
-              },
-            ],
-          },
+          { role: "user", content: userContent },
         ],
-        temperature: 0.3,
-        max_tokens: 4000,
+        temperature: 0.2,
+        max_tokens: 8000,
       }),
     })
 
@@ -196,12 +195,12 @@ RULES:
 
     try {
       const result = JSON.parse(content)
-      return NextResponse.json({ analysis: result })
+      return NextResponse.json(result)
     } catch {
       const jsonMatch = content.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         const result = JSON.parse(jsonMatch[0])
-        return NextResponse.json({ analysis: result })
+        return NextResponse.json(result)
       }
       console.error("Failed to parse AI response:", content)
       return NextResponse.json(

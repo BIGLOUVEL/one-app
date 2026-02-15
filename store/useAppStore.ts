@@ -21,7 +21,8 @@ import {
   ContractState,
   PostItCollection,
   PostIt,
-  TimetableAnalysis,
+  TimetableEvent,
+  TimetableInsights,
 } from "@/lib/types"
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
@@ -73,11 +74,16 @@ interface AppStore {
   // Session post-its (persist across page refreshes during session)
   sessionPostIts: Array<{ id: string; text: string; x: number; y: number; rotation: number }>
 
-  // Timetable Analyzer
-  timetableAnalysis: TimetableAnalysis | null
+  // Timetable
+  timetableEvents: TimetableEvent[]
+  timetableInsights: TimetableInsights | null
   isAnalyzingTimetable: boolean
-  setTimetableAnalysis: (analysis: TimetableAnalysis) => void
-  clearTimetableAnalysis: () => void
+  addTimetableEvent: (event: Omit<TimetableEvent, 'id' | 'createdAt'>) => void
+  updateTimetableEvent: (id: string, updates: Partial<TimetableEvent>) => void
+  deleteTimetableEvent: (id: string) => void
+  addTimetableEvents: (events: Omit<TimetableEvent, 'id' | 'createdAt'>[]) => void
+  setTimetableInsights: (insights: TimetableInsights) => void
+  clearTimetableEvents: () => void
   setIsAnalyzingTimetable: (value: boolean) => void
 
   // AI Insights cache (rate limited: 1 per 48h)
@@ -164,7 +170,7 @@ interface AppStore {
 
   // Focus Session Actions
   startSession: (duration?: number) => void
-  endSession: (reflection?: string, nextAction?: string) => void
+  endSession: (reflection?: string, nextAction?: string, actualMinutes?: number) => void
   addDistraction: (text: string) => void
   markDistractionHandled: (distractionId: string) => void
 
@@ -251,8 +257,9 @@ export const useAppStore = create<AppStore>()(
       rightNowCompleted: false,
       todayGoalCompleted: false,
 
-      // Timetable Analyzer
-      timetableAnalysis: null,
+      // Timetable
+      timetableEvents: [],
+      timetableInsights: null,
       isAnalyzingTimetable: false,
 
       // Session post-its
@@ -421,17 +428,47 @@ export const useAppStore = create<AppStore>()(
         return { canFetch: hoursSince >= 48, hoursRemaining }
       },
 
-      // Timetable Analyzer Actions
-      setTimetableAnalysis: (analysis) => {
-        const { objective } = get()
-        if (objective) {
-          analysis.objectiveId = objective.id
+      // Timetable Actions
+      addTimetableEvent: (event) => {
+        const { timetableEvents } = get()
+        const newEvent: TimetableEvent = {
+          ...event,
+          id: generateId(),
+          createdAt: new Date().toISOString(),
         }
-        set({ timetableAnalysis: analysis, isAnalyzingTimetable: false })
+        set({ timetableEvents: [...timetableEvents, newEvent] })
       },
 
-      clearTimetableAnalysis: () => {
-        set({ timetableAnalysis: null, isAnalyzingTimetable: false })
+      updateTimetableEvent: (id, updates) => {
+        const { timetableEvents } = get()
+        set({
+          timetableEvents: timetableEvents.map(e =>
+            e.id === id ? { ...e, ...updates } : e
+          ),
+        })
+      },
+
+      deleteTimetableEvent: (id) => {
+        const { timetableEvents } = get()
+        set({ timetableEvents: timetableEvents.filter(e => e.id !== id) })
+      },
+
+      addTimetableEvents: (events) => {
+        const { timetableEvents } = get()
+        const newEvents: TimetableEvent[] = events.map(e => ({
+          ...e,
+          id: generateId(),
+          createdAt: new Date().toISOString(),
+        }))
+        set({ timetableEvents: [...timetableEvents, ...newEvents] })
+      },
+
+      setTimetableInsights: (insights) => {
+        set({ timetableInsights: insights })
+      },
+
+      clearTimetableEvents: () => {
+        set({ timetableEvents: [], timetableInsights: null, isAnalyzingTimetable: false })
       },
 
       setIsAnalyzingTimetable: (value) => {
@@ -468,7 +505,8 @@ export const useAppStore = create<AppStore>()(
           needsRecenter: false,
           rightNowCompleted: false,
           todayGoalCompleted: false,
-          timetableAnalysis: null,
+          timetableEvents: [],
+          timetableInsights: null,
           isAnalyzingTimetable: false,
           // Note: visualPrefs are NOT cleared - they're user preferences
         })
@@ -820,14 +858,15 @@ export const useAppStore = create<AppStore>()(
         set({ currentSession: newSession })
       },
 
-      endSession: (reflection, nextAction) => {
+      endSession: (reflection, nextAction, actualMinutes) => {
         const { currentSession, sessions, habitChallenge, dominoChain, contractMeter, sessionPostIts, objective, plannedSessionsPerDay } = get()
         if (!currentSession) return
 
         const endedSession: FocusSession = {
           ...currentSession,
           endedAt: new Date().toISOString(),
-          actualDuration: Math.floor(
+          // Use actualMinutes from timer (excludes paused time), fallback to wall-clock diff
+          actualDuration: actualMinutes ?? Math.floor(
             (new Date().getTime() - new Date(currentSession.startedAt).getTime()) / 60000
           ),
           postIts: sessionPostIts.length > 0 ? [...sessionPostIts] : undefined,

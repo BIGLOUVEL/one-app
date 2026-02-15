@@ -57,7 +57,7 @@ import { Logo } from "@/components/ui/logo"
 
 const mainNavItems = [
   { href: "/app", label: "Dashboard", icon: Target, description: "Your ONE thing", color: "primary" },
-  { href: "/app/onboarding", label: "Define", icon: Plus, description: "Set objective", color: "primary" },
+  { href: "/app/define", label: "Define", icon: Plus, description: "Set objective", color: "primary" },
 ]
 
 const systemNavItems = [

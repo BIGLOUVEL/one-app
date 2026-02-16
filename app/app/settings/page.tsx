@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { Settings, Palette, Check, Sparkles, RotateCcw, Crown, Lock, X, CreditCard, ExternalLink, Loader2, Globe, User, Bot } from "lucide-react"
+import { Settings, Palette, Check, Sparkles, RotateCcw, Crown, Lock, X, CreditCard, ExternalLink, Loader2, Globe, User, Bot, LogOut } from "lucide-react"
 import Image from "next/image"
 import { useTheme, UITheme } from "@/components/theme-provider"
 import { useAppStore } from "@/store/useAppStore"
@@ -525,12 +526,18 @@ function MonkModePreview({ isSelected, onSelect }: { isSelected: boolean; onSele
 }
 
 export default function SettingsPage() {
+  const router = useRouter()
   const { theme, setTheme } = useTheme()
   const { visualPrefs, setVisualPref, resetVisualPrefs, language, setLanguage, firstName, setFirstName, aiName, setAIName } = useAppStore()
-  const { session, user } = useAuth()
+  const { session, user, signOut } = useAuth()
 
   const lang = language
   const t = (en: string, fr: string) => lang === 'fr' ? fr : en
+
+  const handleSignOut = async () => {
+    await signOut()
+    router.push("/login")
+  }
   const visualEffects = getVisualEffects(lang)
   const [subStatus, setSubStatus] = useState<{ status: string; active: boolean; currentPeriodEnd: string | null; promoUsed?: boolean } | null>(null)
   const [subLoading, setSubLoading] = useState(true)
@@ -976,6 +983,17 @@ export default function SettingsPage() {
               </button>
             </div>
           )}
+        </section>
+
+        {/* Sign Out */}
+        <section className="mt-6 mb-8">
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center justify-center gap-2 h-12 rounded-xl border border-red-500/20 hover:border-red-500/40 hover:bg-red-500/5 transition-all text-sm font-medium text-red-400 hover:text-red-300"
+          >
+            <LogOut className="h-4 w-4" />
+            {t("Sign out", "Se deconnecter")}
+          </button>
         </section>
       </motion.div>
     </div>

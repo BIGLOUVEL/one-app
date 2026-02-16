@@ -1,5 +1,11 @@
 import { createServerClient } from "@supabase/ssr"
+import { createClient } from "@supabase/supabase-js"
 import { NextResponse, type NextRequest } from "next/server"
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -34,12 +40,15 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const isAuthPage = request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/signup") ||
-    request.nextUrl.pathname.startsWith("/forgot-password")
-  const isProtectedRoute = request.nextUrl.pathname.startsWith("/app")
-  const isAuthCallback = request.nextUrl.pathname.startsWith("/auth/callback")
-  const isAuthReset = request.nextUrl.pathname.startsWith("/auth/reset-password")
+  const pathname = request.nextUrl.pathname
+  const isAuthPage = pathname.startsWith("/login") ||
+    pathname.startsWith("/signup") ||
+    pathname.startsWith("/forgot-password")
+  const isProtectedRoute = pathname.startsWith("/app")
+  const isAuthCallback = pathname.startsWith("/auth/callback")
+  const isAuthReset = pathname.startsWith("/auth/reset-password")
+  const isOnboardingPage = pathname === "/app/onboarding"
+  const isAnalysisPage = pathname.startsWith("/app/analysis")
 
   // Allow auth callback and reset password
   if (isAuthCallback || isAuthReset) {
@@ -52,6 +61,48 @@ export async function middleware(request: NextRequest) {
     url.pathname = "/login"
     url.searchParams.set("redirect", request.nextUrl.pathname)
     return NextResponse.redirect(url)
+  }
+
+  // For logged-in users on /app/* — check onboarding + subscription
+  if (isProtectedRoute && user) {
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("onboarding_completed, subscription_status, current_period_end")
+      .eq("id", user.id)
+      .single()
+
+    const isOnboarded = profile?.onboarding_completed === true
+
+    // If on onboarding page but already onboarded → go to app
+    if (isOnboardingPage && isOnboarded) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/app"
+      return NextResponse.redirect(url)
+    }
+
+    // If NOT onboarded → force onboarding (allow analysis too, it's the next step)
+    if (!isOnboardingPage && !isAnalysisPage && !isOnboarded) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/app/onboarding"
+      return NextResponse.redirect(url)
+    }
+
+    // Subscription check (skip for onboarding + analysis, those are free)
+    if (!isOnboardingPage && !isAnalysisPage && isOnboarded) {
+      const hasSessionId = request.nextUrl.searchParams.has("session_id")
+      if (!hasSessionId && process.env.NODE_ENV !== "development") {
+        const isSubscribed = profile?.subscription_status === "active" ||
+          (profile?.subscription_status === "canceled" &&
+           profile?.current_period_end &&
+           new Date(profile.current_period_end) > new Date())
+
+        if (!isSubscribed) {
+          const url = request.nextUrl.clone()
+          url.pathname = "/pricing"
+          return NextResponse.redirect(url)
+        }
+      }
+    }
   }
 
   // Redirect if already logged in and accessing auth pages

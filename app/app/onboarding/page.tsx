@@ -28,6 +28,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/ui/logo"
 import { useAppStore } from "@/store/useAppStore"
+import { useAuth } from "@/components/auth/auth-provider"
 import { AIGeneratedPlan, ThiefType } from "@/lib/types"
 
 // ============================================
@@ -77,6 +78,7 @@ const colorKeys: GoalPostIt["color"][] = ["yellow", "pink", "blue", "green", "pu
 
 export default function OnboardingPage() {
   const router = useRouter()
+  const { session } = useAuth()
   const { setObjectiveFromAI, setAIRoadmap, setIsGeneratingRoadmap, firstName: storedFirstName, setFirstName: storeFirstName } = useAppStore()
   const lang = useAppStore(s => s.language)
   const aiName = useAppStore(s => s.aiName) || 'Tony'
@@ -257,6 +259,14 @@ export default function OnboardingPage() {
 
     const finalDeadline = deadline || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
     setObjectiveFromAI(aiPlan, finalDeadline)
+
+    // Persist onboarding completion to Supabase
+    if (session?.access_token) {
+      fetch("/api/onboarding/complete", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      }).catch(() => {}) // Best-effort, don't block navigation
+    }
 
     setIsGeneratingRoadmap(true)
     router.push("/app/analysis")

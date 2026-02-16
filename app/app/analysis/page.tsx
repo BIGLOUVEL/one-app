@@ -139,6 +139,12 @@ export default function AnalysisPage() {
         },
       })
 
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        setPaymentError(data.error || t(`Server error (${response.status}). Try again.`, `Erreur serveur (${response.status}). Reessaie.`))
+        return
+      }
+
       const data = await response.json()
 
       if (data.error) {
@@ -148,9 +154,11 @@ export default function AnalysisPage() {
 
       if (data.url) {
         window.location.href = data.url
+      } else {
+        setPaymentError(t("Could not create payment session. Try again.", "Impossible de creer la session de paiement. Reessaie."))
       }
     } catch {
-      setPaymentError(t("An error occurred. Please try again.", "Une erreur est survenue. Réessayez."))
+      setPaymentError(t("An error occurred. Please try again.", "Une erreur est survenue. Reessayez."))
     } finally {
       setPaymentLoading(false)
     }

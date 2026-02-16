@@ -217,12 +217,18 @@ function FeatureList() {
 // MAIN PAGE
 // ============================================
 export default function PricingPage() {
-  const { user, session } = useAuth()
+  const { user, session, isLoading: authLoading } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const handleSubscribe = async () => {
+    // Auth still loading — wait, don't redirect
+    if (authLoading) {
+      setError("Chargement en cours, reessaie dans un instant.")
+      return
+    }
+
     if (!user || !session) {
       router.push("/login?redirect=/pricing")
       return
@@ -240,6 +246,12 @@ export default function PricingPage() {
         },
       })
 
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        setError(data.error || `Erreur serveur (${response.status}). Reessaie.`)
+        return
+      }
+
       const data = await response.json()
 
       if (data.error) {
@@ -249,6 +261,8 @@ export default function PricingPage() {
 
       if (data.url) {
         window.location.href = data.url
+      } else {
+        setError("Impossible de creer la session de paiement. Reessaie.")
       }
     } catch (err: any) {
       setError(err?.message || "Une erreur est survenue. Reessaie.")
@@ -350,7 +364,7 @@ export default function PricingPage() {
               >
                 <motion.button
                   onClick={handleSubscribe}
-                  disabled={loading}
+                  disabled={loading || authLoading}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="relative w-full sm:w-auto sm:min-w-[280px] group cursor-pointer"
@@ -362,12 +376,12 @@ export default function PricingPage() {
                   <div className="relative h-13 px-8 bg-gradient-to-r from-primary to-primary/90 rounded-xl flex items-center justify-center gap-2.5 font-semibold text-primary-foreground text-sm transition-all overflow-hidden">
                     {/* Shimmer sweep */}
                     <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none"
                       animate={{ x: ["-100%", "200%"] }}
                       transition={{ duration: 3, repeat: Infinity, ease: "linear", repeatDelay: 2 }}
                     />
                     <div className="relative z-10 flex items-center gap-2.5">
-                      {loading ? (
+                      {loading || authLoading ? (
                         <>
                           <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
                           <span>Chargement...</span>

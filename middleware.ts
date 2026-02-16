@@ -91,10 +91,12 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Redirect to app if already logged in and accessing auth pages
+  // Redirect if already logged in and accessing auth pages
   if (isAuthPage && user) {
     const url = request.nextUrl.clone()
-    url.pathname = "/app"
+    const redirect = request.nextUrl.searchParams.get("redirect")
+    url.pathname = redirect && redirect.startsWith("/") ? redirect : "/app"
+    url.search = ""
     return NextResponse.redirect(url)
   }
 

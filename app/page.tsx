@@ -153,7 +153,7 @@ function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.8, ease: smoothEase }}
         >
-          <Link href="/signup">
+          <Link href="/login">
             <motion.span
               className="group relative inline-flex items-center gap-2.5 px-8 py-4 rounded-xl bg-primary text-primary-foreground font-semibold text-sm overflow-hidden"
               whileHover={{ scale: 1.03 }}
@@ -550,7 +550,7 @@ function CTASection() {
           transition={{ duration: 0.6, delay: 0.3, ease: smoothEase }}
           className="space-y-4"
         >
-          <Link href="/signup">
+          <Link href="/login">
             <motion.span
               className="group relative inline-flex items-center gap-3 px-10 sm:px-14 py-4 sm:py-5 rounded-xl bg-primary text-primary-foreground font-bold text-base sm:text-lg overflow-hidden"
               whileHover={{ scale: 1.03 }}
@@ -627,7 +627,7 @@ export default function LandingPage() {
               <Link href="/login" className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1">
                 Sign in
               </Link>
-              <Link href="/signup">
+              <Link href="/login">
                 <motion.span
                   className="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary text-xs sm:text-sm font-medium hover:bg-primary/15 hover:border-primary/30 transition-all"
                   whileHover={{ scale: 1.02 }}

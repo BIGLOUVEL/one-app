@@ -40,7 +40,6 @@ export async function middleware(request: NextRequest) {
   const isProtectedRoute = request.nextUrl.pathname.startsWith("/app")
   const isAuthCallback = request.nextUrl.pathname.startsWith("/auth/callback")
   const isAuthReset = request.nextUrl.pathname.startsWith("/auth/reset-password")
-  const isPricingPage = request.nextUrl.pathname === "/pricing"
 
   // Allow auth callback and reset password
   if (isAuthCallback || isAuthReset) {
@@ -53,42 +52,6 @@ export async function middleware(request: NextRequest) {
     url.pathname = "/login"
     url.searchParams.set("redirect", request.nextUrl.pathname)
     return NextResponse.redirect(url)
-  }
-
-  // Check subscription for protected routes (production only)
-  // Onboarding and analysis are free — paywall is on the analysis results page
-  const isFreeRoute = request.nextUrl.pathname.startsWith("/app/onboarding") ||
-    request.nextUrl.pathname.startsWith("/app/analysis")
-
-  if (isProtectedRoute && user && !isFreeRoute) {
-    // Allow access if returning from Stripe checkout (session_id present)
-    const hasSessionId = request.nextUrl.searchParams.has("session_id")
-    if (hasSessionId) {
-      return supabaseResponse
-    }
-
-    // Skip subscription check in development
-    if (process.env.NODE_ENV !== "development") {
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("subscription_status, current_period_end")
-        .eq("id", user.id)
-        .single()
-
-      // If profile doesn't exist or table error, let user through (new user)
-      if (profile && !profileError) {
-        const isSubscribed = profile.subscription_status === "active" ||
-          (profile.subscription_status === "canceled" &&
-           profile.current_period_end &&
-           new Date(profile.current_period_end) > new Date())
-
-        if (!isSubscribed) {
-          const url = request.nextUrl.clone()
-          url.pathname = "/pricing"
-          return NextResponse.redirect(url)
-        }
-      }
-    }
   }
 
   // Redirect if already logged in and accessing auth pages

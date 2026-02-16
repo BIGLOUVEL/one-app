@@ -811,96 +811,96 @@ export default function SettingsPage() {
               </div>
               <div>
                 <p className="text-sm font-medium">{t("No active subscription", "Aucun abonnement actif")}</p>
-                <p className="text-xs text-muted-foreground mt-1">{t("Subscribe to ONE Pro to unlock all features", "Souscris à ONE Pro pour débloquer toutes les fonctionnalités")}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("Become a ONE member to unlock all features", "Deviens membre ONE pour débloquer toutes les fonctionnalités")}</p>
               </div>
               <a
                 href="/pricing"
                 className="inline-flex items-center gap-2 h-10 px-5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-sm font-medium hover:bg-primary/15 transition-colors"
               >
-                {t("View plans", "Voir les offres")}
+                {t("Become a member", "Devenir membre")}
               </a>
             </div>
           ) : (
             <div className="space-y-5">
-              {/* Mini Member Card */}
-              <div className="relative rounded-xl overflow-hidden" style={{ perspective: 800 }}>
-                <div className="relative" style={{ paddingBottom: "56%" }}>
-                  {/* Card background */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-[hsl(0,0%,11%)] via-[hsl(0,0%,6%)] to-[hsl(0,0%,3%)]" />
-                  <div className="absolute inset-0 rounded-xl border border-white/[0.08]" />
+              {/* Membership Card — portrait style */}
+              <div className="relative mx-auto w-full max-w-[260px]">
+                <div className="holo-card-wrapper">
+                  <div className="holo-card relative rounded-2xl overflow-hidden" style={{ "--card-opacity": "0.8" } as React.CSSProperties}>
+                    {/* Glow behind */}
+                    <div className="holo-behind absolute -inset-4 rounded-3xl" />
 
-                  {/* Holographic sheen - subtle idle animation */}
-                  <motion.div
-                    className="absolute inset-0 pointer-events-none"
-                    animate={{
-                      background: [
-                        "radial-gradient(ellipse at 30% 40%, rgba(255,215,0,0.12) 0%, rgba(139,92,246,0.08) 30%, transparent 60%)",
-                        "radial-gradient(ellipse at 60% 50%, rgba(139,92,246,0.12) 0%, rgba(0,255,136,0.06) 30%, transparent 60%)",
-                        "radial-gradient(ellipse at 40% 60%, rgba(0,255,136,0.1) 0%, rgba(255,215,0,0.08) 30%, transparent 60%)",
-                        "radial-gradient(ellipse at 30% 40%, rgba(255,215,0,0.12) 0%, rgba(139,92,246,0.08) 30%, transparent 60%)",
-                      ],
-                    }}
-                    transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                  />
+                    {/* Card body */}
+                    <div className="relative" style={{ paddingBottom: "130%" }}>
+                      {/* Base gradient */}
+                      <div className="absolute inset-0 bg-gradient-to-b from-[hsl(0,0%,10%)] via-[hsl(0,0%,5%)] to-[hsl(0,0%,2%)]" />
 
-                  {/* Gold top line */}
-                  <motion.div
-                    className="absolute top-0 left-0 right-0 h-[2px]"
-                    style={{ background: "linear-gradient(90deg, transparent, rgba(255,215,0,0.4), rgba(139,92,246,0.4), transparent)" }}
-                    animate={{ opacity: [0.3, 0.7, 0.3] }}
-                    transition={{ duration: 4, repeat: Infinity }}
-                  />
+                      {/* Border glow */}
+                      <div className="absolute inset-0 rounded-2xl border border-white/[0.08]" />
 
-                  {/* Grain */}
-                  <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }} />
+                      {/* Holographic shine layer */}
+                      <div className="holo-shine absolute inset-0 pointer-events-none rounded-2xl" />
+                      <div className="holo-glare absolute inset-0 pointer-events-none rounded-2xl" />
 
-                  {/* Content */}
-                  <div className="absolute inset-0 z-10 p-4 sm:p-5 flex flex-col justify-between">
-                    {/* Top: Logo + Pro badge */}
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <Image src="/LOGO.png" alt="ONE" width={22} height={22} className="opacity-90" />
-                        <div>
-                          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/90">ONE</p>
-                          <p className="text-[6px] tracking-[0.15em] uppercase text-white/25">Focus Operating System</p>
+                      {/* Grain texture */}
+                      <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }} />
+
+                      {/* Gold accent line at top */}
+                      <motion.div
+                        className="absolute top-0 left-0 right-0 h-[2px] z-10"
+                        style={{ background: "linear-gradient(90deg, transparent, rgba(255,215,0,0.5), rgba(139,92,246,0.4), transparent)" }}
+                        animate={{ opacity: [0.3, 0.7, 0.3] }}
+                        transition={{ duration: 4, repeat: Infinity }}
+                      />
+
+                      {/* Content */}
+                      <div className="absolute inset-0 z-10 p-5 flex flex-col items-center justify-between">
+                        {/* Top: Wordmark */}
+                        <div className="flex items-center justify-between w-full">
+                          <p className="text-[11px] font-bold tracking-[0.35em] uppercase text-white/80">ONE</p>
+                          <p className="text-[7px] tracking-[0.1em] uppercase text-white/20">EST. 2025</p>
                         </div>
-                      </div>
-                      <div
-                        className="flex items-center gap-1 px-2 py-0.5 rounded-full border"
-                        style={{
-                          background: "linear-gradient(135deg, rgba(255,215,0,0.15), rgba(139,92,246,0.15))",
-                          borderColor: "rgba(255,215,0,0.25)",
-                        }}
-                      >
-                        <Crown className="h-2.5 w-2.5 text-amber-400" />
-                        <span className="text-[8px] font-bold tracking-[0.15em] uppercase bg-gradient-to-r from-amber-300 to-violet-400 bg-clip-text text-transparent">Pro</span>
-                      </div>
-                    </div>
 
-                    {/* Center: Chip */}
-                    <div className="flex items-center gap-3">
-                      <div className="relative w-9 h-6 rounded-[4px] overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-br from-amber-200/60 via-amber-300/50 to-amber-400/60" />
-                        <div className="absolute inset-[1px] rounded-[3px] bg-gradient-to-br from-amber-100/25 to-amber-300/35" />
-                        <div className="absolute top-[45%] left-0 right-0 h-[1px] bg-amber-600/30" />
-                        <div className="absolute top-0 bottom-0 left-[30%] w-[1px] bg-amber-600/25" />
-                        <div className="absolute top-0 bottom-0 left-[65%] w-[1px] bg-amber-600/25" />
-                      </div>
-                    </div>
+                        {/* Center: Logo + MEMBER + name */}
+                        <div className="flex flex-col items-center gap-3">
+                          {/* Logo with ambient glow */}
+                          <div className="relative">
+                            <div className="absolute inset-0 blur-2xl bg-primary/20 rounded-full scale-150" />
+                            <Image src="/LOGO.png" alt="ONE" width={64} height={64} className="relative opacity-90" />
+                          </div>
 
-                    {/* Bottom: Name + date */}
-                    <div className="flex items-end justify-between">
-                      <div>
-                        <p className="text-[8px] text-white/25 tracking-[0.1em] uppercase mb-0.5">{t("Member", "Membre")}</p>
-                        <p className="text-[11px] font-medium tracking-[0.08em] text-white/70 uppercase">
-                          {firstName || user?.email?.split("@")[0] || "Member"}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[8px] text-white/25 tracking-[0.1em] uppercase mb-0.5">{t("Since", "Depuis")}</p>
-                        <p className="text-[11px] font-medium tabular-nums text-white/70">
-                          {new Date().toLocaleDateString(lang === 'fr' ? "fr-FR" : "en-US", { month: "2-digit", year: "2-digit" })}
-                        </p>
+                          {/* Divider */}
+                          <div className="w-12 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+                          {/* MEMBER badge */}
+                          <div className={cn(
+                            "px-3 py-1 rounded-full border",
+                            subStatus.active
+                              ? "bg-primary/10 border-primary/30"
+                              : "bg-orange-500/10 border-orange-500/30"
+                          )}>
+                            <span className={cn(
+                              "text-[9px] font-bold tracking-[0.25em] uppercase",
+                              subStatus.active ? "text-primary" : "text-orange-400"
+                            )}>
+                              {subStatus.active ? t("MEMBER", "MEMBRE") : subStatus.status === "canceled" ? t("CANCELED", "ANNULÉ") : t("INACTIVE", "INACTIF")}
+                            </span>
+                          </div>
+
+                          {/* User name */}
+                          <p className="text-[18px] font-semibold tracking-[0.08em] text-white/90 uppercase text-center">
+                            {firstName || user?.email?.split("@")[0] || "Member"}
+                          </p>
+                        </div>
+
+                        {/* Bottom: Focus OS label */}
+                        <div className="flex flex-col items-center gap-1">
+                          <p className="text-[7px] tracking-[0.25em] uppercase text-white/15">Focus Operating System</p>
+                          <div className="flex gap-1">
+                            <div className="w-0.5 h-0.5 rounded-full bg-white/10" />
+                            <div className="w-0.5 h-0.5 rounded-full bg-white/10" />
+                            <div className="w-0.5 h-0.5 rounded-full bg-white/10" />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

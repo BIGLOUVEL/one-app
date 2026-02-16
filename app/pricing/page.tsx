@@ -1,188 +1,223 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { motion, useMotionValue, useTransform, useSpring } from "framer-motion"
-import { ArrowRight, Lock, Shield, Check, Zap, Brain, Flame, Palette, Crown } from "lucide-react"
+import { ArrowRight, Lock, Shield, Check, Zap, Brain, Flame, Palette } from "lucide-react"
 import { Logo } from "@/components/ui/logo"
 import Link from "next/link"
 import Image from "next/image"
 import { useAuth } from "@/components/auth/auth-provider"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { useAppStore } from "@/store/useAppStore"
 
 // ============================================
-// MEMBER CARD - The centerpiece (3D tilt)
+// HOLOGRAPHIC MEMBER CARD
 // ============================================
-function MemberCard() {
+function MemberCard({ memberName }: { memberName: string }) {
   const cardRef = useRef<HTMLDivElement>(null)
   const mouseX = useMotionValue(0.5)
   const mouseY = useMotionValue(0.5)
 
-  const rotateX = useSpring(useTransform(mouseY, [0, 1], [8, -8]), { stiffness: 150, damping: 20 })
-  const rotateY = useSpring(useTransform(mouseX, [0, 1], [-8, 8]), { stiffness: 150, damping: 20 })
+  const rotateX = useSpring(useTransform(mouseY, [0, 1], [12, -12]), { stiffness: 200, damping: 25 })
+  const rotateY = useSpring(useTransform(mouseX, [0, 1], [-12, 12]), { stiffness: 200, damping: 25 })
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!cardRef.current) return
     const rect = cardRef.current.getBoundingClientRect()
-    mouseX.set((e.clientX - rect.left) / rect.width)
-    mouseY.set((e.clientY - rect.top) / rect.height)
-  }
+    const x = (e.clientX - rect.left) / rect.width
+    const y = (e.clientY - rect.top) / rect.height
+    mouseX.set(x)
+    mouseY.set(y)
 
-  const handleMouseLeave = () => {
-    mouseX.set(0.5)
-    mouseY.set(0.5)
-  }
+    // Update CSS custom properties for holographic effect
+    const card = cardRef.current
+    card.style.setProperty("--pointer-x", `${x * 100}%`)
+    card.style.setProperty("--pointer-y", `${y * 100}%`)
+    card.style.setProperty("--pointer-from-left", `${x}`)
+    card.style.setProperty("--pointer-from-top", `${y}`)
+    card.style.setProperty("--pointer-from-center", `${Math.sqrt((x - 0.5) ** 2 + (y - 0.5) ** 2)}`)
+    card.style.setProperty("--background-x", `${x * 100}%`)
+    card.style.setProperty("--background-y", `${y * 100}%`)
+  }, [mouseX, mouseY])
 
-  // Holographic gradient follows mouse
-  const sheenX = useTransform(mouseX, [0, 1], [0, 100])
-  const sheenY = useTransform(mouseY, [0, 1], [0, 100])
+  const handleMouseLeave = useCallback(() => {
+    // Don't reset values — idle animation will take over smoothly
+  }, [])
+
+  const [isHovering, setIsHovering] = useState(false)
+  const idleRef = useRef<number>(0)
+
+  // Idle orbit animation — slow continuous rotation with holographic sync
+  useEffect(() => {
+    let raf: number
+    const animate = () => {
+      if (isHovering || !cardRef.current) {
+        raf = requestAnimationFrame(animate)
+        return
+      }
+
+      const t = Date.now() / 1000
+      // Slow elliptical orbit: ~8s full cycle
+      const nx = 0.5 + Math.sin(t * 0.8) * 0.3
+      const ny = 0.5 + Math.cos(t * 0.6) * 0.2
+
+      mouseX.set(nx)
+      mouseY.set(ny)
+
+      // Sync CSS custom properties for holographic layers
+      const card = cardRef.current
+      card.style.setProperty("--pointer-x", `${nx * 100}%`)
+      card.style.setProperty("--pointer-y", `${ny * 100}%`)
+      card.style.setProperty("--pointer-from-left", `${nx}`)
+      card.style.setProperty("--pointer-from-top", `${ny}`)
+      card.style.setProperty("--pointer-from-center", `${Math.sqrt((nx - 0.5) ** 2 + (ny - 0.5) ** 2)}`)
+      card.style.setProperty("--background-x", `${nx * 100}%`)
+      card.style.setProperty("--background-y", `${ny * 100}%`)
+      card.style.setProperty("--card-opacity", "1")
+
+      raf = requestAnimationFrame(animate)
+    }
+    raf = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(raf)
+  }, [isHovering, mouseX, mouseY])
+
+  const displayName = memberName || "VOTRE NOM"
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 40, rotateX: 20 }}
+      initial={{ opacity: 0, y: 50, rotateX: 25 }}
       animate={{ opacity: 1, y: 0, rotateX: 0 }}
-      transition={{ delay: 0.3, duration: 1, ease: [0.22, 1, 0.36, 1] }}
-      className="relative"
-      style={{ perspective: 1000 }}
+      transition={{ delay: 0.25, duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+      className="relative holo-card-wrapper"
     >
+      {/* Behind glow */}
+      <div className="holo-behind" />
+
       <motion.div
         ref={cardRef}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
+        onMouseMove={(e) => { handleMouseMove(e); setIsHovering(true) }}
+        onMouseLeave={() => { handleMouseLeave(); setIsHovering(false) }}
         style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-        className="relative w-full max-w-[400px] mx-auto rounded-2xl overflow-hidden cursor-default select-none"
+        className="holo-card w-full max-w-[400px] mx-auto cursor-default select-none"
       >
-        {/* Card aspect ratio container */}
-        <div className="relative" style={{ paddingBottom: "63%" }}>
-          {/* Card base */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[hsl(0,0%,9%)] via-[hsl(0,0%,5%)] to-[hsl(0,0%,3%)]" />
+        {/* Card — taller, portrait-leaning ratio */}
+        <div className="relative" style={{ paddingBottom: "130%" }}>
 
-          {/* Border */}
-          <div className="absolute inset-0 rounded-2xl border border-white/[0.08]" />
+          {/* Card base — deep dark with subtle color shift */}
+          <div className="absolute inset-0 rounded-[24px]" style={{
+            background: "linear-gradient(165deg, hsl(155, 12%, 7%) 0%, hsl(200, 10%, 4%) 40%, hsl(260, 12%, 5%) 100%)",
+          }} />
 
-          {/* Holographic sheen - moves with mouse */}
-          <motion.div
-            className="absolute inset-0 pointer-events-none opacity-60"
-            style={{
-              background: useTransform(
-                [sheenX, sheenY],
-                ([x, y]) =>
-                  `radial-gradient(ellipse at ${x}% ${y}%, rgba(139,92,246,0.15) 0%, rgba(0,255,136,0.08) 25%, rgba(6,182,212,0.05) 50%, transparent 80%)`
-              ),
-            }}
-          />
+          {/* Subtle radial spotlight from center */}
+          <div className="absolute inset-0 rounded-[24px]" style={{
+            background: "radial-gradient(ellipse at 50% 35%, rgba(52,211,153,0.04) 0%, transparent 60%)",
+          }} />
 
-          {/* Rainbow refraction lines */}
-          <div
-            className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay"
-            style={{
-              backgroundImage: "repeating-linear-gradient(125deg, rgba(255,0,0,0.4) 0px, rgba(255,165,0,0.3) 2px, rgba(255,255,0,0.3) 4px, rgba(0,255,0,0.3) 6px, rgba(0,0,255,0.3) 8px, rgba(139,0,255,0.4) 10px, transparent 12px)",
-            }}
-          />
+          {/* Inner border — double */}
+          <div className="absolute inset-0 rounded-[24px] border border-white/[0.07]" />
+          <div className="absolute inset-[1px] rounded-[23px] border border-white/[0.03]" />
 
-          {/* Grain */}
-          <div className="absolute inset-0 opacity-[0.025]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }} />
+          {/* Holographic shine layer (logo mask) */}
+          <div className="holo-shine rounded-[24px]" />
 
-          {/* Card content */}
-          <div className="absolute inset-0 z-10 p-5 sm:p-6 flex flex-col justify-between">
+          {/* Glare layer */}
+          <div className="holo-glare rounded-[24px]" />
 
-            {/* Top: Logo + Pro badge */}
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-2">
-                <Image src="/LOGO.png" alt="ONE" width={26} height={26} className="opacity-80" />
-                <div>
-                  <p className="text-[11px] font-bold tracking-[0.3em] uppercase text-white/80">ONE</p>
-                  <p className="text-[7px] tracking-[0.2em] uppercase text-white/25">Focus Operating System</p>
-                </div>
-              </div>
-              <motion.div
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full border"
-                style={{
-                  background: "linear-gradient(135deg, rgba(139,92,246,0.15), rgba(0,255,136,0.1))",
-                  borderColor: "rgba(139,92,246,0.2)",
-                }}
-                animate={{
-                  boxShadow: [
-                    "0 0 8px rgba(139,92,246,0.1)",
-                    "0 0 16px rgba(139,92,246,0.2)",
-                    "0 0 8px rgba(139,92,246,0.1)",
-                  ],
-                }}
-                transition={{ duration: 3, repeat: Infinity }}
-              >
-                <Crown className="h-2.5 w-2.5 text-violet-400" />
-                <span className="text-[9px] font-bold tracking-[0.2em] uppercase bg-gradient-to-r from-violet-400 to-primary bg-clip-text text-transparent">Pro</span>
-              </motion.div>
+          {/* Grain texture */}
+          <div className="absolute inset-0 rounded-[24px] opacity-[0.025]" style={{
+            backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
+          }} />
+
+          {/* ===== CARD CONTENT ===== */}
+          <div className="absolute inset-0 z-10 p-7 sm:p-8 flex flex-col">
+
+            {/* Top: Subtle "ONE" wordmark */}
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-bold tracking-[0.4em] uppercase text-white/20">ONE</p>
+              <p className="text-[8px] tracking-[0.2em] uppercase text-white/15">EST. 2025</p>
             </div>
 
-            {/* Center: Chip + contactless */}
-            <div className="flex items-center gap-4">
-              {/* EMV Chip */}
-              <div className="relative w-11 h-8 rounded-[5px] overflow-hidden" style={{ transform: "translateZ(20px)" }}>
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-200/50 via-amber-300/40 to-amber-400/50" />
-                <div className="absolute inset-[1px] rounded-[4px] bg-gradient-to-br from-amber-100/20 to-amber-300/30" />
-                {/* Chip circuit lines */}
-                <div className="absolute top-[45%] left-0 right-0 h-[1px] bg-amber-600/25" />
-                <div className="absolute top-0 bottom-0 left-[30%] w-[1px] bg-amber-600/20" />
-                <div className="absolute top-0 bottom-0 left-[65%] w-[1px] bg-amber-600/20" />
-                <div className="absolute top-[25%] left-[30%] right-[35%] h-[1px] bg-amber-600/15" />
-                <div className="absolute top-[70%] left-[30%] right-[35%] h-[1px] bg-amber-600/15" />
+            {/* CENTER — The logo, big and proud */}
+            <div className="flex-1 flex flex-col items-center justify-center -mt-2">
+              {/* Logo with glow */}
+              <div className="relative">
+                {/* Ambient glow behind logo */}
+                <div className="absolute inset-0 scale-[2]" style={{
+                  background: "radial-gradient(circle, rgba(52,211,153,0.12) 0%, transparent 60%)",
+                  filter: "blur(30px)",
+                }} />
+                <Image
+                  src="/LOGO.png"
+                  alt="ONE"
+                  width={80}
+                  height={80}
+                  className="relative drop-shadow-[0_0_30px_rgba(52,211,153,0.25)]"
+                />
               </div>
 
-              {/* Contactless symbol */}
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-white/15">
-                <path d="M9 15c1.1-1.1 1.1-2.9 0-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                <path d="M12 18c2.2-2.2 2.2-5.8 0-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                <path d="M15 21c3.3-3.3 3.3-8.7 0-12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+              {/* Divider line */}
+              <div className="w-12 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent mt-7 mb-5" />
+
+              {/* MEMBER text */}
+              <p className="text-[9px] tracking-[0.35em] uppercase text-white/25 font-medium">Member</p>
+
+              {/* User's Name — the star */}
+              <p className="text-[22px] sm:text-[26px] font-bold tracking-[0.08em] text-white/80 uppercase mt-3 text-center leading-tight">
+                {displayName}
+              </p>
+
+              {/* Thin separator */}
+              <div className="w-20 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent mt-5" />
             </div>
 
-            {/* Bottom: Member info */}
+            {/* BOTTOM — Focus Operating System tagline + decorative line */}
             <div className="flex items-end justify-between">
-              <div>
-                <p className="text-[9px] text-white/20 tracking-[0.15em] uppercase mb-0.5">Membre</p>
-                <p className="text-[13px] font-medium tracking-[0.12em] text-white/60 uppercase">Votre Nom</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[9px] text-white/20 tracking-[0.15em] uppercase mb-0.5">Valide</p>
-                <p className="text-[13px] font-medium tabular-nums text-white/60">
-                  {new Date().toLocaleDateString("fr-FR", { month: "2-digit", year: "2-digit" })}
-                </p>
+              <p className="text-[7px] tracking-[0.2em] uppercase text-white/12 leading-relaxed">
+                Focus Operating<br />System
+              </p>
+
+              {/* Decorative corner accent */}
+              <div className="flex items-center gap-3">
+                <div className="flex gap-[3px]">
+                  <div className="w-[3px] h-[3px] rounded-full bg-primary/30" />
+                  <div className="w-[3px] h-[3px] rounded-full bg-primary/20" />
+                  <div className="w-[3px] h-[3px] rounded-full bg-primary/10" />
+                </div>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Animated outer glow */}
-        <motion.div
-          className="absolute -inset-1 rounded-2xl pointer-events-none"
-          animate={{
-            boxShadow: [
-              "0 0 30px rgba(139,92,246,0.06), 0 0 80px rgba(0,255,136,0.03)",
-              "0 0 40px rgba(139,92,246,0.12), 0 0 100px rgba(0,255,136,0.06)",
-              "0 0 30px rgba(139,92,246,0.06), 0 0 80px rgba(0,255,136,0.03)",
-            ],
-          }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-        />
       </motion.div>
 
       {/* Reflection below card */}
-      <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-3/4 h-20 bg-gradient-to-t from-transparent via-primary/[0.04] to-transparent blur-2xl rounded-full" />
+      <motion.div
+        className="absolute -bottom-12 left-1/2 -translate-x-1/2 w-3/5 h-20"
+        style={{
+          background: "radial-gradient(ellipse at center, rgba(52,211,153,0.08) 0%, transparent 70%)",
+          filter: "blur(25px)",
+        }}
+        animate={{
+          opacity: isHovering ? 1 : 0.4,
+        }}
+        transition={{ duration: 0.5 }}
+      />
     </motion.div>
   )
 }
 
 // ============================================
-// FEATURE LIST
+// FEATURE LIST — Refined
 // ============================================
-function FeatureList() {
+function FeatureList({ lang }: { lang: string }) {
+  const t = (en: string, fr: string) => lang === "fr" ? fr : en
+
   const features = [
-    { icon: Brain, text: "IA personnelle qui analyse et ajuste ton plan", color: "text-violet-400" },
-    { icon: Zap, text: "Sessions focus illimitees + bunker mode", color: "text-primary" },
-    { icon: Flame, text: "Suivi 66 jours, dominos, contrat d'engagement", color: "text-orange-400" },
-    { icon: Palette, text: "Themes premium (Stoic, Monk Mode, +)", color: "text-cyan-400" },
-    { icon: Shield, text: "Bouclier anti-distractions et analytics", color: "text-emerald-400" },
+    { icon: Brain, text: t("Personal AI that analyzes and adjusts your plan", "IA personnelle qui analyse et ajuste ton plan"), color: "text-violet-400", bg: "bg-violet-500/8" },
+    { icon: Zap, text: t("Unlimited focus sessions + bunker mode", "Sessions focus illimitées + bunker mode"), color: "text-primary", bg: "bg-primary/8" },
+    { icon: Flame, text: t("66-day tracking, dominos, commitment contract", "Suivi 66 jours, dominos, contrat d'engagement"), color: "text-orange-400", bg: "bg-orange-500/8" },
+    { icon: Palette, text: t("Premium themes (Stoic, Monk Mode, +)", "Thèmes premium (Stoic, Monk Mode, +)"), color: "text-cyan-400", bg: "bg-cyan-500/8" },
+    { icon: Shield, text: t("Anti-distraction shield and analytics", "Bouclier anti-distractions et analytics"), color: "text-emerald-400", bg: "bg-emerald-500/8" },
   ]
 
   return (
@@ -190,7 +225,7 @@ function FeatureList() {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.5, duration: 0.6 }}
-      className="space-y-3"
+      className="space-y-2.5"
     >
       {features.map((feat, i) => {
         const Icon = feat.icon
@@ -200,12 +235,15 @@ function FeatureList() {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.5 + i * 0.08 }}
-            className="flex items-center gap-3"
+            className="flex items-center gap-3.5 group"
           >
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.04] border border-white/[0.06] shrink-0">
-              <Icon className={cn("h-3 w-3", feat.color)} />
+            <div className={cn(
+              "flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.05] shrink-0 transition-colors",
+              feat.bg,
+            )}>
+              <Icon className={cn("h-3.5 w-3.5", feat.color)} />
             </div>
-            <p className="text-[13px] text-white/60 leading-snug">{feat.text}</p>
+            <p className="text-[13px] text-white/55 leading-snug group-hover:text-white/70 transition-colors">{feat.text}</p>
           </motion.div>
         )
       })}
@@ -221,11 +259,13 @@ export default function PricingPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const firstName = useAppStore((s) => s.firstName)
+  const lang = useAppStore((s) => s.language) || "fr"
+  const t = (en: string, fr: string) => lang === "fr" ? fr : en
 
   const handleSubscribe = async () => {
-    // Auth still loading — wait, don't redirect
     if (authLoading) {
-      setError("Chargement en cours, reessaie dans un instant.")
+      setError(t("Loading, try again shortly.", "Chargement en cours, réessaie dans un instant."))
       return
     }
 
@@ -248,7 +288,7 @@ export default function PricingPage() {
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}))
-        setError(data.error || `Erreur serveur (${response.status}). Reessaie.`)
+        setError(data.error || t(`Server error (${response.status}). Try again.`, `Erreur serveur (${response.status}). Réessaie.`))
         return
       }
 
@@ -262,10 +302,10 @@ export default function PricingPage() {
       if (data.url) {
         window.location.href = data.url
       } else {
-        setError("Impossible de creer la session de paiement. Reessaie.")
+        setError(t("Unable to create payment session. Try again.", "Impossible de créer la session de paiement. Réessaie."))
       }
     } catch (err: any) {
-      setError(err?.message || "Une erreur est survenue. Reessaie.")
+      setError(err?.message || t("An error occurred. Try again.", "Une erreur est survenue. Réessaie."))
     } finally {
       setLoading(false)
     }
@@ -276,8 +316,9 @@ export default function PricingPage() {
 
       {/* Atmosphere */}
       <div className="pointer-events-none fixed inset-0">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-primary/[0.04] blur-[180px]" />
-        <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] rounded-full bg-violet-500/[0.03] blur-[150px]" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] rounded-full bg-primary/[0.03] blur-[200px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] rounded-full bg-violet-500/[0.02] blur-[180px]" />
+        <div className="absolute top-2/3 left-1/4 w-[400px] h-[400px] rounded-full bg-cyan-500/[0.015] blur-[160px]" />
       </div>
 
       {/* Header */}
@@ -287,11 +328,11 @@ export default function PricingPage() {
         </Link>
         {user ? (
           <Link href="/app" className="text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors tracking-[0.15em] uppercase">
-            Mon app
+            {t("My app", "Mon app")}
           </Link>
         ) : (
           <Link href="/login" className="text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors tracking-[0.15em] uppercase">
-            Connexion
+            {t("Login", "Connexion")}
           </Link>
         )}
       </header>
@@ -300,11 +341,11 @@ export default function PricingPage() {
       <main className="relative z-10 flex items-center justify-center min-h-[calc(100vh-4rem)] px-6 py-12">
         <div className="w-full max-w-5xl">
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-20 items-center">
 
-            {/* LEFT: Member Card */}
+            {/* LEFT: Holographic Member Card */}
             <div className="order-2 lg:order-1">
-              <MemberCard />
+              <MemberCard memberName={firstName} />
             </div>
 
             {/* RIGHT: Copy + CTA */}
@@ -316,42 +357,49 @@ export default function PricingPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
               >
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/15 mb-5">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/15 mb-6">
                   <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                  <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-primary">Offre de lancement</span>
+                  <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-primary">
+                    {t("Launch offer", "Offre de lancement")}
+                  </span>
                 </div>
 
-                <h1 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-black tracking-tight leading-[1.05] mb-4">
-                  Deviens membre
+                <h1 className="text-3xl sm:text-4xl lg:text-[2.8rem] font-black tracking-tight leading-[1.08] mb-4">
+                  {t("Become a", "Deviens membre")}
                   <br />
-                  <span className="bg-gradient-to-r from-primary via-emerald-400 to-violet-400 bg-clip-text text-transparent">
-                    ONE Pro.
+                  <span className="bg-gradient-to-r from-primary via-emerald-300 to-primary bg-clip-text text-transparent">
+                    {t("ONE member.", "ONE.")}
                   </span>
                 </h1>
 
-                <p className="text-[15px] text-muted-foreground leading-relaxed max-w-md">
-                  Le systeme de focus qui te force a finir ce que tu commences.
-                  Intelligence artificielle. Simplicite radicale.
+                <p className="text-[15px] text-muted-foreground/50 leading-relaxed max-w-md">
+                  {t(
+                    "The focus system that forces you to finish what you start. Artificial intelligence. Radical simplicity.",
+                    "Le système de focus qui te force à finir ce que tu commences. Intelligence artificielle. Simplicité radicale."
+                  )}
                 </p>
               </motion.div>
 
               {/* Features */}
-              <FeatureList />
+              <FeatureList lang={lang} />
 
               {/* Pricing */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.6 }}
-                className="pt-2"
+                className="pt-3 space-y-2"
               >
-                <div className="flex items-baseline gap-3 mb-1">
-                  <span className="text-4xl font-black tabular-nums tracking-tight">1,99$</span>
-                  <span className="text-lg text-muted-foreground/40 line-through">6,99$</span>
-                  <span className="text-[11px] text-primary font-semibold uppercase tracking-wider">-71%</span>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-[2.5rem] font-black tabular-nums tracking-tight leading-none">1,99$</span>
+                  <span className="text-lg text-muted-foreground/30 line-through font-medium">6,99$</span>
+                  <span className="text-[11px] text-primary font-bold uppercase tracking-wider bg-primary/10 px-2 py-0.5 rounded-md">-71%</span>
                 </div>
-                <p className="text-[12px] text-muted-foreground/40">
-                  Premier mois &middot; puis 6,99$/mois &middot; annulable a tout moment
+                <p className="text-[12px] text-muted-foreground/35">
+                  {t(
+                    "First month · then $6.99/mo · cancel anytime",
+                    "Premier mois · puis 6,99$/mois · annulable à tout moment"
+                  )}
                 </p>
               </motion.div>
 
@@ -360,35 +408,35 @@ export default function PricingPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7, duration: 0.5 }}
-                className="space-y-4"
+                className="space-y-5"
               >
                 <motion.button
                   onClick={handleSubscribe}
                   disabled={loading || authLoading}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="relative w-full sm:w-auto sm:min-w-[280px] group cursor-pointer"
+                  whileHover={{ scale: 1.015 }}
+                  whileTap={{ scale: 0.985 }}
+                  className="relative w-full sm:w-auto sm:min-w-[300px] group cursor-pointer"
                 >
                   {/* Glow behind */}
-                  <div className="absolute inset-0 bg-primary/25 rounded-xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                  <div className="absolute inset-0 bg-primary/20 rounded-2xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
 
                   {/* Button body */}
-                  <div className="relative h-13 px-8 bg-gradient-to-r from-primary to-primary/90 rounded-xl flex items-center justify-center gap-2.5 font-semibold text-primary-foreground text-sm transition-all overflow-hidden">
+                  <div className="relative h-14 px-8 bg-gradient-to-r from-primary to-primary/90 rounded-2xl flex items-center justify-center gap-3 font-bold text-primary-foreground text-[14px] transition-all overflow-hidden shadow-xl shadow-primary/20">
                     {/* Shimmer sweep */}
                     <motion.div
                       className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none"
                       animate={{ x: ["-100%", "200%"] }}
                       transition={{ duration: 3, repeat: Infinity, ease: "linear", repeatDelay: 2 }}
                     />
-                    <div className="relative z-10 flex items-center gap-2.5">
+                    <div className="relative z-10 flex items-center gap-3">
                       {loading || authLoading ? (
                         <>
                           <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                          <span>Chargement...</span>
+                          <span>{t("Loading...", "Chargement...")}</span>
                         </>
                       ) : (
                         <>
-                          <span>Obtenir ma carte ONE Pro</span>
+                          <span>{t("Get my ONE membership", "Obtenir ma carte ONE")}</span>
                           <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                         </>
                       )}
@@ -400,27 +448,27 @@ export default function PricingPage() {
                   <motion.p
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="text-red-400 text-xs"
+                    className="text-red-400 text-xs font-medium"
                   >
                     {error}
                   </motion.p>
                 )}
 
                 {/* Trust signals */}
-                <div className="flex flex-wrap items-center gap-4 text-[10px] text-muted-foreground/25 tracking-wide">
+                <div className="flex flex-wrap items-center gap-5 text-[10px] text-muted-foreground/20 tracking-wide">
                   <span className="flex items-center gap-1.5">
                     <Lock className="w-2.5 h-2.5" />
-                    Paiement securise
+                    {t("Secure payment", "Paiement sécurisé")}
                   </span>
-                  <span className="w-px h-2.5 bg-white/5 hidden sm:block" />
+                  <span className="w-px h-3 bg-white/[0.04] hidden sm:block" />
                   <span className="flex items-center gap-1.5">
                     <Shield className="w-2.5 h-2.5" />
-                    Annulation libre
+                    {t("Cancel freely", "Annulation libre")}
                   </span>
-                  <span className="w-px h-2.5 bg-white/5 hidden sm:block" />
+                  <span className="w-px h-3 bg-white/[0.04] hidden sm:block" />
                   <span className="flex items-center gap-1.5">
                     <Check className="w-2.5 h-2.5" />
-                    Acces immediat
+                    {t("Instant access", "Accès immédiat")}
                   </span>
                 </div>
               </motion.div>
@@ -432,12 +480,15 @@ export default function PricingPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1 }}
-            className="text-center mt-20 pb-8"
+            className="text-center mt-24 pb-8"
           >
-            <p className="text-sm text-muted-foreground/30 italic max-w-md mx-auto">
-              &quot;Quelle est la SEULE chose que je puisse faire, telle qu&apos;en la faisant, tout le reste deviendra plus simple ou inutile ?&quot;
+            <p className="text-[14px] text-muted-foreground/20 italic max-w-lg mx-auto leading-relaxed">
+              {t(
+                '"What is the ONE thing I can do, such that by doing it, everything else will become easier or unnecessary?"',
+                '"Quelle est la SEULE chose que je puisse faire, telle qu\'en la faisant, tout le reste deviendra plus simple ou inutile ?"'
+              )}
             </p>
-            <p className="text-[10px] text-muted-foreground/20 mt-2 tracking-[0.15em] uppercase">Gary Keller</p>
+            <p className="text-[10px] text-muted-foreground/15 mt-3 tracking-[0.2em] uppercase font-medium">Gary Keller</p>
           </motion.div>
         </div>
       </main>

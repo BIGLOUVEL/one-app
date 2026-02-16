@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase"
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from "framer-motion"
 import confetti from "canvas-confetti"
 import Image from "next/image"
-import { Crown, ArrowRight, Sparkles } from "lucide-react"
+import { Crown, ArrowRight, Sparkles, AlertTriangle, RefreshCw } from "lucide-react"
 import { useAuth } from "@/components/auth/auth-provider"
 import { useAppStore } from "@/store/useAppStore"
 
@@ -404,21 +404,26 @@ export function PaymentVerifier() {
     setTimeout(frame, 600)
   }, [])
 
-  // Verification logic
-  useEffect(() => {
-    if (!sessionId) return
+  // Verification logic with retry
+  const verifyPayment = useCallback(async () => {
+    setStatus("verifying")
+    setPhase(1)
 
-    const verifyPayment = async () => {
-      setStatus("verifying")
-      setPhase(1)
+    const maxRetries = 3
+    const retryDelay = 2000
 
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const supabase = createClient()
         const { data: { session } } = await supabase.auth.getSession()
 
         if (!session?.access_token) {
-          setStatus("success")
-          setPhase(2)
+          // Wait for auth session to be ready, then retry
+          if (attempt < maxRetries) {
+            await new Promise(r => setTimeout(r, retryDelay))
+            continue
+          }
+          setStatus("error")
           return
         }
 
@@ -433,21 +438,34 @@ export function PaymentVerifier() {
 
         if (response.ok) {
           setStatus("success")
-        } else {
-          console.warn("Payment verification API returned error, proceeding anyway")
-          setStatus("success")
+          setPhase(2)
+          return
+        }
+
+        const errorData = await response.json().catch(() => ({}))
+        console.error(`Verify attempt ${attempt}/${maxRetries} failed:`, errorData)
+
+        if (attempt < maxRetries) {
+          await new Promise(r => setTimeout(r, retryDelay))
+          continue
         }
       } catch (error) {
-        console.error("Payment verification error:", error)
-        setStatus("success")
+        console.error(`Verify attempt ${attempt}/${maxRetries} error:`, error)
+        if (attempt < maxRetries) {
+          await new Promise(r => setTimeout(r, retryDelay))
+          continue
+        }
       }
-
-      // Start the ceremony
-      setPhase(2)
     }
 
-    verifyPayment()
+    // All retries exhausted
+    setStatus("error")
   }, [sessionId])
+
+  useEffect(() => {
+    if (!sessionId) return
+    verifyPayment()
+  }, [sessionId, verifyPayment])
 
   // Phase transitions
   useEffect(() => {
@@ -555,6 +573,48 @@ export function PaymentVerifier() {
                   >
                     {t("Activation...", "Activation...")}
                   </motion.p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Error state */}
+            <AnimatePresence>
+              {status === "error" && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="flex flex-col items-center gap-5 text-center"
+                >
+                  <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                    <AlertTriangle className="w-7 h-7 text-amber-400" />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-white/90 font-medium">
+                      {t("Payment received, activation pending", "Paiement recu, activation en cours")}
+                    </p>
+                    <p className="text-sm text-white/40 max-w-xs">
+                      {t(
+                        "Your payment was processed but we're having trouble activating your account. Try again or contact support.",
+                        "Ton paiement a ete traite mais l'activation a echoue. Reessaie ou contacte le support."
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => verifyPayment()}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-primary/90 hover:bg-primary text-black rounded-lg font-medium text-sm transition-colors"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      {t("Retry", "Reessayer")}
+                    </button>
+                    <button
+                      onClick={() => router.replace("/app")}
+                      className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white/60 rounded-lg text-sm transition-colors"
+                    >
+                      {t("Continue anyway", "Continuer quand meme")}
+                    </button>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>

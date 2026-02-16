@@ -36,16 +36,22 @@ export async function POST(request: NextRequest) {
           // Get subscription details
           const subscription = await stripe.subscriptions.retrieve(subscriptionId) as any
 
-          await supabaseAdmin
+          // Upsert profile to guarantee subscription is saved (handles missing profile)
+          const { error: upsertError } = await supabaseAdmin
             .from("profiles")
-            .update({
+            .upsert({
+              id: userId,
+              stripe_customer_id: customerId,
               stripe_subscription_id: subscriptionId,
               subscription_status: "active",
               promo_used: promoApplied,
               current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
               updated_at: new Date().toISOString(),
-            })
-            .eq("id", userId)
+            }, { onConflict: "id" })
+
+          if (upsertError) {
+            console.error("Webhook: Failed to upsert profile for checkout.session.completed:", upsertError)
+          }
 
           // If promo was applied, schedule price change after first month
           if (promoApplied) {
@@ -60,6 +66,8 @@ export async function POST(request: NextRequest) {
               billing_cycle_anchor: "unchanged",
             })
           }
+        } else {
+          console.error("Webhook: checkout.session.completed missing user_id in metadata. Customer:", customerId)
         }
         break
       }

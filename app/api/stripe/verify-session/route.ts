@@ -49,21 +49,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No subscription found" }, { status: 400 })
     }
 
-    // Update profile in Supabase
-    const { error: updateError } = await supabaseAdmin
+    // Upsert profile in Supabase (handles case where profile doesn't exist yet)
+    const { error: upsertError } = await supabaseAdmin
       .from("profiles")
-      .update({
+      .upsert({
+        id: user.id,
+        email: user.email || "",
+        stripe_customer_id: session.customer as string,
         stripe_subscription_id: subscription.id,
         subscription_status: subscription.status,
         current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
         promo_used: session.metadata?.promo_applied === "true",
         updated_at: new Date().toISOString(),
-      })
-      .eq("id", user.id)
+      }, { onConflict: "id" })
 
-    if (updateError) {
-      console.error("Failed to update profile:", updateError)
+    if (upsertError) {
+      console.error("Failed to upsert profile:", upsertError)
       return NextResponse.json({ error: "Failed to update subscription status" }, { status: 500 })
+    }
+
+    // Double-check the update actually persisted
+    const { data: verifyProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("subscription_status")
+      .eq("id", user.id)
+      .single()
+
+    if (verifyProfile?.subscription_status !== "active") {
+      console.error("Profile update verification failed. Status:", verifyProfile?.subscription_status)
+      return NextResponse.json({ error: "Subscription status not saved" }, { status: 500 })
     }
 
     return NextResponse.json({

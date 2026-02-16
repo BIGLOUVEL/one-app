@@ -28,10 +28,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get or create profile
+    // Ensure profile exists (upsert handles race condition with auth trigger)
+    await supabaseAdmin
+      .from("profiles")
+      .upsert(
+        { id: user.id, email: user.email || "" },
+        { onConflict: "id", ignoreDuplicates: true }
+      )
+
+    // Get profile
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("*")
+      .select("stripe_customer_id")
       .eq("id", user.id)
       .single()
 
@@ -47,11 +55,15 @@ export async function POST(request: NextRequest) {
       })
       stripeCustomerId = customer.id
 
-      // Update profile with Stripe customer ID
-      await supabaseAdmin
+      // Save Stripe customer ID to profile
+      const { error: updateError } = await supabaseAdmin
         .from("profiles")
-        .update({ stripe_customer_id: stripeCustomerId })
+        .update({ stripe_customer_id: stripeCustomerId, updated_at: new Date().toISOString() })
         .eq("id", user.id)
+
+      if (updateError) {
+        console.error("Failed to save stripe_customer_id:", updateError)
+      }
     }
 
     // Get price ID - use env var, or find active price from Stripe

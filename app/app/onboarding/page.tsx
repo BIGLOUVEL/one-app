@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
-  Ghost,
   ArrowRight,
   ArrowLeft,
   Sparkles,
@@ -317,6 +316,51 @@ export default function OnboardingPage() {
 
   const today = new Date().toISOString().split("T")[0]
 
+  const goBack = () => {
+    switch (step) {
+      case "name":
+        setStep("intro")
+        break
+      case "braindump":
+        setStep("name")
+        break
+      case "confront":
+        setStep("braindump")
+        break
+      case "eliminate":
+        setGoals(prev => prev.map(g => ({ ...g, eliminated: false })))
+        setStep("confront")
+        break
+      case "reveal":
+        setGoals(prev => {
+          const eliminated = prev.filter(g => g.eliminated)
+          if (eliminated.length > 0) {
+            const lastId = eliminated[eliminated.length - 1].id
+            return prev.map(g => g.id === lastId ? { ...g, eliminated: false } : g)
+          }
+          return prev
+        })
+        setStep("eliminate")
+        break
+      case "context":
+        if (goals.length > 0 && remainingCount === 1) {
+          setStep("reveal")
+        } else {
+          setStep("braindump")
+        }
+        break
+      case "steps":
+        setStep("context")
+        break
+      case "constraints":
+        setStep("steps")
+        break
+      case "cascade":
+        setStep("constraints")
+        break
+    }
+  }
+
   // --- Progress dot index ---
   const currentDotIndex = progressDots.findIndex(d => d.steps.includes(step))
 
@@ -332,24 +376,21 @@ export default function OnboardingPage() {
       {/* Ambient glow */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/5 blur-[100px] rounded-full pointer-events-none" />
 
-      <div className="w-full max-w-2xl relative z-10">
-        {/* Logo — hidden on intro */}
-        {step !== "intro" && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-center gap-3 mb-6"
-          >
-            <div className="relative">
-              <div className="absolute inset-0 bg-primary/30 blur-xl rounded-full" />
-              <div className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/30 to-primary/10 border border-primary/20">
-                <Ghost className="h-5 w-5 text-primary" />
-              </div>
-            </div>
-            <span className="text-xl font-semibold tracking-tight">ONE</span>
-          </motion.div>
-        )}
+      {/* Back arrow — top left */}
+      {step !== "intro" && step !== "generating" && (
+        <motion.button
+          key={`back-${step}`}
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          onClick={goBack}
+          className="fixed top-6 left-6 p-2.5 rounded-xl text-muted-foreground/50 hover:text-foreground hover:bg-white/10 transition-all z-20"
+          aria-label={t("Go back", "Retour")}
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </motion.button>
+      )}
 
+      <div className="w-full max-w-2xl relative z-10">
         {/* Progress indicator — hidden on intro/braindump/confront/eliminate/reveal */}
         {!["intro", "name", "braindump", "confront", "eliminate", "reveal"].includes(step) && (
           <div className="flex justify-center gap-2 mb-8">
@@ -393,9 +434,7 @@ export default function OnboardingPage() {
               >
                 <div className="relative inline-block">
                   <div className="absolute inset-0 bg-primary/40 blur-3xl rounded-full scale-150" />
-                  <div className="relative flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-primary/30 to-primary/10 border border-primary/20">
-                    <Ghost className="h-8 w-8 text-primary" />
-                  </div>
+                  <Logo size="lg" />
                 </div>
               </motion.div>
 
@@ -1511,28 +1550,6 @@ export default function OnboardingPage() {
             className="mt-8 space-y-3"
           >
             <div className="flex gap-3">
-              {/* Back button — not shown on braindump (first interactive step) */}
-              {step !== "braindump" && (
-                <Button
-                  onClick={() => {
-                    const stepOrder: Step[] = ["intro", "name", "braindump", "confront", "eliminate", "reveal", "context", "steps", "constraints", "generating", "cascade"]
-                    const currentIdx = stepOrder.indexOf(step)
-                    // Skip back over non-navigable steps
-                    if (step === "context") {
-                      // Go back to braindump to redo the elimination
-                      setGoals(prev => prev.map(g => ({ ...g, eliminated: false })))
-                      setStep("braindump")
-                    } else if (currentIdx > 0) {
-                      setStep(stepOrder[currentIdx - 1])
-                    }
-                  }}
-                  variant="outline"
-                  className="h-14 rounded-2xl px-6 bg-white/5 border-white/10 hover:bg-white/10"
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              )}
-
               <Button
                 onClick={() => {
                   if (step === "braindump" && goals.length >= 3) {

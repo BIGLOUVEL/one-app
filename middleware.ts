@@ -1,11 +1,5 @@
 import { createServerClient } from "@supabase/ssr"
-import { createClient } from "@supabase/supabase-js"
 import { NextResponse, type NextRequest } from "next/server"
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -47,8 +41,6 @@ export async function middleware(request: NextRequest) {
   const isProtectedRoute = pathname.startsWith("/app")
   const isAuthCallback = pathname.startsWith("/auth/callback")
   const isAuthReset = pathname.startsWith("/auth/reset-password")
-  const isOnboardingPage = pathname === "/app/onboarding"
-  const isAnalysisPage = pathname.startsWith("/app/analysis")
 
   // Allow auth callback and reset password
   if (isAuthCallback || isAuthReset) {
@@ -61,31 +53,6 @@ export async function middleware(request: NextRequest) {
     url.pathname = "/login"
     url.searchParams.set("redirect", request.nextUrl.pathname)
     return NextResponse.redirect(url)
-  }
-
-  // For logged-in users on /app/* — check subscription only
-  // Onboarding is handled client-side via Zustand store
-  if (isProtectedRoute && user && !isOnboardingPage && !isAnalysisPage) {
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("subscription_status, current_period_end")
-      .eq("id", user.id)
-      .single()
-
-    // Subscription check in production
-    const hasSessionId = request.nextUrl.searchParams.has("session_id")
-    if (!hasSessionId && process.env.NODE_ENV !== "development") {
-      const isSubscribed = profile?.subscription_status === "active" ||
-        (profile?.subscription_status === "canceled" &&
-         profile?.current_period_end &&
-         new Date(profile.current_period_end) > new Date())
-
-      if (!isSubscribed) {
-        const url = request.nextUrl.clone()
-        url.pathname = "/pricing"
-        return NextResponse.redirect(url)
-      }
-    }
   }
 
   // Redirect if already logged in and accessing auth pages

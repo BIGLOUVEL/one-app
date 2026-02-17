@@ -34,11 +34,14 @@ function UserGuard() {
 }
 
 function AppHeader() {
-  const { objective, hasCompletedOnboarding, currentSession } = useAppStore()
-  const isOnboarding = !objective || !hasCompletedOnboarding
+  const { currentSession } = useAppStore()
+  const hasHydrated = useHasHydrated()
 
-  // Hide header during onboarding or active focus session (bunker mode)
-  if (isOnboarding || currentSession) return null
+  // Don't render until hydrated (prevents SidebarProvider prerender crash)
+  if (!hasHydrated) return null
+
+  // Hide header during active focus session (bunker mode)
+  if (currentSession) return null
 
   return (
     <header className="sticky top-0 z-40 flex items-center justify-between h-14 px-4 border-b border-border bg-background/80 backdrop-blur-xl">
@@ -64,11 +67,10 @@ function AppHeader() {
 }
 
 function AppMobileNav() {
-  const { objective, hasCompletedOnboarding, currentSession } = useAppStore()
-  const isOnboarding = !objective || !hasCompletedOnboarding
+  const { currentSession } = useAppStore()
 
-  // Hide mobile nav during onboarding or active focus session (bunker mode)
-  if (isOnboarding || currentSession) return null
+  // Hide mobile nav during active focus session (bunker mode)
+  if (currentSession) return null
 
   return <MobileNav />
 }

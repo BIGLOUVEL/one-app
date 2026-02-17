@@ -1325,7 +1325,7 @@ export default function TimetablePage() {
             </p>
           </div>
           <button
-            onClick={() => router.push("/app/onboarding")}
+            onClick={() => router.push("/app/define")}
             className="h-11 px-7 rounded-xl bg-primary text-primary-foreground text-[13px] font-bold shadow-lg shadow-primary/20 hover:brightness-110 transition-all"
           >
             {t("Set Objective", "Définir l'objectif")}

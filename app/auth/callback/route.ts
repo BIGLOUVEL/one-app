@@ -40,8 +40,17 @@ export async function GET(request: NextRequest) {
       }
       return NextResponse.redirect(new URL(redirect, requestUrl.origin))
     }
+
+    // Pass the real error to login so user can see what went wrong
+    const errorUrl = new URL("/login", requestUrl.origin)
+    errorUrl.searchParams.set("error", "auth_error")
+    errorUrl.searchParams.set("message", error.message)
+    return NextResponse.redirect(errorUrl)
   }
 
-  // Return the user to an error page with instructions
-  return NextResponse.redirect(new URL("/login?error=auth_error", requestUrl.origin))
+  // No code or invalid request
+  const errorUrl = new URL("/login", requestUrl.origin)
+  errorUrl.searchParams.set("error", "auth_error")
+  errorUrl.searchParams.set("message", "missing_code")
+  return NextResponse.redirect(errorUrl)
 }

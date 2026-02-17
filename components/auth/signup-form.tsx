@@ -74,9 +74,9 @@ export function SignupForm({
         body: JSON.stringify({ email }),
       }).catch(() => {})
 
-      // If session returned (email confirmation disabled), go straight to app
+      // If session returned (email confirmation disabled), go to onboarding
       if (data.session) {
-        router.push("/app")
+        router.push("/app/onboarding")
         return
       }
 
@@ -96,7 +96,7 @@ export function SignupForm({
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/auth/callback?redirect=/app/onboarding`,
         },
       })
 

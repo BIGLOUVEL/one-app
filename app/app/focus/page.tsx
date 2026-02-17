@@ -290,7 +290,7 @@ export default function FocusPage() {
   // Redirect if no objective - ONLY after hydration
   useEffect(() => {
     if (hasHydrated && !objective) {
-      router.push("/app/onboarding")
+      router.push("/app/define")
     }
   }, [hasHydrated, objective, router])
 

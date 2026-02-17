@@ -40,7 +40,7 @@ export default function HabitPage() {
   // Redirect if no objective
   useEffect(() => {
     if (!isLoading && !objective) {
-      router.push("/app/onboarding")
+      router.push("/app/define")
     }
   }, [objective, isLoading, router])
 

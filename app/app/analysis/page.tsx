@@ -113,7 +113,7 @@ export default function AnalysisPage() {
   // Redirect if no objective
   useEffect(() => {
     if (hasHydrated && !objective) {
-      router.push("/app/onboarding")
+      router.push("/app/define")
     }
   }, [hasHydrated, objective, router])
 

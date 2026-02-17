@@ -19,7 +19,7 @@ export default function DefinePage() {
   // No objective → onboarding
   useEffect(() => {
     if (!objective) {
-      router.push("/app/onboarding")
+      router.push("/app")
     }
   }, [objective, router])
 
@@ -28,7 +28,7 @@ export default function DefinePage() {
   const handleAbandon = () => {
     failObjective()
     resetObjective()
-    router.push("/app/onboarding")
+    router.push("/app")
   }
 
   // Stats

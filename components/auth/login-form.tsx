@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Loader2 } from "lucide-react"
@@ -32,6 +32,15 @@ export function LoginForm({
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+
+  // Show auth callback error (e.g. Google OAuth redirect_url not allowed)
+  useEffect(() => {
+    const err = searchParams.get("error")
+    const message = searchParams.get("message")
+    if (err === "auth_error" && message) {
+      setError(message === "missing_code" ? "Connexion annulée ou lien invalide." : message)
+    }
+  }, [searchParams])
 
   const lang = useAppStore(s => s.language)
   const t = (en: string, fr: string) => lang === 'fr' ? fr : en

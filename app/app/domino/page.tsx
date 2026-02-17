@@ -21,7 +21,7 @@ export default function DominoPage() {
         <div className="text-center space-y-4">
           <Lock className="h-8 w-8 text-muted-foreground mx-auto" />
           <p className="text-muted-foreground">{t("No objective defined.", "Aucun objectif défini.")}</p>
-          <Button onClick={() => router.push("/app/onboarding")}>
+          <Button onClick={() => router.push("/app/define")}>
             {t("Define your ONE Thing", "Définir ton ONE Thing")}
           </Button>
         </div>

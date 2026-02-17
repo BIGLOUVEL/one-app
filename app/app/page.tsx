@@ -797,15 +797,15 @@ export default function DashboardPage() {
     failObjective()
     resetObjective()
     setShowAbandonModal(false)
-    router.push("/app/onboarding")
+    router.push("/app/define")
   }
 
-  // Redirect to onboarding if no objective
+  // Redirect to define page if no objective (NOT onboarding)
   useEffect(() => {
-    if (hasHydrated && (!hasCompletedOnboarding || !objective)) {
-      router.push("/app/onboarding")
+    if (hasHydrated && !objective) {
+      router.push("/app/define")
     }
-  }, [hasHydrated, hasCompletedOnboarding, objective, router])
+  }, [hasHydrated, objective, router])
 
   // Milestone celebrations
   useEffect(() => {

@@ -16,11 +16,9 @@ export default function DefinePage() {
 
   const [showConfirm, setShowConfirm] = useState(false)
 
-  // No objective → onboarding
+  // No objective → back to dashboard (which shows empty state)
   useEffect(() => {
-    if (!objective) {
-      router.push("/app")
-    }
+    if (!objective) router.push("/app")
   }, [objective, router])
 
   if (!objective) return null

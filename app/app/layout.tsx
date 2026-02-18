@@ -11,11 +11,15 @@ import { useAuth } from "@/components/auth/auth-provider"
 import { Logo } from "@/components/ui/logo"
 import { PaymentVerifier } from "@/components/app/payment-verifier"
 import { DailyDominoCheck } from "@/components/app/daily-domino-check"
+import { useSupabaseSync } from "@/hooks/use-supabase-sync"
 
 function UserGuard() {
   const { user } = useAuth()
   const hasHydrated = useHasHydrated()
   const { userId, setUserId, clearAllData } = useAppStore()
+
+  // Sync Zustand state with Supabase (load on login, save on changes)
+  useSupabaseSync()
 
   useEffect(() => {
     if (!hasHydrated || !user) return

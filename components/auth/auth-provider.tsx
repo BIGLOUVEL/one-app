@@ -46,6 +46,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signOut = async () => {
+    // Flush pending sync saves before signing out
+    try {
+      const { useAppStore } = await import("@/store/useAppStore")
+      const { flushSave, resetSyncState } = await import("@/lib/supabase-sync")
+      const state = useAppStore.getState()
+      if (state.userId) {
+        const plainState: Record<string, unknown> = {}
+        for (const [key, value] of Object.entries(state)) {
+          if (typeof value !== "function") plainState[key] = value
+        }
+        await flushSave(state.userId, plainState)
+      }
+      resetSyncState()
+      useAppStore.getState().clearAllData()
+    } catch {
+      // Best effort
+    }
+
+    // Clear localStorage
+    localStorage.removeItem("one-app")
+
     const supabase = createClient()
     await supabase.auth.signOut()
     setUser(null)

@@ -11,6 +11,7 @@ import { Logo } from "@/components/ui/logo"
 import { PaymentVerifier } from "@/components/app/payment-verifier"
 import { DailyDominoCheck } from "@/components/app/daily-domino-check"
 import { useSupabaseSync } from "@/hooks/use-supabase-sync"
+import { SubscriptionGate } from "@/components/app/subscription-gate"
 
 function UserGuard() {
   const { user } = useAuth()
@@ -99,6 +100,9 @@ export default function AppLayout({
       <Suspense fallback={null}>
         <PaymentVerifier />
       </Suspense>
+
+      {/* Block unpaid users after onboarding */}
+      <SubscriptionGate />
 
       <div className="min-h-screen bg-background">
         {/* Header - hidden during onboarding */}

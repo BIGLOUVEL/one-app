@@ -78,8 +78,16 @@ const colorKeys: GoalPostIt["color"][] = ["yellow", "pink", "blue", "green", "pu
 export default function OnboardingPage() {
   const router = useRouter()
   const { session } = useAuth()
+  const objective = useAppStore(s => s.objective)
   const { setObjectiveFromAI, setAIRoadmap, setIsGeneratingRoadmap, firstName: storedFirstName, setFirstName: storeFirstName } = useAppStore()
   const lang = useAppStore(s => s.language)
+
+  // Guard: if user already has an objective, send them to dashboard — no re-onboarding
+  useEffect(() => {
+    if (objective) {
+      router.replace("/app")
+    }
+  }, [objective, router])
   const aiName = useAppStore(s => s.aiName) || 'Tony'
   const t = (en: string, fr: string) => lang === 'fr' ? fr : en
 

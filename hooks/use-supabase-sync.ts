@@ -26,16 +26,42 @@ export function useSupabaseSync() {
         const remoteData = await loadUserData()
 
         if (remoteData?.state && Object.keys(remoteData.state).length > 0) {
-          // Merge remote state into Zustand, preserving local-only fields
+          // Smart merge: remote wins UNLESS local has data that remote lacks
+          const localState = useAppStore.getState()
           const mergedState: Record<string, unknown> = {}
 
           for (const [key, value] of Object.entries(remoteData.state)) {
-            if (!LOCAL_ONLY_KEYS.has(key)) {
-              mergedState[key] = value
+            if (LOCAL_ONLY_KEYS.has(key)) continue
+
+            const localValue = (localState as Record<string, unknown>)[key]
+
+            // Never overwrite a valid local objective with null/empty remote
+            if (key === "objective") {
+              if (localValue && !value) {
+                // Local has objective, remote doesn't — keep local
+                continue
+              }
+              if (localValue && value) {
+                // Both have objectives — keep whichever was updated more recently
+                const localObj = localValue as { updatedAt?: string; createdAt?: string }
+                const remoteObj = value as { updatedAt?: string; createdAt?: string }
+                const localTime = new Date(localObj.updatedAt || localObj.createdAt || 0).getTime()
+                const remoteTime = new Date(remoteObj.updatedAt || remoteObj.createdAt || 0).getTime()
+                if (localTime >= remoteTime) continue
+              }
             }
+
+            // For hasCompletedOnboarding: never overwrite true with false
+            if (key === "hasCompletedOnboarding" && localValue === true && value === false) {
+              continue
+            }
+
+            mergedState[key] = value
           }
 
-          useAppStore.setState(mergedState)
+          if (Object.keys(mergedState).length > 0) {
+            useAppStore.setState(mergedState)
+          }
         }
         // If remoteData is null, this is a new user — keep current (empty) state
         // The first debouncedSave will create the row

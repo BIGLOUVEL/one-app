@@ -110,12 +110,12 @@ export default function AnalysisPage() {
     }
   }, [aiRoadmap, isGeneratingRoadmap])
 
-  // Redirect if no objective
+  // Redirect if no objective and never onboarded
   useEffect(() => {
-    if (hasHydrated && !objective) {
-      router.push("/app/define")
+    if (hasHydrated && !objective && !isGeneratingRoadmap) {
+      router.replace("/app")
     }
-  }, [hasHydrated, objective, router])
+  }, [hasHydrated, objective, isGeneratingRoadmap, router])
 
   const handleContinue = () => {
     router.push("/app")

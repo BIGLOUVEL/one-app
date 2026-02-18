@@ -857,12 +857,12 @@ export default function DashboardPage() {
     return { totalDays, daysElapsed, daysRemaining, status, statusLabel: label, statusColor: color, delta }
   }, [objective, lang])
 
-  // No objective — redirect to onboarding
+  // No objective and never completed onboarding — redirect to onboarding
   useEffect(() => {
-    if (hasHydrated && !objective) {
-      router.push("/app/onboarding")
+    if (hasHydrated && !objective && !hasCompletedOnboarding) {
+      router.replace("/app/onboarding")
     }
-  }, [hasHydrated, objective, router])
+  }, [hasHydrated, objective, hasCompletedOnboarding, router])
 
   // Loading (hydration) or no objective yet
   if (!hasHydrated || !objective) {

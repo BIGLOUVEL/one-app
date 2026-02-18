@@ -3,7 +3,6 @@
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Target,
@@ -421,35 +420,11 @@ function AppSidebarContent() {
 }
 
 export function AppNav({ children }: { children?: React.ReactNode }) {
-  const { objective, hasCompletedOnboarding } = useAppStore()
-  const [showSidebar, setShowSidebar] = useState(false)
-  const [isInitialized, setIsInitialized] = useState(false)
+  const pathname = usePathname()
+  const isOnboardingRoute = pathname === "/app/onboarding"
 
-  // Check if we're in onboarding mode (no objective)
-  const isOnboarding = !objective || !hasCompletedOnboarding
-
-  // Handle sidebar visibility with animation
-  useEffect(() => {
-    // Wait for hydration
-    setIsInitialized(true)
-  }, [])
-
-  useEffect(() => {
-    if (!isInitialized) return
-
-    if (!isOnboarding && !showSidebar) {
-      // Objective just got set, animate sidebar in after a small delay
-      const timer = setTimeout(() => {
-        setShowSidebar(true)
-      }, 300)
-      return () => clearTimeout(timer)
-    } else if (isOnboarding) {
-      setShowSidebar(false)
-    }
-  }, [isOnboarding, isInitialized, showSidebar])
-
-  // During onboarding: no sidebar, centered content
-  if (isOnboarding) {
+  // During onboarding route: no sidebar, centered content
+  if (isOnboardingRoute) {
     return (
       <SidebarProvider defaultOpen={false}>
         <TooltipProvider delayDuration={0}>
@@ -463,32 +438,10 @@ export function AppNav({ children }: { children?: React.ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <AnimatePresence mode="wait">
-        {showSidebar && (
-          <motion.div
-            initial={{ x: -300, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{
-              type: "spring",
-              stiffness: 300,
-              damping: 30,
-              duration: 0.5
-            }}
-          >
-            <AppSidebarContent />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <AppSidebarContent />
       {children && (
         <SidebarInset>
-          <motion.div
-            initial={!showSidebar ? { opacity: 1 } : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="h-full"
-          >
-            {children}
-          </motion.div>
+          {children}
         </SidebarInset>
       )}
     </SidebarProvider>

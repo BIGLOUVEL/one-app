@@ -2,10 +2,9 @@
 
 import { Suspense, useEffect } from "react"
 import Link from "next/link"
-import { PanelLeft } from "lucide-react"
+import { usePathname } from "next/navigation"
 import { AppNav, MobileNav } from "@/components/app/app-nav"
 import { SidebarTrigger } from "@/components/ui/sidebar"
-import { Button } from "@/components/ui/button"
 import { useAppStore, useHasHydrated } from "@/store/useAppStore"
 import { useAuth } from "@/components/auth/auth-provider"
 import { Logo } from "@/components/ui/logo"
@@ -40,12 +39,14 @@ function UserGuard() {
 function AppHeader() {
   const { currentSession } = useAppStore()
   const hasHydrated = useHasHydrated()
+  const pathname = usePathname()
 
   // Don't render until hydrated (prevents SidebarProvider prerender crash)
   if (!hasHydrated) return null
 
-  // Hide header during active focus session (bunker mode)
+  // Hide header during active focus session (bunker mode) or onboarding
   if (currentSession) return null
+  if (pathname === "/app/onboarding") return null
 
   return (
     <header className="sticky top-0 z-40 flex items-center justify-between h-14 px-4 border-b border-border bg-background/80 backdrop-blur-xl">
@@ -72,9 +73,11 @@ function AppHeader() {
 
 function AppMobileNav() {
   const { currentSession } = useAppStore()
+  const pathname = usePathname()
 
-  // Hide mobile nav during active focus session (bunker mode)
+  // Hide mobile nav during active focus session (bunker mode) or onboarding
   if (currentSession) return null
+  if (pathname === "/app/onboarding") return null
 
   return <MobileNav />
 }

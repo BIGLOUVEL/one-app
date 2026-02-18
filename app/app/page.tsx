@@ -887,7 +887,7 @@ export default function DashboardPage() {
             )}
           </p>
           <Link
-            href="/app/onboarding"
+            href="/app/define"
             className="inline-flex items-center justify-center gap-2 h-12 px-8 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
           >
             <Zap className="h-4 w-4" />

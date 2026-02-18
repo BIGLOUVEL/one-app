@@ -451,11 +451,13 @@ export function AppNav({ children }: { children?: React.ReactNode }) {
   // During onboarding: no sidebar, centered content
   if (isOnboarding) {
     return (
-      <TooltipProvider delayDuration={0}>
-        <div className="min-h-svh w-full bg-background">
-          {children}
-        </div>
-      </TooltipProvider>
+      <SidebarProvider defaultOpen={false}>
+        <TooltipProvider delayDuration={0}>
+          <div className="min-h-svh w-full bg-background">
+            {children}
+          </div>
+        </TooltipProvider>
+      </SidebarProvider>
     )
   }
 

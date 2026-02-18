@@ -60,7 +60,7 @@ export default function GPSPage() {
   // Redirect if no objective
   useEffect(() => {
     if (!isLoading && !objective) {
-      router.push("/app/define")
+      router.replace("/app")
     }
   }, [objective, isLoading, router])
 

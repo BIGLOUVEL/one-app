@@ -799,7 +799,7 @@ export default function DashboardPage() {
     failObjective()
     resetObjective()
     setShowAbandonModal(false)
-    router.push("/app/define")
+    // objective becomes null → useEffect redirects to onboarding
   }
 
   // Show empty state if no objective (no redirect)

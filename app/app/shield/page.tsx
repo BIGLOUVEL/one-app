@@ -177,7 +177,7 @@ export default function ShieldPage() {
   // Redirect if no objective
   useEffect(() => {
     if (!isLoading && !objective) {
-      router.push("/app/define")
+      router.replace("/app")
     }
   }, [objective, isLoading, router])
 

@@ -68,7 +68,7 @@ export default function SessionsPage() {
 
   useEffect(() => {
     if (hasHydrated && !objective) {
-      router.push("/app/define")
+      router.replace("/app")
     }
   }, [objective, hasHydrated, router])
 

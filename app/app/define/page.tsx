@@ -1,32 +1,43 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { AlertTriangle } from "lucide-react"
-import { useAppStore } from "@/store/useAppStore"
+import { useAppStore, useHasHydrated } from "@/store/useAppStore"
 
 const smooth = [0.25, 0.46, 0.45, 0.94] as const
 
 export default function DefinePage() {
   const router = useRouter()
   const { objective, dominoChain, failObjective, resetObjective } = useAppStore()
+  const hasHydrated = useHasHydrated()
   const lang = useAppStore((s) => s.language)
   const t = (en: string, fr: string) => (lang === "fr" ? fr : en)
 
   const [showConfirm, setShowConfirm] = useState(false)
 
-  // No objective → back to dashboard (which shows empty state)
-  useEffect(() => {
-    if (!objective) router.push("/app")
-  }, [objective, router])
+  // Not hydrated yet — show spinner
+  if (!hasHydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
-  if (!objective) return null
+  // No objective → back to dashboard
+  if (!objective) {
+    router.replace("/app")
+    return null
+  }
 
   const handleAbandon = () => {
     failObjective()
     resetObjective()
-    router.push("/app")
+    // After resetting, objective becomes null → redirect to onboarding via dashboard
+    // Use setTimeout to ensure Zustand state update is flushed before navigating
+    setTimeout(() => router.replace("/app"), 50)
   }
 
   // Stats

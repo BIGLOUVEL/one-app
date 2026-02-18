@@ -4,16 +4,25 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Lock, GitBranch } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useAppStore } from "@/store/useAppStore"
+import { useAppStore, useHasHydrated } from "@/store/useAppStore"
 import { DominoPath } from "@/components/app/domino-path"
 import { CascadeView } from "@/components/app/cascade-view"
 
 export default function DominoPage() {
   const router = useRouter()
   const { objective } = useAppStore()
+  const hasHydrated = useHasHydrated()
 
   const lang = useAppStore(s => s.language)
   const t = (en: string, fr: string) => lang === 'fr' ? fr : en
+
+  if (!hasHydrated) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
+        <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   if (!objective) {
     return (
@@ -21,7 +30,7 @@ export default function DominoPage() {
         <div className="text-center space-y-4">
           <Lock className="h-8 w-8 text-muted-foreground mx-auto" />
           <p className="text-muted-foreground">{t("No objective defined.", "Aucun objectif défini.")}</p>
-          <Button onClick={() => router.push("/app/define")}>
+          <Button onClick={() => router.push("/app/onboarding")}>
             {t("Define your ONE Thing", "Définir ton ONE Thing")}
           </Button>
         </div>

@@ -40,7 +40,7 @@ export default function HabitPage() {
   // Redirect if no objective
   useEffect(() => {
     if (!isLoading && !objective) {
-      router.push("/app/define")
+      router.replace("/app")
     }
   }, [objective, isLoading, router])
 

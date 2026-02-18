@@ -857,43 +857,20 @@ export default function DashboardPage() {
     return { totalDays, daysElapsed, daysRemaining, status, statusLabel: label, statusColor: color, delta }
   }, [objective, lang])
 
-  // Loading (hydration)
-  if (!hasHydrated) {
+  // No objective — redirect to onboarding
+  useEffect(() => {
+    if (hasHydrated && !objective) {
+      router.push("/app/onboarding")
+    }
+  }, [hasHydrated, objective, router])
+
+  // Loading (hydration) or no objective yet
+  if (!hasHydrated || !objective) {
     return (
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
         <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
           <Target className="h-8 w-8 text-primary" />
         </motion.div>
-      </div>
-    )
-  }
-
-  // No objective — empty state
-  if (!objective) {
-    return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-6">
-        <div className="text-center space-y-6 max-w-md">
-          <div className="flex justify-center">
-            <div className="relative">
-              <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
-              <Target className="h-16 w-16 text-primary relative" />
-            </div>
-          </div>
-          <h1 className="text-2xl font-bold">{t("Define your ONE Thing", "Définis ton ONE Thing")}</h1>
-          <p className="text-muted-foreground text-sm">
-            {t(
-              "You don't have an active objective yet. Start by defining the ONE thing that matters most right now.",
-              "Tu n'as pas encore d'objectif actif. Commence par définir le ONE thing qui compte le plus maintenant."
-            )}
-          </p>
-          <Link
-            href="/app/define"
-            className="inline-flex items-center justify-center gap-2 h-12 px-8 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
-          >
-            <Zap className="h-4 w-4" />
-            {t("Get started", "Commencer")}
-          </Link>
-        </div>
       </div>
     )
   }

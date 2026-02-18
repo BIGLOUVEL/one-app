@@ -23,11 +23,13 @@ import {
   Pencil,
   HelpCircle,
   Trash2,
+  FolderOpen,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { IconBolt, IconTarget } from "@/components/ui/custom-icons"
 import { useAppStore, useHasHydrated } from "@/store/useAppStore"
 import { cn } from "@/lib/utils"
+import { BunkerFolder } from "@/components/app/bunker-folder"
 
 // ============================================
 // TYPES
@@ -233,6 +235,7 @@ export default function FocusPage() {
   // Motivational quotes states
   const [showMotivationalQuotes, setShowMotivationalQuotes] = useState(false)
   const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0)
+  const [showDocuments, setShowDocuments] = useState(false)
 
   // Editable focus objective during session
   const [isEditingFocus, setIsEditingFocus] = useState(false)
@@ -465,9 +468,14 @@ export default function FocusPage() {
           e.preventDefault()
           setShowNoteInput(true)
         }
+        if (e.key === "f" && e.shiftKey && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault()
+          setShowDocuments(prev => !prev)
+        }
         if (e.key === "Escape") {
           setShowDistractionModal(false)
           setShowNoteInput(false)
+          setShowDocuments(false)
         }
       }
     }
@@ -1169,6 +1177,15 @@ export default function FocusPage() {
                 </Button>
 
                 <Button
+                  onClick={() => setShowDocuments(true)}
+                  variant="outline"
+                  className="h-14 px-5 rounded-2xl"
+                >
+                  <FolderOpen className="mr-2 h-5 w-5" />
+                  Docs
+                </Button>
+
+                <Button
                   onClick={handleEndSession}
                   variant="outline"
                   className="h-14 w-14 rounded-2xl p-0 border-red-500/30 text-red-400 hover:bg-red-500/10"
@@ -1182,6 +1199,8 @@ export default function FocusPage() {
                 <kbd className="px-1.5 py-0.5 rounded bg-white/10">Ctrl+N</kbd> Note
                 {" · "}
                 <kbd className="px-1.5 py-0.5 rounded bg-white/10">Ctrl+D</kbd> Distraction
+                {" · "}
+                <kbd className="px-1.5 py-0.5 rounded bg-white/10">Ctrl+Shift+F</kbd> Docs
               </p>
 
               {/* Post-it notes indicator */}
@@ -1486,6 +1505,9 @@ export default function FocusPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Documents folder panel */}
+      <BunkerFolder isOpen={showDocuments} onClose={() => setShowDocuments(false)} />
     </div>
   )
 }

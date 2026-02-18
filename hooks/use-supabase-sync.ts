@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useSyncExternalStore } from "react"
 import { useAuth } from "@/components/auth/auth-provider"
 import { useAppStore, useHasHydrated } from "@/store/useAppStore"
 import {
@@ -9,6 +9,27 @@ import {
   flushSave,
 } from "@/lib/supabase-sync"
 import { LOCAL_ONLY_KEYS } from "@/lib/sync-config"
+
+// Module-level sync state — shared across all consumers
+let _hasSyncedRemote = false
+const _listeners = new Set<() => void>()
+
+function setSyncedRemote(value: boolean) {
+  _hasSyncedRemote = value
+  _listeners.forEach((l) => l())
+}
+
+/** Returns true once the remote Supabase data has been loaded (or failed). */
+export function useHasSyncedRemote(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      _listeners.add(cb)
+      return () => { _listeners.delete(cb) }
+    },
+    () => _hasSyncedRemote,
+    () => false
+  )
+}
 
 export function useSupabaseSync() {
   const { user, session } = useAuth()
@@ -68,11 +89,13 @@ export function useSupabaseSync() {
 
         hasSyncedRef.current = true
         userIdRef.current = user.id
+        setSyncedRemote(true)
       } catch (err) {
         console.error("[sync] Failed to load remote data:", err)
         // Fall back to localStorage data (already hydrated)
         hasSyncedRef.current = true
         userIdRef.current = user.id
+        setSyncedRemote(true)
       }
     }
 

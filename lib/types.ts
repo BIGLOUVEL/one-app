@@ -330,6 +330,15 @@ export interface TimetableInsights {
   analyzedAt: string
 }
 
+// Bunker Documents (Supabase Storage)
+export interface BunkerDocument {
+  name: string
+  storagePath: string
+  size: number
+  mimeType: string
+  createdAt: string
+}
+
 // App State
 export interface AppState {
   objective: Objective | null

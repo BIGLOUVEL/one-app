@@ -31,6 +31,7 @@ import {
   Send,
 } from "lucide-react"
 import { useAppStore, useHasHydrated } from "@/store/useAppStore"
+import { useHasSyncedRemote } from "@/hooks/use-supabase-sync"
 import { AIInsights } from "@/components/app/ai-insights"
 import { cn } from "@/lib/utils"
 
@@ -792,6 +793,7 @@ export default function DashboardPage() {
     return initial
   })
   const hasHydrated = useHasHydrated()
+  const hasSyncedRemote = useHasSyncedRemote()
 
   const handleAbandonObjective = () => {
     failObjective()
@@ -857,15 +859,15 @@ export default function DashboardPage() {
     return { totalDays, daysElapsed, daysRemaining, status, statusLabel: label, statusColor: color, delta }
   }, [objective, lang])
 
-  // No objective — send to onboarding immediately
+  // No objective — send to onboarding (but wait for remote sync first)
   useEffect(() => {
-    if (hasHydrated && !objective) {
+    if (hasHydrated && hasSyncedRemote && !objective) {
       router.replace("/app/onboarding")
     }
-  }, [hasHydrated, objective, router])
+  }, [hasHydrated, hasSyncedRemote, objective, router])
 
-  // Loading or waiting for redirect
-  if (!hasHydrated || !objective) {
+  // Loading: wait for hydration + remote sync before deciding
+  if (!hasHydrated || !hasSyncedRemote || !objective) {
     return (
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
         <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>

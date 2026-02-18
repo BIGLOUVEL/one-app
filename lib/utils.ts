@@ -58,3 +58,9 @@ export function getRelativeTime(date: string | Date) {
   const months = Math.floor(days / 30)
   return `In ${months} month${months > 1 ? 's' : ''}`
 }
+
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1048576).toFixed(1)} MB`
+}

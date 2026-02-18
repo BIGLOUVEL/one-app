@@ -33,7 +33,7 @@ export function useSupabaseSync() {
           for (const [key, value] of Object.entries(remoteData.state)) {
             if (LOCAL_ONLY_KEYS.has(key)) continue
 
-            const localValue = (localState as Record<string, unknown>)[key]
+            const localValue = (localState as unknown as Record<string, unknown>)[key]
 
             // Never overwrite a valid local objective with null/empty remote
             if (key === "objective") {

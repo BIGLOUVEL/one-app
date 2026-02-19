@@ -102,7 +102,9 @@ export default function AppLayout({
       </Suspense>
 
       {/* Block unpaid users after onboarding */}
-      <SubscriptionGate />
+      <Suspense fallback={null}>
+        <SubscriptionGate />
+      </Suspense>
 
       <div className="min-h-screen bg-background">
         {/* Header - hidden during onboarding */}

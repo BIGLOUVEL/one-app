@@ -34,6 +34,7 @@ import { useAppStore, useHasHydrated } from "@/store/useAppStore"
 import { useHasSyncedRemote } from "@/hooks/use-supabase-sync"
 import { AIInsights } from "@/components/app/ai-insights"
 import { cn } from "@/lib/utils"
+import { EnergyWindowStrip } from "@/components/app/energy-window"
 
 // ============================================
 // UTILITY FUNCTIONS
@@ -959,6 +960,9 @@ export default function DashboardPage() {
           streak={streak}
           hasStreak={!!habitChallenge}
         />
+
+        {/* Energy Window — ambient willpower depletion indicator */}
+        <EnergyWindowStrip />
 
         {/* Stats Strip */}
         <StatsStrip

@@ -339,6 +339,13 @@ export interface BunkerDocument {
   createdAt: string
 }
 
+// Energy Window - Willpower depletion awareness
+export interface EnergyWindow {
+  wakeUpTime: string          // "06:30" (24h format)
+  bedTime: string             // "23:00" (24h format)
+  preferredPeriod?: "morning" | "afternoon" | "evening"
+}
+
 // App State
 export interface AppState {
   objective: Objective | null

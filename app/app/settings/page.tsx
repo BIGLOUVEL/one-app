@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { Settings, Palette, Check, Sparkles, RotateCcw, Crown, Lock, X, CreditCard, ExternalLink, Loader2, Globe, User, Bot, LogOut } from "lucide-react"
+import { Settings, Palette, Check, Sparkles, RotateCcw, Crown, Lock, X, CreditCard, ExternalLink, Loader2, Globe, User, Bot, LogOut, Clock } from "lucide-react"
 import Image from "next/image"
 import { useTheme, UITheme } from "@/components/theme-provider"
 import { useAppStore } from "@/store/useAppStore"
@@ -528,7 +528,7 @@ function MonkModePreview({ isSelected, onSelect }: { isSelected: boolean; onSele
 export default function SettingsPage() {
   const router = useRouter()
   const { theme, setTheme } = useTheme()
-  const { visualPrefs, setVisualPref, resetVisualPrefs, language, setLanguage, firstName, setFirstName, aiName, setAIName } = useAppStore()
+  const { visualPrefs, setVisualPref, resetVisualPrefs, language, setLanguage, firstName, setFirstName, aiName, setAIName, energyWindow, setEnergyWindow } = useAppStore()
   const { session, user, signOut } = useAuth()
 
   const lang = language
@@ -539,9 +539,10 @@ export default function SettingsPage() {
     router.push("/login")
   }
   const visualEffects = getVisualEffects(lang)
-  const [subStatus, setSubStatus] = useState<{ status: string; active: boolean; currentPeriodEnd: string | null; promoUsed?: boolean } | null>(null)
+  const [subStatus, setSubStatus] = useState<{ status: string; active: boolean; currentPeriodEnd: string | null; promoUsed?: boolean; priceAmount?: number | null; priceCurrency?: string | null } | null>(null)
   const [subLoading, setSubLoading] = useState(true)
   const [portalLoading, setPortalLoading] = useState(false)
+  const [portalError, setPortalError] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchStatus() {
@@ -568,20 +569,31 @@ export default function SettingsPage() {
   const openPortal = async () => {
     if (!session?.access_token) return
     setPortalLoading(true)
+    setPortalError(null)
     try {
       const res = await fetch("/api/stripe/portal", {
         method: "POST",
         headers: { Authorization: `Bearer ${session.access_token}` },
       })
-      if (res.ok) {
-        const { url } = await res.json()
-        window.open(url, "_blank")
+      const data = await res.json()
+      if (res.ok && data.url) {
+        window.open(data.url, "_blank")
+      } else {
+        setPortalError(data.error || t("Failed to open portal", "Impossible d'ouvrir le portail"))
       }
     } catch {
-      // silently fail
+      setPortalError(t("Network error. Try again.", "Erreur réseau. Réessaie."))
     } finally {
       setPortalLoading(false)
     }
+  }
+
+  // Format price from cents to display string
+  const formatPrice = (amount: number, currency: string) => {
+    const value = amount / 100
+    const symbol = currency === "eur" ? "€" : currency === "usd" ? "$" : currency.toUpperCase()
+    const formatted = value % 1 === 0 ? value.toString() : value.toFixed(2).replace(".", ",")
+    return currency === "usd" ? `${symbol}${formatted}` : `${formatted}${symbol}`
   }
 
   return (
@@ -748,6 +760,86 @@ export default function SettingsPage() {
                 />
               </div>
               <p className="text-xs text-muted-foreground/60">{t("This is the name used by your AI during onboarding and coaching", "C'est le nom utilisé par ton IA pendant l'onboarding et le coaching")}</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Energy Window Section */}
+        <section className="glass-panel rounded-2xl p-6 mt-6">
+          <div className="flex items-center gap-2 mb-6">
+            <Clock className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">{t("Energy Window", "Fen\u00eatre d'\u00e9nergie")}</h2>
+          </div>
+
+          <p className="text-sm text-muted-foreground mb-4">
+            {t(
+              "Willpower depletes throughout the day. Set your schedule to see when your focus is strongest.",
+              "La volont\u00e9 s'\u00e9puise au fil de la journ\u00e9e. D\u00e9finis ton rythme pour voir quand ton focus est le plus fort."
+            )}
+          </p>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5">
+              <div>
+                <p className="font-medium text-sm">{t("Wake-up time", "Heure de r\u00e9veil")}</p>
+                <p className="text-xs text-muted-foreground">{t("When does your day start?", "Quand ta journ\u00e9e commence-t-elle ?")}</p>
+              </div>
+              <input
+                type="time"
+                value={energyWindow?.wakeUpTime ?? "07:00"}
+                onChange={(e) => setEnergyWindow({
+                  wakeUpTime: e.target.value,
+                  bedTime: energyWindow?.bedTime ?? "23:00",
+                  preferredPeriod: energyWindow?.preferredPeriod,
+                })}
+                className="h-9 px-3 rounded-lg bg-white/5 border border-border text-sm focus:outline-none focus:ring-1 focus:ring-primary/30 [color-scheme:dark]"
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5">
+              <div>
+                <p className="font-medium text-sm">{t("Bedtime", "Heure de coucher")}</p>
+                <p className="text-xs text-muted-foreground">{t("When does your day end?", "Quand ta journ\u00e9e se termine-t-elle ?")}</p>
+              </div>
+              <input
+                type="time"
+                value={energyWindow?.bedTime ?? "23:00"}
+                onChange={(e) => setEnergyWindow({
+                  wakeUpTime: energyWindow?.wakeUpTime ?? "07:00",
+                  bedTime: e.target.value,
+                  preferredPeriod: energyWindow?.preferredPeriod,
+                })}
+                className="h-9 px-3 rounded-lg bg-white/5 border border-border text-sm focus:outline-none focus:ring-1 focus:ring-primary/30 [color-scheme:dark]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <p className="font-medium text-sm">{t("Peak productivity", "Pic de productivit\u00e9")}</p>
+              <p className="text-xs text-muted-foreground mb-3">{t("When do you feel most focused?", "Quand te sens-tu le plus concentr\u00e9 ?")}</p>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { id: "morning" as const, label: t("Morning", "Matin") },
+                  { id: "afternoon" as const, label: t("Afternoon", "Apr\u00e8s-midi") },
+                  { id: "evening" as const, label: t("Evening", "Soir") },
+                ]).map((period) => (
+                  <button
+                    key={period.id}
+                    onClick={() => setEnergyWindow({
+                      wakeUpTime: energyWindow?.wakeUpTime ?? "07:00",
+                      bedTime: energyWindow?.bedTime ?? "23:00",
+                      preferredPeriod: energyWindow?.preferredPeriod === period.id ? undefined : period.id,
+                    })}
+                    className={cn(
+                      "h-10 rounded-xl border text-sm font-medium transition-all",
+                      energyWindow?.preferredPeriod === period.id
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-white/5 text-muted-foreground hover:border-primary/30"
+                    )}
+                  >
+                    {period.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -936,20 +1028,15 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Monthly amount */}
-                <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/5">
-                  <p className="text-sm text-muted-foreground">{t("Monthly amount", "Montant mensuel")}</p>
-                  <p className="text-sm font-semibold">
-                    {subStatus.promoUsed ? (
-                      <span className="flex items-center gap-2">
-                        <span className="line-through text-muted-foreground/50 font-normal text-xs">9,99€</span>
-                        <span className="text-primary">4,99€</span>
-                      </span>
-                    ) : (
-                      <span>9,99€</span>
-                    )}
-                    <span className="text-xs text-muted-foreground font-normal">/{t("month", "mois")}</span>
-                  </p>
-                </div>
+                {subStatus.priceAmount != null && subStatus.priceCurrency && (
+                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/5">
+                    <p className="text-sm text-muted-foreground">{t("Monthly amount", "Montant mensuel")}</p>
+                    <p className="text-sm font-semibold">
+                      <span>{formatPrice(subStatus.priceAmount, subStatus.priceCurrency)}</span>
+                      <span className="text-xs text-muted-foreground font-normal">/{t("month", "mois")}</span>
+                    </p>
+                  </div>
+                )}
 
                 {/* Next billing */}
                 {subStatus.currentPeriodEnd && (
@@ -969,18 +1056,23 @@ export default function SettingsPage() {
               </div>
 
               {/* Manage button */}
-              <button
-                onClick={openPortal}
-                disabled={portalLoading}
-                className="w-full flex items-center justify-center gap-2 h-11 rounded-xl border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
-              >
-                {portalLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <ExternalLink className="h-4 w-4" />
+              <div className="space-y-2">
+                <button
+                  onClick={openPortal}
+                  disabled={portalLoading}
+                  className="w-full flex items-center justify-center gap-2 h-11 rounded-xl border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                >
+                  {portalLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ExternalLink className="h-4 w-4" />
+                  )}
+                  {t("Manage subscription", "Gérer mon abonnement")}
+                </button>
+                {portalError && (
+                  <p className="text-xs text-red-400 text-center">{portalError}</p>
                 )}
-                {t("Manage subscription", "Gérer mon abonnement")}
-              </button>
+              </div>
             </div>
           )}
         </section>

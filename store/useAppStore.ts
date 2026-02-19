@@ -23,6 +23,7 @@ import {
   PostIt,
   TimetableEvent,
   TimetableInsights,
+  EnergyWindow,
 } from "@/lib/types"
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
@@ -73,6 +74,10 @@ interface AppStore {
 
   // Session post-its (persist across page refreshes during session)
   sessionPostIts: Array<{ id: string; text: string; x: number; y: number; rotation: number }>
+
+  // Energy Window
+  energyWindow: EnergyWindow | null
+  setEnergyWindow: (config: EnergyWindow | null) => void
 
   // Timetable
   timetableEvents: TimetableEvent[]
@@ -258,6 +263,10 @@ export const useAppStore = create<AppStore>()(
       todayGoalCompleted: false,
 
       // Timetable
+      // Energy Window
+      energyWindow: null,
+      setEnergyWindow: (config) => set({ energyWindow: config }),
+
       timetableEvents: [],
       timetableInsights: null,
       isAnalyzingTimetable: false,

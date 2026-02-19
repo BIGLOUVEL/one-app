@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { useRouter, usePathname } from "next/navigation"
+import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { useAuth } from "@/components/auth/auth-provider"
 import { useAppStore, useHasHydrated } from "@/store/useAppStore"
 
@@ -11,6 +11,7 @@ const EXEMPT_PATHS = ["/app/onboarding", "/app/analysis", "/app/settings"]
 export function SubscriptionGate() {
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { user, session } = useAuth()
   const hasHydrated = useHasHydrated()
   const { hasCompletedOnboarding } = useAppStore()
@@ -23,6 +24,10 @@ export function SubscriptionGate() {
 
     // Don't block exempt pages
     if (EXEMPT_PATHS.some((p) => pathname.startsWith(p))) return
+
+    // Payment verification in progress (returning from Stripe checkout)
+    // Let PaymentVerifier handle this — don't race against it
+    if (searchParams.get("session_id")) return
 
     // User hasn't completed onboarding yet — no paywall needed
     if (!hasCompletedOnboarding) return
@@ -53,7 +58,7 @@ export function SubscriptionGate() {
     }
 
     checkSubscription()
-  }, [hasHydrated, user, session, hasCompletedOnboarding, pathname, hasChecked, router])
+  }, [hasHydrated, user, session, hasCompletedOnboarding, pathname, searchParams, hasChecked, router])
 
   return null
 }

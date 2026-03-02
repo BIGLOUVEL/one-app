@@ -42,12 +42,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true })
     }
 
-    // Send email via Resend
-    const { error: sendError } = await resend.emails.send({
-      from: "ONE <noreply@makeitreal.one>",
-      to: email,
-      subject: "Reset your ONE password",
-      html: `
+    // Try Resend first if key is configured
+    const resendKey = process.env.RESEND_API_KEY
+    if (resendKey) {
+      const { error: sendError } = await resend.emails.send({
+        from: "ONE <noreply@makeitreal.one>",
+        to: email,
+        subject: "Reset your ONE password",
+        html: `
 <!DOCTYPE html>
 <html>
 <head>
@@ -113,11 +115,27 @@ export async function POST(request: NextRequest) {
   </table>
 </body>
 </html>
-      `.trim(),
-    })
+        `.trim(),
+      })
 
-    if (sendError) {
-      console.error("[reset-email] Resend error:", sendError)
+      if (!sendError) {
+        return NextResponse.json({ success: true })
+      }
+      console.error("[reset-email] Resend error, falling back to Supabase:", sendError)
+    }
+
+    // Fallback: use Supabase's built-in password reset email
+    const supabasePublic = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const { error: nativeError } = await supabasePublic.auth.resetPasswordForEmail(
+      email.toLowerCase().trim(),
+      { redirectTo: `${origin}/auth/reset-password` }
+    )
+
+    if (nativeError) {
+      console.error("[reset-email] Native reset error:", nativeError.message)
       return NextResponse.json({ error: "Failed to send email" }, { status: 500 })
     }
 

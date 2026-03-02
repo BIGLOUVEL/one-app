@@ -1527,49 +1527,73 @@ export default function TimetablePage() {
           }}
         >
           {/* Week navigation + Day headers */}
-          <div className="border-b border-white/[0.05]">
-            {/* Week navigator bar */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-white/[0.03]">
-              <button
-                onClick={goToPrevWeek}
-                className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground/30 hover:text-muted-foreground/70 hover:bg-white/[0.04] transition-all"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
+          <div className="border-b border-white/[0.06]">
 
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-semibold text-muted-foreground/50">
-                  {weekDates[0] && weekDates[6] && (() => {
-                    const startD = new Date(weekDates[0].date + "T12:00:00")
-                    const endD = new Date(weekDates[6].date + "T12:00:00")
-                    const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" }
-                    const locale = lang === "fr" ? "fr-FR" : "en-US"
-                    return `${startD.toLocaleDateString(locale, opts)} – ${endD.toLocaleDateString(locale, opts)}`
-                  })()}
-                </span>
+            {/* ── Month + week nav bar ── */}
+            <div className="grid border-b border-white/[0.04]" style={{ gridTemplateColumns: "56px 1fr" }}>
+              {/* Clock icon cell */}
+              <div className="flex items-center justify-center border-r border-white/[0.04]">
+                <Clock className="h-3.5 w-3.5 text-muted-foreground/20" />
+              </div>
+
+              {/* Nav + month */}
+              <div className="flex items-center gap-3 px-4 py-3">
+                {/* Prev arrow */}
+                <button
+                  onClick={goToPrevWeek}
+                  className="h-8 w-8 rounded-xl flex items-center justify-center border border-white/[0.08] bg-white/[0.03] text-foreground/50 hover:text-foreground hover:bg-white/[0.08] hover:border-white/[0.14] transition-all"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                {/* Month + year */}
+                <div className="flex-1 flex items-baseline gap-3">
+                  <h2 className="text-[17px] font-black tracking-tight text-foreground">
+                    {(() => {
+                      if (!weekDates[0] || !weekDates[6]) return ""
+                      const locale = lang === "fr" ? "fr-FR" : "en-US"
+                      const startD = new Date(weekDates[0].date + "T12:00:00")
+                      const endD   = new Date(weekDates[6].date + "T12:00:00")
+                      const startMonth = startD.toLocaleDateString(locale, { month: "long" })
+                      const endMonth   = endD.toLocaleDateString(locale, { month: "long" })
+                      const year = endD.getFullYear()
+                      if (startMonth === endMonth) return `${startMonth} ${year}`
+                      return `${startD.toLocaleDateString(locale, { month: "short" })} – ${endMonth} ${year}`
+                    })()}
+                  </h2>
+                  <span className="text-[11px] font-semibold text-muted-foreground/30 tabular-nums">
+                    {weekDates[0]?.date && weekDates[6]?.date && (() => {
+                      const locale = lang === "fr" ? "fr-FR" : "en-US"
+                      const s = new Date(weekDates[0].date + "T12:00:00")
+                      const e = new Date(weekDates[6].date + "T12:00:00")
+                      return `${s.toLocaleDateString(locale, { day: "numeric", month: "short" })} → ${e.toLocaleDateString(locale, { day: "numeric", month: "short" })}`
+                    })()}
+                  </span>
+                </div>
+
+                {/* Today button — only shown when not on current week */}
                 {!isCurrentWeek && (
                   <button
                     onClick={goToToday}
-                    className="h-5 px-2 rounded-md text-[9px] font-bold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15 transition-all"
+                    className="h-7 px-3 rounded-lg text-[11px] font-bold bg-primary text-primary-foreground hover:brightness-110 transition-all shadow-md shadow-primary/20"
                   >
-                    {t("Today", "Auj.")}
+                    {t("Today", "Aujourd'hui")}
                   </button>
                 )}
-              </div>
 
-              <button
-                onClick={goToNextWeek}
-                className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground/30 hover:text-muted-foreground/70 hover:bg-white/[0.04] transition-all"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
+                {/* Next arrow */}
+                <button
+                  onClick={goToNextWeek}
+                  className="h-8 w-8 rounded-xl flex items-center justify-center border border-white/[0.08] bg-white/[0.03] text-foreground/50 hover:text-foreground hover:bg-white/[0.08] hover:border-white/[0.14] transition-all"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
-            {/* Day columns header */}
+            {/* ── Day column headers ── */}
             <div className="grid" style={{ gridTemplateColumns: "56px repeat(7, 1fr)" }}>
-              <div className="p-3 flex items-center justify-center border-r border-white/[0.04]">
-                <Clock className="h-3.5 w-3.5 text-muted-foreground/15" />
-              </div>
+              <div className="border-r border-white/[0.04]" />
               {weekDates.map(({ day, date }, i) => {
                 const isToday = date === todayStr
                 const eventCount = eventsByDay[day].length
@@ -1579,30 +1603,41 @@ export default function TimetablePage() {
                   <div
                     key={day}
                     className={cn(
-                      "relative py-2.5 px-2 text-center transition-colors",
+                      "relative py-3 text-center transition-colors",
                       i > 0 && "border-l border-white/[0.04]",
-                      isToday && "bg-primary/[0.03]"
+                      isToday ? "bg-primary/[0.05]" : "hover:bg-white/[0.015]"
                     )}
                   >
+                    {/* Today dot */}
                     {isToday && (
-                      <div className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-primary shadow-lg shadow-primary/40" />
+                      <div className="absolute top-2.5 right-2.5 h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_6px_rgba(47,208,22,0.6)]" />
                     )}
+
+                    {/* Day name abbrev */}
                     <span className={cn(
-                      "text-[10px] font-bold uppercase tracking-[0.08em] block",
-                      isToday ? "text-primary" : "text-muted-foreground/40"
+                      "text-[10px] font-bold uppercase tracking-[0.1em] block",
+                      isToday ? "text-primary/70" : "text-muted-foreground/35"
                     )}>
                       {dayLabels[day]}
                     </span>
+
+                    {/* Day number — big and clear */}
                     <span className={cn(
-                      "text-[14px] font-black tabular-nums block mt-0.5",
-                      isToday ? "text-primary" : "text-muted-foreground/50"
+                      "text-[22px] font-black tabular-nums leading-tight block",
+                      isToday
+                        ? "text-primary"
+                        : "text-foreground/70"
                     )}>
                       {dayNum}
                     </span>
+
+                    {/* Event count pill */}
                     {eventCount > 0 && (
                       <span className={cn(
-                        "text-[9px] tabular-nums mt-0.5 block",
-                        isToday ? "text-primary/40" : "text-muted-foreground/20"
+                        "inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[9px] font-bold mt-0.5",
+                        isToday
+                          ? "bg-primary/20 text-primary"
+                          : "bg-white/[0.06] text-muted-foreground/40"
                       )}>
                         {eventCount}
                       </span>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback } from "react"
+import React, { useState, useRef, useEffect, useCallback } from "react"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { Loader2, ArrowRight, CheckCircle2 } from "lucide-react"
@@ -8,6 +8,8 @@ import { Logo } from "@/components/ui/logo"
 
 // ColorBends uses Three.js — client only
 const ColorBends = dynamic(() => import("@/components/ColorBends"), { ssr: false }) as any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const TrueFocus = dynamic(() => import("@/components/TrueFocus") as any, { ssr: false }) as React.ComponentType<Record<string, unknown>>
 
 const ADMIN_PASSWORD = "EARLYADOPTER"
 
@@ -111,7 +113,18 @@ export function PreLaunchPage() {
 
         {/* Title */}
         <h1 className="mb-4 text-center text-5xl font-black leading-[1.05] tracking-tight text-white sm:text-6xl">
-          Stop Working <span className="text-primary">Blind.</span>
+          Stop Working{" "}
+          <span className="text-primary inline-block">
+            <TrueFocus
+              sentence="Blind."
+              manualMode={false}
+              blurAmount={0}
+              borderColor="#10b723"
+              glowColor="rgba(16, 183, 35, 0.35)"
+              animationDuration={0.5}
+              pauseBetweenAnimations={9999}
+            />
+          </span>
         </h1>
 
         {/* Subtitle */}

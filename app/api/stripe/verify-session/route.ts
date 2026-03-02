@@ -70,18 +70,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to update subscription status" }, { status: 500 })
     }
 
-    // Double-check the update actually persisted
-    const { data: verifyProfile } = await supabaseAdmin
-      .from("profiles")
-      .select("subscription_status")
-      .eq("id", user.id)
-      .single()
-
-    if (verifyProfile?.subscription_status !== "active") {
-      console.error("Profile update verification failed. Status:", verifyProfile?.subscription_status)
-      return NextResponse.json({ error: "Subscription status not saved" }, { status: 500 })
-    }
-
     return NextResponse.json({
       success: true,
       status: subscription.status,

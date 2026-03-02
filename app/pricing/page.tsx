@@ -1,15 +1,18 @@
 "use client"
 
-import { useState, useRef, useCallback, useEffect } from "react"
+import React, { useState, useRef, useCallback, useEffect } from "react"
 import { motion, useMotionValue, useTransform, useSpring } from "framer-motion"
-import { ArrowRight, Lock, Shield, Check, Zap, Brain, Flame, Palette } from "lucide-react"
+import { ArrowRight, Lock, Shield, Check } from "lucide-react"
 import { Logo } from "@/components/ui/logo"
 import Link from "next/link"
 import Image from "next/image"
 import { useAuth } from "@/components/auth/auth-provider"
 import { useRouter } from "next/navigation"
-import { cn } from "@/lib/utils"
 import { useAppStore } from "@/store/useAppStore"
+import dynamic from "next/dynamic"
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const FloatingLines = dynamic(() => import("@/components/FloatingLines") as any, { ssr: false }) as React.ComponentType<Record<string, unknown>>
 
 // ============================================
 // HOLOGRAPHIC MEMBER CARD
@@ -207,17 +210,17 @@ function MemberCard({ memberName }: { memberName: string }) {
 }
 
 // ============================================
-// FEATURE LIST — Refined
+// FEATURE LIST — No icons, numbered editorial style
 // ============================================
 function FeatureList({ lang }: { lang: string }) {
   const t = (en: string, fr: string) => lang === "fr" ? fr : en
 
   const features = [
-    { icon: Brain, text: t("Personal AI that analyzes and adjusts your plan", "IA personnelle qui analyse et ajuste ton plan"), color: "text-violet-400", bg: "bg-violet-500/8" },
-    { icon: Zap, text: t("Unlimited focus sessions + bunker mode", "Sessions focus illimitées + bunker mode"), color: "text-primary", bg: "bg-primary/8" },
-    { icon: Flame, text: t("66-day tracking, dominos, commitment contract", "Suivi 66 jours, dominos, contrat d'engagement"), color: "text-orange-400", bg: "bg-orange-500/8" },
-    { icon: Palette, text: t("Premium themes (Stoic, Monk Mode, +)", "Thèmes premium (Stoic, Monk Mode, +)"), color: "text-cyan-400", bg: "bg-cyan-500/8" },
-    { icon: Shield, text: t("Anti-distraction shield and analytics", "Bouclier anti-distractions et analytics"), color: "text-emerald-400", bg: "bg-emerald-500/8" },
+    t("Personal AI that analyzes and adjusts your plan", "IA personnelle qui analyse et ajuste ton plan"),
+    t("Unlimited focus sessions + bunker mode", "Sessions focus illimitées + bunker mode"),
+    t("66-day tracking, dominos, commitment contract", "Suivi 66 jours, dominos, contrat d'engagement"),
+    t("Premium themes (Stoic, Monk Mode, +)", "Thèmes premium (Stoic, Monk Mode, +)"),
+    t("Anti-distraction shield and analytics", "Bouclier anti-distractions et analytics"),
   ]
 
   return (
@@ -225,28 +228,24 @@ function FeatureList({ lang }: { lang: string }) {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.5, duration: 0.6 }}
-      className="space-y-2.5"
+      className="border-t border-white/[0.06]"
     >
-      {features.map((feat, i) => {
-        const Icon = feat.icon
-        return (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 + i * 0.08 }}
-            className="flex items-center gap-3.5 group"
-          >
-            <div className={cn(
-              "flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.05] shrink-0 transition-colors",
-              feat.bg,
-            )}>
-              <Icon className={cn("h-3.5 w-3.5", feat.color)} />
-            </div>
-            <p className="text-[13px] text-white/55 leading-snug group-hover:text-white/70 transition-colors">{feat.text}</p>
-          </motion.div>
-        )
-      })}
+      {features.map((text, i) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, x: -8 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.5 + i * 0.07 }}
+          className="flex items-start gap-5 py-3.5 border-b border-white/[0.06] group"
+        >
+          <span className="text-[10px] tabular-nums text-primary/40 font-mono mt-[3px] shrink-0 leading-none">
+            {String(i + 1).padStart(2, "0")}
+          </span>
+          <p className="text-[13px] text-white/45 leading-snug group-hover:text-white/65 transition-colors duration-200">
+            {text}
+          </p>
+        </motion.div>
+      ))}
     </motion.div>
   )
 }
@@ -314,8 +313,22 @@ export default function PricingPage() {
   return (
     <div className="relative min-h-screen bg-background text-foreground overflow-hidden">
 
+      {/* FloatingLines background */}
+      <div className="pointer-events-none fixed inset-0 z-0 opacity-20" style={{ mixBlendMode: "screen" }}>
+        <FloatingLines
+          linesGradient={["#10b723", "#ffffff"]}
+          animationSpeed={1}
+          interactive
+          bendRadius={5}
+          bendStrength={-0.5}
+          mouseDamping={0.05}
+          parallax
+          parallaxStrength={0.2}
+        />
+      </div>
+
       {/* Atmosphere */}
-      <div className="pointer-events-none fixed inset-0">
+      <div className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] rounded-full bg-primary/[0.03] blur-[200px]" />
         <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] rounded-full bg-violet-500/[0.02] blur-[180px]" />
         <div className="absolute top-2/3 left-1/4 w-[400px] h-[400px] rounded-full bg-cyan-500/[0.015] blur-[160px]" />

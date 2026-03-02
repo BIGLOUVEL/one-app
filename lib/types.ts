@@ -304,6 +304,7 @@ export type TimetableDay = "monday" | "tuesday" | "wednesday" | "thursday" | "fr
 export interface TimetableEvent {
   id: string
   day: TimetableDay
+  date?: string              // YYYY-MM-DD — actual calendar date (undefined = legacy template event)
   startTime: string          // "09:00" (24h)
   endTime: string            // "10:30"
   title: string

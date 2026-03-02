@@ -30,6 +30,8 @@ import {
   Lightbulb,
   Shield,
   Flame,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { useAppStore, useHasHydrated } from "@/store/useAppStore"
 import { useAuth } from "@/components/auth/auth-provider"
@@ -119,6 +121,40 @@ function getTodayDay(): TimetableDay {
   return map[jsDay]
 }
 
+// Returns the Monday of a given week
+function getWeekStart(date: Date = new Date()): Date {
+  const d = new Date(date)
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+function toDateStr(date: Date): string {
+  return date.toISOString().slice(0, 10)
+}
+
+function dayFromDate(dateStr: string): TimetableDay {
+  const d = new Date(dateStr + "T12:00:00")
+  const map: TimetableDay[] = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
+  return map[d.getDay()]
+}
+
+function formatDayDate(dateStr: string, lang: string): string {
+  const d = new Date(dateStr + "T12:00:00")
+  return d.toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", { day: "numeric", month: "short" })
+}
+
+// Build 7-date array for a week starting on weekStart (Monday)
+function buildWeekDates(weekStart: Date): { day: TimetableDay; date: string }[] {
+  return DAYS.map((day, i) => {
+    const d = new Date(weekStart)
+    d.setDate(weekStart.getDate() + i)
+    return { day, date: toDateStr(d) }
+  })
+}
+
 // ============================================
 // FOCUS SCORE RING — SVG circular gauge
 // ============================================
@@ -160,18 +196,25 @@ function FocusScoreRing({ score, size = 72, strokeWidth = 5 }: { score: number; 
 // EVENT MODAL — Premium editing experience
 // ============================================
 function EventModal({
-  open, onClose, event, defaultDay, defaultTime, onSave, onDelete, lang,
+  open, onClose, event, weekDates, defaultDate, defaultTime, onSave, onDelete, lang,
 }: {
   open: boolean; onClose: () => void; event?: TimetableEvent | null
-  defaultDay?: TimetableDay; defaultTime?: string
-  onSave: (data: { day: TimetableDay; startTime: string; endTime: string; title: string; category: string; priority: TimetablePriority }) => void
+  weekDates: { day: TimetableDay; date: string }[]
+  defaultDate?: string; defaultTime?: string
+  onSave: (data: { day: TimetableDay; date: string; startTime: string; endTime: string; title: string; category: string; priority: TimetablePriority }) => void
   onDelete?: () => void; lang: string
 }) {
   const t = (en: string, fr: string) => (lang === "fr" ? fr : en)
   const isEdit = !!event
 
   const [title, setTitle] = useState(event?.title || "")
-  const [day, setDay] = useState<TimetableDay>(event?.day || defaultDay || "monday")
+  // For existing event: use its date if set, else find the date matching its day in the current weekDates
+  const resolvedDefaultDate = event?.date
+    || (event?.day ? (weekDates.find(w => w.day === event.day)?.date ?? weekDates[0]?.date) : null)
+    || defaultDate
+    || weekDates[0]?.date
+    || toDateStr(new Date())
+  const [selectedDate, setSelectedDate] = useState<string>(resolvedDefaultDate)
   const [startTime, setStartTime] = useState(event?.startTime || defaultTime || "09:00")
   const [endTime, setEndTime] = useState(event?.endTime || minutesToTime(timeToMinutes(defaultTime || "09:00") + 60))
   const [category, setCategory] = useState(event?.category || "Deep Work")
@@ -180,11 +223,10 @@ function EventModal({
 
   const handleSave = () => {
     if (!title.trim()) return
-    onSave({ day, startTime, endTime, title: title.trim(), category, priority })
+    const day = dayFromDate(selectedDate)
+    onSave({ day, date: selectedDate, startTime, endTime, title: title.trim(), category, priority })
     onClose()
   }
-
-  const dayFull = lang === "fr" ? DAY_FULL_FR : DAY_FULL_EN
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -241,23 +283,47 @@ function EventModal({
               />
             </div>
 
-            {/* Day + Times */}
-            <div className="grid grid-cols-3 gap-2.5">
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/40 font-bold block">
-                  {t("Day", "Jour")}
-                </label>
-                <Select value={day} onValueChange={(v) => setDay(v as TimetableDay)}>
-                  <SelectTrigger className="bg-white/[0.03] border-white/[0.06] h-11 text-sm font-medium">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DAYS.map((d) => (
-                      <SelectItem key={d} value={d}>{dayFull[d]}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* Date picker — 7 day buttons for the current week */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/40 font-bold block">
+                {t("Date", "Date")}
+              </label>
+              <div className="grid grid-cols-7 gap-1">
+                {weekDates.map(({ day, date }) => {
+                  const d = new Date(date + "T12:00:00")
+                  const dayShort = d.toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", { weekday: "narrow" })
+                  const dayNum = d.getDate()
+                  const isSelected = selectedDate === date
+                  const isToday = date === toDateStr(new Date())
+                  return (
+                    <button
+                      key={date}
+                      type="button"
+                      onClick={() => setSelectedDate(date)}
+                      className={cn(
+                        "flex flex-col items-center py-2 px-0.5 rounded-xl text-center transition-all duration-150 border",
+                        isSelected
+                          ? "bg-primary/15 border-primary/30 text-primary"
+                          : isToday
+                            ? "bg-white/[0.04] border-white/[0.08] text-foreground/70 hover:bg-white/[0.07]"
+                            : "bg-white/[0.02] border-white/[0.04] text-muted-foreground/40 hover:bg-white/[0.04] hover:text-muted-foreground/60"
+                      )}
+                    >
+                      <span className="text-[9px] font-bold uppercase tracking-wide">{dayShort}</span>
+                      <span className={cn("text-[13px] font-black tabular-nums mt-0.5", isSelected ? "text-primary" : "")}>
+                        {dayNum}
+                      </span>
+                      {isToday && (
+                        <div className={cn("h-1 w-1 rounded-full mt-0.5", isSelected ? "bg-primary" : "bg-foreground/30")} />
+                      )}
+                    </button>
+                  )
+                })}
               </div>
+            </div>
+
+            {/* Times */}
+            <div className="grid grid-cols-2 gap-2.5">
               <div className="space-y-1.5">
                 <label className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/40 font-bold block">
                   {t("Start", "Début")}
@@ -1019,8 +1085,9 @@ export default function TimetablePage() {
   const [showEventModal, setShowEventModal] = useState(false)
   const [showUploadDialog, setShowUploadDialog] = useState(false)
   const [editingEvent, setEditingEvent] = useState<TimetableEvent | null>(null)
-  const [defaultDay, setDefaultDay] = useState<TimetableDay>("monday")
+  const [defaultDate, setDefaultDate] = useState<string>(toDateStr(new Date()))
   const [defaultTime, setDefaultTime] = useState("09:00")
+  const [weekStart, setWeekStart] = useState<Date>(() => getWeekStart())
   const [currentTimeOffset, setCurrentTimeOffset] = useState<number | null>(null)
   const [hoveredSlot, setHoveredSlot] = useState<string | null>(null)
   const [googleCalendarConnected, setGoogleCalendarConnected] = useState(false)
@@ -1031,7 +1098,33 @@ export default function TimetablePage() {
   const { session } = useAuth()
 
   const today = getTodayDay()
+  const todayStr = toDateStr(new Date())
   const dayLabels = lang === "fr" ? DAY_LABELS_FR : DAY_LABELS_EN
+
+  // Current week's dates (Mon–Sun)
+  const weekDates = useMemo(() => buildWeekDates(weekStart), [weekStart])
+
+  const isCurrentWeek = useMemo(() => toDateStr(getWeekStart()) === toDateStr(weekStart), [weekStart])
+
+  const goToPrevWeek = useCallback(() => {
+    setWeekStart((prev) => {
+      const d = new Date(prev)
+      d.setDate(d.getDate() - 7)
+      return d
+    })
+  }, [])
+
+  const goToNextWeek = useCallback(() => {
+    setWeekStart((prev) => {
+      const d = new Date(prev)
+      d.setDate(d.getDate() + 7)
+      return d
+    })
+  }, [])
+
+  const goToToday = useCallback(() => {
+    setWeekStart(getWeekStart())
+  }, [])
 
   // Current time indicator
   useEffect(() => {
@@ -1135,18 +1228,29 @@ export default function TimetablePage() {
     return [...timetableEvents, ...googleEvents]
   }, [timetableEvents, googleEvents])
 
+  const weekDateSet = useMemo(() => new Set(weekDates.map(w => w.date)), [weekDates])
+
   const eventsByDay = useMemo(() => {
     const map: Record<TimetableDay, TimetableEvent[]> = {
       monday: [], tuesday: [], wednesday: [], thursday: [],
       friday: [], saturday: [], sunday: [],
     }
-    allEvents.forEach((e) => { if (map[e.day]) map[e.day].push(e) })
+    allEvents.forEach((e) => {
+      if (e.date) {
+        // Date-specific event: only show if it falls in the current week
+        if (weekDateSet.has(e.date) && map[e.day]) map[e.day].push(e)
+      } else {
+        // Legacy template event (no date): always show on matching day
+        if (map[e.day]) map[e.day].push(e)
+      }
+    })
     return map
-  }, [allEvents])
+  }, [allEvents, weekDateSet])
 
   const handleSlotClick = (day: TimetableDay, time: string) => {
     setEditingEvent(null)
-    setDefaultDay(day)
+    const dateForDay = weekDates.find(w => w.day === day)?.date ?? todayStr
+    setDefaultDate(dateForDay)
     setDefaultTime(time)
     setShowEventModal(true)
   }
@@ -1157,7 +1261,7 @@ export default function TimetablePage() {
     setShowEventModal(true)
   }
 
-  const handleSaveEvent = (data: { day: TimetableDay; startTime: string; endTime: string; title: string; category: string; priority: TimetablePriority }) => {
+  const handleSaveEvent = (data: { day: TimetableDay; date: string; startTime: string; endTime: string; title: string; category: string; priority: TimetablePriority }) => {
     if (editingEvent) {
       updateTimetableEvent(editingEvent.id, data)
     } else {
@@ -1365,7 +1469,7 @@ export default function TimetablePage() {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => { setEditingEvent(null); setDefaultDay(today); setDefaultTime("09:00"); setShowEventModal(true) }}
+              onClick={() => { setEditingEvent(null); setDefaultDate(todayStr); setDefaultTime("09:00"); setShowEventModal(true) }}
               className="h-9 px-4 rounded-xl bg-primary text-primary-foreground text-[11px] font-bold flex items-center gap-2 hover:brightness-110 transition-all shadow-lg shadow-primary/20"
             >
               <Plus className="h-3.5 w-3.5" />
@@ -1422,43 +1526,91 @@ export default function TimetablePage() {
             background: "linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(255,255,255,0.005) 100%)",
           }}
         >
-          {/* Day headers */}
-          <div className="grid border-b border-white/[0.05]" style={{ gridTemplateColumns: "56px repeat(7, 1fr)" }}>
-            <div className="p-3 flex items-center justify-center border-r border-white/[0.04]">
-              <Clock className="h-3.5 w-3.5 text-muted-foreground/15" />
+          {/* Week navigation + Day headers */}
+          <div className="border-b border-white/[0.05]">
+            {/* Week navigator bar */}
+            <div className="flex items-center justify-between px-3 py-2 border-b border-white/[0.03]">
+              <button
+                onClick={goToPrevWeek}
+                className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground/30 hover:text-muted-foreground/70 hover:bg-white/[0.04] transition-all"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-semibold text-muted-foreground/50">
+                  {weekDates[0] && weekDates[6] && (() => {
+                    const startD = new Date(weekDates[0].date + "T12:00:00")
+                    const endD = new Date(weekDates[6].date + "T12:00:00")
+                    const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" }
+                    const locale = lang === "fr" ? "fr-FR" : "en-US"
+                    return `${startD.toLocaleDateString(locale, opts)} – ${endD.toLocaleDateString(locale, opts)}`
+                  })()}
+                </span>
+                {!isCurrentWeek && (
+                  <button
+                    onClick={goToToday}
+                    className="h-5 px-2 rounded-md text-[9px] font-bold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15 transition-all"
+                  >
+                    {t("Today", "Auj.")}
+                  </button>
+                )}
+              </div>
+
+              <button
+                onClick={goToNextWeek}
+                className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground/30 hover:text-muted-foreground/70 hover:bg-white/[0.04] transition-all"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
             </div>
-            {DAYS.map((day, i) => {
-              const isToday = day === today
-              const eventCount = eventsByDay[day].length
-              return (
-                <div
-                  key={day}
-                  className={cn(
-                    "relative py-3 px-2 text-center transition-colors",
-                    i > 0 && "border-l border-white/[0.04]",
-                    isToday && "bg-primary/[0.03]"
-                  )}
-                >
-                  {isToday && (
-                    <div className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-primary shadow-lg shadow-primary/40" />
-                  )}
-                  <span className={cn(
-                    "text-[11px] font-bold uppercase tracking-[0.08em] block",
-                    isToday ? "text-primary" : "text-muted-foreground/40"
-                  )}>
-                    {dayLabels[day]}
-                  </span>
-                  {eventCount > 0 && (
+
+            {/* Day columns header */}
+            <div className="grid" style={{ gridTemplateColumns: "56px repeat(7, 1fr)" }}>
+              <div className="p-3 flex items-center justify-center border-r border-white/[0.04]">
+                <Clock className="h-3.5 w-3.5 text-muted-foreground/15" />
+              </div>
+              {weekDates.map(({ day, date }, i) => {
+                const isToday = date === todayStr
+                const eventCount = eventsByDay[day].length
+                const d = new Date(date + "T12:00:00")
+                const dayNum = d.getDate()
+                return (
+                  <div
+                    key={day}
+                    className={cn(
+                      "relative py-2.5 px-2 text-center transition-colors",
+                      i > 0 && "border-l border-white/[0.04]",
+                      isToday && "bg-primary/[0.03]"
+                    )}
+                  >
+                    {isToday && (
+                      <div className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-primary shadow-lg shadow-primary/40" />
+                    )}
                     <span className={cn(
-                      "text-[9px] tabular-nums mt-0.5 block",
-                      isToday ? "text-primary/40" : "text-muted-foreground/20"
+                      "text-[10px] font-bold uppercase tracking-[0.08em] block",
+                      isToday ? "text-primary" : "text-muted-foreground/40"
                     )}>
-                      {eventCount}
+                      {dayLabels[day]}
                     </span>
-                  )}
-                </div>
-              )
-            })}
+                    <span className={cn(
+                      "text-[14px] font-black tabular-nums block mt-0.5",
+                      isToday ? "text-primary" : "text-muted-foreground/50"
+                    )}>
+                      {dayNum}
+                    </span>
+                    {eventCount > 0 && (
+                      <span className={cn(
+                        "text-[9px] tabular-nums mt-0.5 block",
+                        isToday ? "text-primary/40" : "text-muted-foreground/20"
+                      )}>
+                        {eventCount}
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
 
           {/* Scrollable grid body */}
@@ -1486,8 +1638,8 @@ export default function TimetablePage() {
                     </div>
 
                     {/* Day columns */}
-                    {DAYS.map((day, dayIdx) => {
-                      const isToday = day === today
+                    {weekDates.map(({ day, date }, dayIdx) => {
+                      const isToday = date === todayStr
                       const slotKey = `${day}-${time}`
                       const isHovered = hoveredSlot === slotKey
                       return (
@@ -1727,7 +1879,8 @@ export default function TimetablePage() {
         open={showEventModal}
         onClose={() => { setShowEventModal(false); setEditingEvent(null) }}
         event={editingEvent}
-        defaultDay={defaultDay}
+        weekDates={weekDates}
+        defaultDate={defaultDate}
         defaultTime={defaultTime}
         onSave={handleSaveEvent}
         onDelete={editingEvent ? handleDeleteEvent : undefined}

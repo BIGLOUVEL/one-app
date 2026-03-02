@@ -1,11 +1,11 @@
-// Switcher — controlled by PRELAUNCH env var in Vercel
-// To activate pre-launch:  add PRELAUNCH=true in Vercel → redeploy
-// To launch (revert):      remove PRELAUNCH or set PRELAUNCH=false → redeploy
+// Switcher — default is pre-launch page
+// To launch (show landing): add LAUNCHED=true in Vercel → redeploy
+// To revert to pre-launch:  remove LAUNCHED or set LAUNCHED=false → redeploy
 import { PreLaunchPage } from "@/components/prelaunch-page"
 import LandingPage from "@/components/landing-original"
 
 export default function Page() {
-  const isPreLaunch = process.env.PRELAUNCH === "true"
-  if (isPreLaunch) return <PreLaunchPage />
-  return <LandingPage />
+  const isLaunched = process.env.LAUNCHED === "true"
+  if (isLaunched) return <LandingPage />
+  return <PreLaunchPage />
 }

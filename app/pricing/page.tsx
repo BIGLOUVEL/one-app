@@ -11,7 +11,6 @@ import { useRouter } from "next/navigation"
 import { useAppStore } from "@/store/useAppStore"
 import dynamic from "next/dynamic"
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const FloatingLines = dynamic(() => import("@/components/FloatingLines") as any, { ssr: false }) as React.ComponentType<Record<string, unknown>>
 
 // ============================================

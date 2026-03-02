@@ -7,7 +7,6 @@ import { Loader2, ArrowRight, CheckCircle2 } from "lucide-react"
 import { Logo } from "@/components/ui/logo"
 
 // ColorBends uses Three.js — client only
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ColorBends = dynamic(() => import("@/components/ColorBends"), { ssr: false }) as any
 
 const ADMIN_PASSWORD = "EARLYADOPTER"

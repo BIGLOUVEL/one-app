@@ -170,7 +170,7 @@ export function PreLaunchPage() {
       </div>
 
       <div className="absolute bottom-6 left-0 right-0 z-20 flex justify-center">
-        <button onClick={() => router.push("/login")} className="text-[11px] tracking-widest text-white/15 uppercase cursor-default hover:text-white/30 transition-colors">ONE — Focus Operating System</button>
+        <p className="text-[11px] tracking-widest text-white/15 uppercase">ONE — Focus Operating System</p>
       </div>
     </div>
   )

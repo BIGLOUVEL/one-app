@@ -43,7 +43,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if subscription is still valid (even if canceled, access until period end)
-    const isActive = profile.subscription_status === "active" ||
+    const isActive =
+      profile.subscription_status === "active" ||
+      profile.subscription_status === "trialing" ||
       (profile.subscription_status === "canceled" &&
        profile.current_period_end &&
        new Date(profile.current_period_end) > new Date())

@@ -40,10 +40,19 @@ export function SubscriptionGate() {
         const res = await fetch("/api/stripe/status", {
           headers: { Authorization: `Bearer ${session.access_token}` },
         })
+
+        // On any server error, fail open — never lock out a paying user
+        if (!res.ok) {
+          console.error("[subscription] Status check returned", res.status, "— failing open")
+          setHasChecked(true)
+          checkedUserRef.current = user.id
+          return
+        }
+
         const data = await res.json()
 
-        if (!data.active) {
-          // Not subscribed — redirect to pricing
+        if (data.active === false) {
+          // Explicitly not subscribed — redirect to pricing
           router.replace("/pricing")
         }
 
@@ -51,7 +60,7 @@ export function SubscriptionGate() {
         setHasChecked(true)
       } catch (err) {
         console.error("[subscription] Failed to check status:", err)
-        // On error, don't block — fail open to avoid locking out users
+        // On network error, don't block — fail open to avoid locking out users
         setHasChecked(true)
         checkedUserRef.current = user.id
       }

@@ -102,24 +102,29 @@ export function PreLaunchPage() {
           <Logo size="xl" className="drop-shadow-[0_0_24px_rgba(47,208,22,0.5)]" />
         </button>
 
-        <div className="mb-3 flex items-center gap-2">
+        {/* Badge */}
+        <div className="mb-5">
           <span className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-primary">
             Coming soon
           </span>
         </div>
 
-        <h1 className="mb-4 max-w-lg text-center text-4xl font-black leading-[1.1] tracking-tight text-white sm:text-5xl">
-          Not a task manager.<br />
-          <span className="text-primary">A focus OS.</span>
+        {/* Title */}
+        <h1 className="mb-4 text-center text-5xl font-black leading-[1.05] tracking-tight text-white sm:text-6xl">
+          Stop Working <span className="text-primary">Blind.</span>
         </h1>
 
-        <p className="mb-10 max-w-sm text-center text-sm leading-relaxed text-white/50">
-          Pick ONE objective. Lock it in. Execute daily.
-          Built on The ONE Thing methodology.
-          <br />
-          <span className="text-white/30">Be first to get access.</span>
+        {/* Subtitle */}
+        <p className="mb-3 text-center text-[15px] font-medium text-white/55 tracking-wide">
+          Focus on One Thing. Just do it.
         </p>
 
+        {/* Book attribution */}
+        <p className="mb-10 text-center text-[12px] text-white/25">
+          Inspired by <span className="italic text-white/35">&ldquo;The ONE Thing&rdquo;</span> — Gary Keller
+        </p>
+
+        {/* Form */}
         {isSuccess ? (
           <div className="flex flex-col items-center gap-3 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full border border-primary/30 bg-primary/10">
@@ -129,7 +134,7 @@ export function PreLaunchPage() {
             <p className="text-xs text-white/40">We&apos;ll reach out the day we launch.</p>
           </div>
         ) : (
-          <form onSubmit={handleWaitlistSubmit} className="flex w-full max-w-sm flex-col gap-3">
+          <form onSubmit={handleWaitlistSubmit} className="flex w-full max-w-[360px] flex-col gap-3">
             <div className="flex gap-2">
               <input
                 type="email"
@@ -138,18 +143,18 @@ export function PreLaunchPage() {
                 placeholder="your@email.com"
                 required
                 disabled={isLoading}
-                className="h-11 flex-1 rounded-xl border border-white/10 bg-white/5 px-4 text-sm text-white placeholder:text-white/25 backdrop-blur-sm outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
+                className="h-12 flex-1 rounded-xl border border-white/[0.08] bg-black/30 px-4 text-sm text-white placeholder:text-white/20 backdrop-blur-sm outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all"
               />
               <button
                 type="submit"
                 disabled={isLoading}
-                className="flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-60"
+                className="flex h-12 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-60"
               >
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><span>Join</span><ArrowRight className="h-4 w-4" /></>}
               </button>
             </div>
             {error && <p className="text-center text-xs text-red-400">{error}</p>}
-            <p className="text-center text-[11px] text-white/20">No spam. Just a launch notification.</p>
+            <p className="text-center text-[11px] text-white/20">Be first to get access. No spam.</p>
           </form>
         )}
 

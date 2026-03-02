@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Dot,
@@ -46,12 +46,19 @@ const LANDMARK_COLORS = [
 ]
 
 export function DominoPath() {
-  const { dominoChain, sessions, objective } = useAppStore()
+  const { dominoChain, sessions, objective, initDominoContract } = useAppStore()
   const lang = useAppStore(s => s.language)
   const t = (en: string, fr: string) => lang === 'fr' ? fr : en
   const completedDominos = dominoChain?.completedDominos ?? 0
   const totalDominos = dominoChain?.totalDominos ?? 0
   const [hoveredLandmark, setHoveredLandmark] = useState<number | null>(null)
+
+  // Auto-init domino chain if objective exists but chain was never created
+  useEffect(() => {
+    if (objective && !dominoChain) {
+      initDominoContract()
+    }
+  }, [objective, dominoChain, initDominoContract])
 
   const { current, next, reached } = useMemo(
     () => getDominoLandmarkProgress(completedDominos),
@@ -104,9 +111,18 @@ export function DominoPath() {
   const activeDays = activityGrid.filter(d => d.active).length
 
   if (!dominoChain) {
+    // If no objective at all, show empty state
+    if (!objective) {
+      return (
+        <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">
+          {t("No objective defined. Dominos will appear here.", "Aucun objectif défini. Les dominos apparaîtront ici.")}
+        </div>
+      )
+    }
+    // Objective exists but chain not yet initialized — show spinner while useEffect fires
     return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">
-        {t("No objective defined. Dominos will appear here.", "Aucun objectif défini. Les dominos apparaîtront ici.")}
+      <div className="flex items-center justify-center py-20">
+        <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }

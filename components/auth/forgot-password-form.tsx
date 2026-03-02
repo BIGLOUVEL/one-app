@@ -15,7 +15,6 @@ import {
   FieldError,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { createClient } from "@/lib/supabase"
 import { useAppStore } from "@/store/useAppStore"
 
 export function ForgotPasswordForm({
@@ -36,13 +35,16 @@ export function ForgotPasswordForm({
     setIsLoading(true)
 
     try {
-      const supabase = createClient()
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+      const res = await fetch("/api/auth/send-reset-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       })
 
-      if (error) {
-        setError(error.message)
+      const data = await res.json()
+
+      if (!res.ok || data.error) {
+        setError(t("An error occurred. Please try again.", "Une erreur est survenue. Réessayez."))
         return
       }
 

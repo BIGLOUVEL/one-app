@@ -38,8 +38,24 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "ONE - One Objective. Total Focus.",
-  description: "Not a task manager. A focus operating system. Pick ONE objective. Lock it in. Execute daily.",
+  metadataBase: new URL("https://makeitreal.one"),
+  title: "ONE — Focus Operating System",
+  description: "Not a task manager. A focus operating system. Pick ONE objective. Lock it in. Execute daily. Built on The ONE Thing methodology by Gary Keller.",
+  applicationName: "ONE — Focus Operating System",
+  authors: [{ name: "ONE", url: "https://makeitreal.one" }],
+  keywords: ["focus", "productivity", "goal setting", "one thing", "time blocking", "habit tracker"],
+  openGraph: {
+    type: "website",
+    url: "https://makeitreal.one",
+    title: "ONE — Focus Operating System",
+    description: "Not a task manager. A focus operating system. Pick ONE objective. Lock it in. Execute daily.",
+    siteName: "ONE — Focus Operating System",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ONE — Focus Operating System",
+    description: "Not a task manager. A focus operating system.",
+  },
 }
 
 export default function RootLayout({

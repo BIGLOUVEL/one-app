@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
       if (sub) {
         // Use upcoming invoice amount for accurate next billing (handles promo → full price transitions)
         try {
-          const upcoming = await stripe.invoices.retrieveUpcoming({ subscription: sub.id }) as any
+          const upcoming = await stripe.invoices.createPreview({ subscription: sub.id }) as any
           if (upcoming?.amount_due != null) {
             priceAmount = upcoming.amount_due
             priceCurrency = upcoming.currency

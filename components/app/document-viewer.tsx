@@ -76,6 +76,7 @@ export function DocumentViewer({ document, signedUrl, onClose }: DocumentViewerP
         )}
 
         {viewType === "image" && (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={signedUrl}
             alt={document.name}

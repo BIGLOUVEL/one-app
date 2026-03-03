@@ -9,25 +9,24 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-async function findActiveSubscriptionId(customerId?: string, email?: string): Promise<string | null> {
-  const statuses = ["active", "trialing"]
+// Find any cancellable subscription (active or trialing) — no status filter so we catch all
+async function findCancellableSubscription(customerId?: string, email?: string): Promise<any | null> {
+  const isCancellable = (sub: any) => sub.status === "active" || sub.status === "trialing"
 
-  // 1. Try directly via customer ID
+  // 1. Via customer ID stored in DB
   if (customerId) {
-    for (const status of statuses) {
-      const list = await stripe.subscriptions.list({ customer: customerId, status: status as any, limit: 1 }) as any
-      if (list.data.length > 0) return list.data[0].id
-    }
+    const list = await stripe.subscriptions.list({ customer: customerId, limit: 10 }) as any
+    const sub = list.data.find(isCancellable)
+    if (sub) return sub
   }
 
-  // 2. Fall back: look up customer by email in Stripe
+  // 2. Via email → find all Stripe customers with that email
   if (email) {
     const customers = await stripe.customers.list({ email, limit: 5 }) as any
     for (const customer of customers.data) {
-      for (const status of statuses) {
-        const list = await stripe.subscriptions.list({ customer: customer.id, status: status as any, limit: 1 }) as any
-        if (list.data.length > 0) return list.data[0].id
-      }
+      const list = await stripe.subscriptions.list({ customer: customer.id, limit: 10 }) as any
+      const sub = list.data.find(isCancellable)
+      if (sub) return sub
     }
   }
 
@@ -55,35 +54,55 @@ export async function POST(request: NextRequest) {
 
     let subscriptionId = profile?.stripe_subscription_id
 
-    if (!subscriptionId) {
-      subscriptionId = await findActiveSubscriptionId(profile?.stripe_customer_id, user.email)
-      // Persist for next time
-      if (subscriptionId) {
-        await supabaseAdmin.from("profiles").update({ stripe_subscription_id: subscriptionId }).eq("id", user.id)
+    // If we have the ID, verify it's still cancellable
+    let sub: any = null
+    if (subscriptionId) {
+      try {
+        sub = await stripe.subscriptions.retrieve(subscriptionId) as any
+        if (sub.status !== "active" && sub.status !== "trialing") {
+          sub = null
+          subscriptionId = null
+        }
+      } catch {
+        subscriptionId = null
       }
     }
 
+    // Fall back: find by customer ID or email
     if (!subscriptionId) {
-      return NextResponse.json({ error: "No subscription found" }, { status: 404 })
+      sub = await findCancellableSubscription(profile?.stripe_customer_id, user.email)
+      if (sub) {
+        subscriptionId = sub.id
+        await supabaseAdmin.from("profiles").update({ stripe_subscription_id: sub.id }).eq("id", user.id)
+      }
     }
 
-    const subscription = await stripe.subscriptions.update(subscriptionId, {
+    if (!sub || !subscriptionId) {
+      return NextResponse.json({ error: "No active subscription found" }, { status: 404 })
+    }
+
+    // If already set to cancel at period end, just return success
+    if (sub.cancel_at_period_end) {
+      const periodEnd = new Date(sub.current_period_end * 1000).toISOString()
+      return NextResponse.json({ success: true, currentPeriodEnd: periodEnd, alreadyCanceled: true })
+    }
+
+    const updated = await stripe.subscriptions.update(subscriptionId, {
       cancel_at_period_end: true,
     }) as any
+
+    const periodEnd = new Date(updated.current_period_end * 1000).toISOString()
 
     await supabaseAdmin
       .from("profiles")
       .update({
         subscription_status: "canceled",
-        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        current_period_end: periodEnd,
         updated_at: new Date().toISOString(),
       })
       .eq("id", user.id)
 
-    return NextResponse.json({
-      success: true,
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
-    })
+    return NextResponse.json({ success: true, currentPeriodEnd: periodEnd })
   } catch (error: any) {
     console.error("Cancel error:", error)
     return NextResponse.json({ error: error?.message || "Failed to cancel" }, { status: 500 })

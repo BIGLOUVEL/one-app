@@ -337,6 +337,127 @@ function BentoCard({
 }
 
 // ============================================
+// VIDEO SHOWCASE SECTION
+// ============================================
+function VideoSection({
+  videoSrc,
+  index,
+  headline,
+  subline,
+  body,
+  reverse = false,
+}: {
+  videoSrc: string
+  index: number
+  headline: string
+  subline: string
+  body: string
+  reverse?: boolean
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const isInView = useInView(ref, { once: true, margin: "-8%" })
+
+  return (
+    <section className="relative py-24 sm:py-32 lg:py-40 px-5">
+      {/* Separator */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-16 bg-gradient-to-b from-transparent via-white/[0.05] to-transparent" />
+
+      <div ref={ref} className="max-w-[1200px] mx-auto">
+        <div className={`grid md:grid-cols-2 gap-12 lg:gap-20 items-center ${reverse ? "md:[&>*:first-child]:order-last" : ""}`}>
+
+          {/* Text side */}
+          <motion.div
+            className="space-y-7"
+            initial={{ opacity: 0, x: reverse ? 28 : -28 }}
+            animate={isInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.85, ease: smoothEase }}
+          >
+            {/* Index chip */}
+            <div className="flex items-center gap-3">
+              <span className="text-[9px] font-bold uppercase tracking-[0.4em] text-primary/50">
+                {String(index).padStart(2, "0")}
+              </span>
+              <div className="flex-1 h-px bg-white/[0.06] max-w-[40px]" />
+              <span className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground/30">04</span>
+            </div>
+
+            {/* Headline */}
+            <h2
+              className="font-black tracking-[-0.03em] leading-[0.92]"
+              style={{ fontSize: "clamp(2.2rem, 4.5vw, 4rem)" }}
+            >
+              {headline}
+            </h2>
+
+            {/* Subline */}
+            <p className="text-base sm:text-lg font-medium text-primary/70 leading-relaxed">
+              {subline}
+            </p>
+
+            {/* Body */}
+            <p className="text-sm sm:text-base text-muted-foreground/70 leading-relaxed max-w-md">
+              {body}
+            </p>
+          </motion.div>
+
+          {/* Video side */}
+          <motion.div
+            className="relative"
+            initial={{ opacity: 0, x: reverse ? -28 : 28 }}
+            animate={isInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.85, delay: 0.1, ease: smoothEase }}
+          >
+            {/* Ambient glow */}
+            <div
+              className="absolute -inset-6 rounded-3xl pointer-events-none"
+              style={{
+                background: "radial-gradient(ellipse at center, hsla(150,100%,45%,0.07), transparent 65%)",
+                filter: "blur(40px)",
+              }}
+            />
+
+            {/* Video frame */}
+            <div className="relative rounded-2xl overflow-hidden border border-white/[0.08] shadow-[0_40px_100px_rgba(0,0,0,0.6)]">
+              {/* Top chrome bar */}
+              <div className="absolute top-0 inset-x-0 z-10 h-8 bg-gradient-to-b from-black/40 to-transparent pointer-events-none flex items-center px-3 gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-white/10" />
+                <div className="w-2 h-2 rounded-full bg-white/10" />
+                <div className="w-2 h-2 rounded-full bg-white/10" />
+              </div>
+
+              <video
+                src={videoSrc}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-auto object-cover block"
+              />
+
+              {/* Subtle inner shadow */}
+              <div
+                className="absolute inset-0 pointer-events-none rounded-2xl"
+                style={{
+                  boxShadow: "inset 0 0 60px rgba(0,0,0,0.25)",
+                }}
+              />
+            </div>
+
+            {/* Corner accent */}
+            <div
+              className="absolute -bottom-2 -right-2 w-16 h-16 rounded-br-2xl pointer-events-none"
+              style={{
+                background: "radial-gradient(circle at bottom right, hsla(150,100%,45%,0.12), transparent 70%)",
+              }}
+            />
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ============================================
 // SYSTEM SECTION
 // ============================================
 function SystemSection() {
@@ -645,6 +766,13 @@ export default function LandingPage() {
       <main>
         <HeroSection />
         <ProblemSection />
+        <VideoSection
+          videoSrc="/VIDEO HERO 1.webm"
+          index={1}
+          headline="Define what truly matters."
+          subline="Success isn't about doing more. It's about choosing better."
+          body="Identify the one objective that creates leverage, and let everything else fall into place."
+        />
         <SystemSection />
         <LockSection />
         <StatsStrip />

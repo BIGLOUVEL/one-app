@@ -9,9 +9,19 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+async function findStripeCustomerId(dbCustomerId?: string, email?: string): Promise<string | null> {
+  if (dbCustomerId) return dbCustomerId
+
+  if (email) {
+    const customers = await stripe.customers.list({ email, limit: 5 }) as any
+    if (customers.data.length > 0) return customers.data[0].id
+  }
+
+  return null
+}
+
 export async function POST(request: NextRequest) {
   try {
-    // Get user from auth header
     const authHeader = request.headers.get("authorization")
     if (!authHeader) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -24,32 +34,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get profile with Stripe customer ID
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("stripe_customer_id")
       .eq("id", user.id)
       .single()
 
-    if (!profile?.stripe_customer_id) {
-      return NextResponse.json(
-        { error: "No subscription found" },
-        { status: 404 }
-      )
+    const customerId = await findStripeCustomerId(profile?.stripe_customer_id, user.email)
+
+    if (!customerId) {
+      return NextResponse.json({ error: "No subscription found" }, { status: 404 })
     }
 
-    // Create billing portal session
+    // Persist customer ID for future lookups
+    if (!profile?.stripe_customer_id) {
+      await supabaseAdmin.from("profiles").update({ stripe_customer_id: customerId }).eq("id", user.id)
+    }
+
     const session = await stripe.billingPortal.sessions.create({
-      customer: profile.stripe_customer_id,
+      customer: customerId,
       return_url: `${request.nextUrl.origin}/app/settings`,
     })
 
     return NextResponse.json({ url: session.url })
   } catch (error) {
     console.error("Portal error:", error)
-    return NextResponse.json(
-      { error: "Failed to create portal session" },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: "Failed to create portal session" }, { status: 500 })
   }
 }

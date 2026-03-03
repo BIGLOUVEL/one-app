@@ -555,7 +555,7 @@ export default function SettingsPage() {
         return
       }
       try {
-        const res = await fetch("/api/stripe/status", {
+        const res = await fetch("/api/stripe/status?billing=1", {
           headers: { Authorization: `Bearer ${session.access_token}` },
         })
         if (res.ok) {

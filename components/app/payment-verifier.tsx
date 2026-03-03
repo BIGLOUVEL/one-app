@@ -41,10 +41,9 @@ function ParticleField({ active }: { active: boolean }) {
 
     const particles: Particle[] = []
     const colors = [
-      "rgba(139,92,246,",  // violet
-      "rgba(0,255,136,",   // green
-      "rgba(255,215,0,",   // gold
-      "rgba(6,182,212,",   // cyan
+      "rgba(16,183,35,",   // primary green
+      "rgba(47,208,22,",   // light green
+      "rgba(255,255,255,", // white
     ]
 
     const spawn = () => {
@@ -201,11 +200,11 @@ function CelebrationCard({ userName, phase }: { userName: string; phase: number 
           {/* Border */}
           <div className="absolute inset-0 rounded-2xl border border-white/[0.1]" />
 
-          {/* Gold accent line at top */}
+          {/* Green accent line at top */}
           <motion.div
             className="absolute top-0 left-0 right-0 h-[2px]"
-            style={{ background: "linear-gradient(90deg, transparent, rgba(255,215,0,0.5), rgba(139,92,246,0.5), transparent)" }}
-            animate={{ opacity: [0.4, 0.8, 0.4] }}
+            style={{ background: "linear-gradient(90deg, transparent, rgba(16,183,35,0.6), rgba(255,255,255,0.3), rgba(16,183,35,0.6), transparent)" }}
+            animate={{ opacity: [0.5, 1, 0.5] }}
             transition={{ duration: 3, repeat: Infinity }}
           />
 
@@ -216,16 +215,16 @@ function CelebrationCard({ userName, phase }: { userName: string; phase: number 
               background: useTransform(
                 [sheenX, sheenY],
                 ([x, y]) =>
-                  `radial-gradient(ellipse at ${x}% ${y}%, rgba(255,215,0,0.2) 0%, rgba(139,92,246,0.15) 20%, rgba(0,255,136,0.08) 40%, rgba(6,182,212,0.05) 60%, transparent 80%)`
+                  `radial-gradient(ellipse at ${x}% ${y}%, rgba(255,255,255,0.12) 0%, rgba(16,183,35,0.12) 25%, rgba(47,208,22,0.06) 50%, transparent 75%)`
               ),
             }}
           />
 
-          {/* Rainbow refraction */}
+          {/* Subtle scan lines */}
           <div
-            className="absolute inset-0 opacity-[0.04] pointer-events-none mix-blend-overlay"
+            className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay"
             style={{
-              backgroundImage: "repeating-linear-gradient(125deg, rgba(255,0,0,0.4) 0px, rgba(255,165,0,0.3) 2px, rgba(255,255,0,0.3) 4px, rgba(0,255,0,0.3) 6px, rgba(0,0,255,0.3) 8px, rgba(139,0,255,0.4) 10px, transparent 12px)",
+              backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,0.15) 0px, transparent 1px, transparent 3px)",
             }}
           />
 
@@ -247,20 +246,20 @@ function CelebrationCard({ userName, phase }: { userName: string; phase: number 
               <motion.div
                 className="flex items-center gap-1 px-2.5 py-1 rounded-full border"
                 style={{
-                  background: "linear-gradient(135deg, rgba(255,215,0,0.15), rgba(139,92,246,0.15))",
-                  borderColor: "rgba(255,215,0,0.25)",
+                  background: "rgba(16,183,35,0.12)",
+                  borderColor: "rgba(16,183,35,0.3)",
                 }}
                 animate={{
                   boxShadow: [
-                    "0 0 8px rgba(255,215,0,0.1)",
-                    "0 0 20px rgba(255,215,0,0.25)",
-                    "0 0 8px rgba(255,215,0,0.1)",
+                    "0 0 8px rgba(16,183,35,0.1)",
+                    "0 0 20px rgba(16,183,35,0.3)",
+                    "0 0 8px rgba(16,183,35,0.1)",
                   ],
                 }}
                 transition={{ duration: 2.5, repeat: Infinity }}
               >
-                <Crown className="h-2.5 w-2.5 text-amber-400" />
-                <span className="text-[9px] font-bold tracking-[0.2em] uppercase bg-gradient-to-r from-amber-300 to-violet-400 bg-clip-text text-transparent">Pro</span>
+                <Crown className="h-2.5 w-2.5 text-primary" />
+                <span className="text-[9px] font-bold tracking-[0.2em] uppercase text-primary">Pro</span>
               </motion.div>
             </div>
 
@@ -268,13 +267,13 @@ function CelebrationCard({ userName, phase }: { userName: string; phase: number 
             <div className="flex items-center gap-4">
               {/* EMV Chip */}
               <div className="relative w-11 h-8 rounded-[5px] overflow-hidden" style={{ transform: "translateZ(20px)" }}>
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-200/60 via-amber-300/50 to-amber-400/60" />
-                <div className="absolute inset-[1px] rounded-[4px] bg-gradient-to-br from-amber-100/25 to-amber-300/35" />
-                <div className="absolute top-[45%] left-0 right-0 h-[1px] bg-amber-600/30" />
-                <div className="absolute top-0 bottom-0 left-[30%] w-[1px] bg-amber-600/25" />
-                <div className="absolute top-0 bottom-0 left-[65%] w-[1px] bg-amber-600/25" />
-                <div className="absolute top-[25%] left-[30%] right-[35%] h-[1px] bg-amber-600/20" />
-                <div className="absolute top-[70%] left-[30%] right-[35%] h-[1px] bg-amber-600/20" />
+                <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-white/12 to-white/8" />
+                <div className="absolute inset-[1px] rounded-[4px] bg-gradient-to-br from-white/10 to-transparent" />
+                <div className="absolute top-[45%] left-0 right-0 h-[1px] bg-white/15" />
+                <div className="absolute top-0 bottom-0 left-[30%] w-[1px] bg-white/10" />
+                <div className="absolute top-0 bottom-0 left-[65%] w-[1px] bg-white/10" />
+                <div className="absolute top-[25%] left-[30%] right-[35%] h-[1px] bg-white/8" />
+                <div className="absolute top-[70%] left-[30%] right-[35%] h-[1px] bg-white/8" />
               </div>
 
               {/* Contactless */}
@@ -313,14 +312,14 @@ function CelebrationCard({ userName, phase }: { userName: string; phase: number 
           </div>
         </div>
 
-        {/* Outer glow - more dramatic during celebration */}
+        {/* Outer glow */}
         <motion.div
           className="absolute -inset-2 rounded-3xl pointer-events-none"
           animate={{
             boxShadow: [
-              "0 0 40px rgba(255,215,0,0.08), 0 0 100px rgba(139,92,246,0.05), 0 0 160px rgba(0,255,136,0.03)",
-              "0 0 60px rgba(255,215,0,0.15), 0 0 120px rgba(139,92,246,0.1), 0 0 200px rgba(0,255,136,0.06)",
-              "0 0 40px rgba(255,215,0,0.08), 0 0 100px rgba(139,92,246,0.05), 0 0 160px rgba(0,255,136,0.03)",
+              "0 0 40px rgba(16,183,35,0.08), 0 0 100px rgba(16,183,35,0.04)",
+              "0 0 60px rgba(16,183,35,0.18), 0 0 120px rgba(16,183,35,0.08)",
+              "0 0 40px rgba(16,183,35,0.08), 0 0 100px rgba(16,183,35,0.04)",
             ],
           }}
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}

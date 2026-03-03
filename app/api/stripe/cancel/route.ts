@@ -24,16 +24,45 @@ export async function POST(request: NextRequest) {
 
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("stripe_subscription_id")
+      .select("stripe_subscription_id, stripe_customer_id")
       .eq("id", user.id)
       .single()
 
-    if (!profile?.stripe_subscription_id) {
+    let subscriptionId = profile?.stripe_subscription_id
+
+    // If no direct subscription ID, look it up from Stripe via customer ID
+    if (!subscriptionId && profile?.stripe_customer_id) {
+      const subs = await stripe.subscriptions.list({
+        customer: profile.stripe_customer_id,
+        status: "active",
+        limit: 1,
+      }) as any
+      if (subs.data.length === 0) {
+        // Try trialing too
+        const trialSubs = await stripe.subscriptions.list({
+          customer: profile.stripe_customer_id,
+          status: "trialing",
+          limit: 1,
+        }) as any
+        if (trialSubs.data.length > 0) subscriptionId = trialSubs.data[0].id
+      } else {
+        subscriptionId = subs.data[0].id
+      }
+      // Save it for next time
+      if (subscriptionId) {
+        await supabaseAdmin
+          .from("profiles")
+          .update({ stripe_subscription_id: subscriptionId })
+          .eq("id", user.id)
+      }
+    }
+
+    if (!subscriptionId) {
       return NextResponse.json({ error: "No subscription found" }, { status: 404 })
     }
 
     // Cancel at period end (user keeps access until end of paid period)
-    const subscription = await stripe.subscriptions.update(profile.stripe_subscription_id, {
+    const subscription = await stripe.subscriptions.update(subscriptionId, {
       cancel_at_period_end: true,
     }) as any
 

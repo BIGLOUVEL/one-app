@@ -543,6 +543,10 @@ export default function SettingsPage() {
   const [subLoading, setSubLoading] = useState(true)
   const [portalLoading, setPortalLoading] = useState(false)
   const [portalError, setPortalError] = useState<string | null>(null)
+  const [cancelLoading, setCancelLoading] = useState(false)
+  const [cancelConfirm, setCancelConfirm] = useState(false)
+  const [cancelError, setCancelError] = useState<string | null>(null)
+  const [cancelSuccess, setCancelSuccess] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchStatus() {
@@ -585,6 +589,36 @@ export default function SettingsPage() {
       setPortalError(t("Network error. Try again.", "Erreur réseau. Réessaie."))
     } finally {
       setPortalLoading(false)
+    }
+  }
+
+  const cancelSubscription = async () => {
+    if (!session?.access_token) return
+    setCancelLoading(true)
+    setCancelError(null)
+    try {
+      const res = await fetch("/api/stripe/cancel", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        const endDate = data.currentPeriodEnd
+          ? new Date(data.currentPeriodEnd).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })
+          : null
+        setCancelSuccess(endDate
+          ? t(`Subscription canceled. Access until ${endDate}.`, `Abonnement annulé. Accès jusqu'au ${endDate}.`)
+          : t("Subscription canceled.", "Abonnement annulé.")
+        )
+        setSubStatus(prev => prev ? { ...prev, status: "canceled" } : prev)
+        setCancelConfirm(false)
+      } else {
+        setCancelError(data.error || t("Failed to cancel. Try again.", "Impossible d'annuler. Réessaie."))
+      }
+    } catch {
+      setCancelError(t("Network error. Try again.", "Erreur réseau. Réessaie."))
+    } finally {
+      setCancelLoading(false)
     }
   }
 
@@ -1055,7 +1089,7 @@ export default function SettingsPage() {
                 )}
               </div>
 
-              {/* Manage button */}
+              {/* Manage + Cancel buttons */}
               <div className="space-y-2">
                 <button
                   onClick={openPortal}
@@ -1071,6 +1105,40 @@ export default function SettingsPage() {
                 </button>
                 {portalError && (
                   <p className="text-xs text-red-400 text-center">{portalError}</p>
+                )}
+
+                {/* Cancel subscription */}
+                {subStatus?.status === "active" || subStatus?.status === "trialing" ? (
+                  cancelSuccess ? (
+                    <p className="text-xs text-primary text-center py-1">{cancelSuccess}</p>
+                  ) : cancelConfirm ? (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={cancelSubscription}
+                        disabled={cancelLoading}
+                        className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl border border-red-500/30 bg-red-500/10 text-xs font-medium text-red-400 hover:bg-red-500/20 transition-all disabled:opacity-50"
+                      >
+                        {cancelLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                        {t("Confirm cancel", "Confirmer l'annulation")}
+                      </button>
+                      <button
+                        onClick={() => setCancelConfirm(false)}
+                        className="flex-1 h-9 rounded-xl border border-border text-xs text-muted-foreground hover:text-foreground transition-all"
+                      >
+                        {t("Keep it", "Garder")}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => { setCancelConfirm(true); setCancelError(null) }}
+                      className="w-full h-9 rounded-xl text-xs text-muted-foreground/50 hover:text-red-400 transition-colors"
+                    >
+                      {t("Cancel subscription", "Annuler l'abonnement")}
+                    </button>
+                  )
+                ) : null}
+                {cancelError && (
+                  <p className="text-xs text-red-400 text-center">{cancelError}</p>
                 )}
               </div>
             </div>

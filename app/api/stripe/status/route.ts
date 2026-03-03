@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     // Get profile
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("subscription_status, current_period_end, promo_used, stripe_subscription_id")
+      .select("subscription_status, current_period_end, promo_used, stripe_subscription_id, stripe_customer_id")
       .eq("id", user.id)
       .single()
 
@@ -42,34 +42,56 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Check if subscription is still valid (even if canceled, access until period end)
-    const isActive =
-      profile.subscription_status === "active" ||
-      profile.subscription_status === "trialing" ||
-      (profile.subscription_status === "canceled" &&
-       profile.current_period_end &&
-       new Date(profile.current_period_end) > new Date())
-
-    // Fetch actual price from Stripe subscription
+    let status = profile.subscription_status
+    let currentPeriodEnd = profile.current_period_end
     let priceAmount: number | null = null
     let priceCurrency: string | null = null
+
+    // If DB status is unclear but we have a Stripe subscription, fetch from Stripe
+    // to self-heal — this ensures any paid user always gets access
     if (profile.stripe_subscription_id) {
       try {
-        const sub = await stripe.subscriptions.retrieve(profile.stripe_subscription_id)
+        const sub = await stripe.subscriptions.retrieve(profile.stripe_subscription_id) as any
         const item = sub.items.data[0]
         if (item?.price) {
-          priceAmount = item.price.unit_amount // in cents
-          priceCurrency = item.price.currency   // e.g. "eur", "usd"
+          priceAmount = item.price.unit_amount
+          priceCurrency = item.price.currency
+        }
+
+        // Always trust Stripe as source of truth if DB status looks wrong
+        const stripeStatus = sub.status // "active" | "trialing" | "canceled" | etc.
+        const stripePeriodEnd = new Date(sub.current_period_end * 1000).toISOString()
+
+        if (!status || status === "none" || status !== stripeStatus) {
+          // DB is out of sync — repair it
+          status = stripeStatus
+          currentPeriodEnd = stripePeriodEnd
+          await supabaseAdmin
+            .from("profiles")
+            .update({
+              subscription_status: stripeStatus,
+              current_period_end: stripePeriodEnd,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", user.id)
         }
       } catch {
-        // Subscription may have been deleted in Stripe — ignore
+        // Stripe unreachable — fall back to DB value
       }
     }
 
+    // Check if subscription is still valid (even if canceled, access until period end)
+    const isActive =
+      status === "active" ||
+      status === "trialing" ||
+      (status === "canceled" &&
+       currentPeriodEnd &&
+       new Date(currentPeriodEnd) > new Date())
+
     return NextResponse.json({
-      status: profile.subscription_status || "none",
+      status: status || "none",
       active: isActive,
-      currentPeriodEnd: profile.current_period_end,
+      currentPeriodEnd,
       promoUsed: profile.promo_used || false,
       priceAmount,
       priceCurrency,

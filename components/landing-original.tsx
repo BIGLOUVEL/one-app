@@ -767,11 +767,19 @@ export default function LandingPage() {
         <HeroSection />
         <ProblemSection />
         <VideoSection
-          videoSrc="/VIDEO HERO 1.webm"
+          videoSrc="/VIDEO HERO 2.webm"
           index={1}
+          headline="Inspired by the book that redefined focus."
+          subline="It has changed millions of lives by teaching one simple truth: extraordinary results require extreme clarity."
+          body="Now it's your turn."
+        />
+        <VideoSection
+          videoSrc="/VIDEO HERO 1.webm"
+          index={2}
           headline="Define what truly matters."
           subline="Success isn't about doing more. It's about choosing better."
           body="Identify the one objective that creates leverage, and let everything else fall into place."
+          reverse
         />
         <SystemSection />
         <LockSection />

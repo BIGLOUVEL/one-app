@@ -345,6 +345,7 @@ function VideoSection({
   headline,
   subline,
   body,
+  quote,
   reverse = false,
 }: {
   videoSrc: string
@@ -352,6 +353,7 @@ function VideoSection({
   headline: string
   subline: string
   body: string
+  quote?: string
   reverse?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -398,6 +400,16 @@ function VideoSection({
             <p className="text-sm sm:text-base text-muted-foreground/70 leading-relaxed max-w-md">
               {body}
             </p>
+
+            {/* Quote */}
+            {quote && (
+              <div className="flex items-start gap-3 pt-2">
+                <div className="w-px h-10 bg-primary/40 shrink-0 mt-1" />
+                <p className="text-sm sm:text-base italic text-muted-foreground/50 leading-relaxed">
+                  &ldquo;{quote}&rdquo;
+                </p>
+              </div>
+            )}
           </motion.div>
 
           {/* Video side */}
@@ -772,6 +784,7 @@ export default function LandingPage() {
           headline="Inspired by the book that redefined focus."
           subline="It has changed millions of lives by teaching one simple truth: extraordinary results require extreme clarity."
           body="Now it's your turn."
+          quote="Success is built sequentially. It's one thing at a time."
         />
         <VideoSection
           videoSrc="/VIDEO HERO 1.webm"

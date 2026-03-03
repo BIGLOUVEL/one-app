@@ -7,6 +7,9 @@ import { ArrowRight, ArrowDown } from "lucide-react"
 import ElectricBorder from "@/components/ui/electric-border"
 import { useTheme, UITheme } from "@/components/theme-provider"
 import { useRef, useEffect, useState } from "react"
+import dynamic from "next/dynamic"
+
+const ColorBends = dynamic(() => import("@/components/ColorBends"), { ssr: false }) as import("react").ComponentType<any>
 
 // ============================================
 // DATA
@@ -734,6 +737,23 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden selection:bg-primary/20">
       <GrainOverlay />
+
+      {/* ColorBends background */}
+      <div className="fixed inset-0 z-0 pointer-events-none" style={{ opacity: 0.18 }}>
+        <ColorBends
+          colors={["#ff5c7a", "#8a5cff", "#00ffd1"]}
+          rotation={0}
+          speed={0.2}
+          scale={1}
+          frequency={1}
+          warpStrength={1}
+          mouseInfluence={1}
+          parallax={0.5}
+          noise={0.1}
+          transparent
+          autoRotate={0}
+        />
+      </div>
 
       {/* NAV */}
       <motion.header

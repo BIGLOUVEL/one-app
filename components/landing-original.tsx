@@ -4,6 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { motion, useScroll, useTransform, useInView } from "framer-motion"
 import { ArrowRight, ArrowDown } from "lucide-react"
+import ElectricBorder from "@/components/ui/electric-border"
 import { useTheme, UITheme } from "@/components/theme-provider"
 import { useRef, useEffect, useState } from "react"
 
@@ -155,13 +156,12 @@ function HeroSection() {
         >
           <Link href="/login">
             <motion.span
-              className="group relative inline-flex items-center gap-2.5 px-8 py-4 rounded-xl bg-primary text-primary-foreground font-semibold text-sm overflow-hidden"
+              className="group inline-flex items-center gap-2.5 px-8 py-4 rounded-xl bg-primary/10 border border-primary/20 text-primary font-semibold text-sm hover:bg-primary/15 hover:border-primary/30 transition-all"
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.98 }}
             >
-              <span className="relative z-10">STOP WORKING BLIND</span>
-              <ArrowRight className="relative z-10 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              <div className="absolute inset-0 bg-gradient-to-r from-primary via-emerald-400 to-primary bg-[length:200%_100%] animate-shimmer" />
+              STOP WORKING BLIND
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </motion.span>
           </Link>
           <Link href="#system">
@@ -429,31 +429,31 @@ function VideoSection({
             />
 
             {/* Video frame */}
-            <div className="relative rounded-2xl overflow-hidden border border-white/[0.08] shadow-[0_40px_100px_rgba(0,0,0,0.6)]">
-              {/* Top chrome bar */}
-              <div className="absolute top-0 inset-x-0 z-10 h-8 bg-gradient-to-b from-black/40 to-transparent pointer-events-none flex items-center px-3 gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-white/10" />
-                <div className="w-2 h-2 rounded-full bg-white/10" />
-                <div className="w-2 h-2 rounded-full bg-white/10" />
+            <ElectricBorder color="#00cc55" speed={0.7} chaos={0.1} borderRadius={16}>
+              <div className="relative rounded-2xl overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.5)]">
+                {/* Top chrome bar */}
+                <div className="absolute top-0 inset-x-0 z-10 h-8 bg-gradient-to-b from-black/40 to-transparent pointer-events-none flex items-center px-3 gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-white/10" />
+                  <div className="w-2 h-2 rounded-full bg-white/10" />
+                  <div className="w-2 h-2 rounded-full bg-white/10" />
+                </div>
+
+                <video
+                  src={videoSrc}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full h-auto object-cover block"
+                />
+
+                {/* Subtle inner shadow */}
+                <div
+                  className="absolute inset-0 pointer-events-none rounded-2xl"
+                  style={{ boxShadow: "inset 0 0 60px rgba(0,0,0,0.25)" }}
+                />
               </div>
-
-              <video
-                src={videoSrc}
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="w-full h-auto object-cover block"
-              />
-
-              {/* Subtle inner shadow */}
-              <div
-                className="absolute inset-0 pointer-events-none rounded-2xl"
-                style={{
-                  boxShadow: "inset 0 0 60px rgba(0,0,0,0.25)",
-                }}
-              />
-            </div>
+            </ElectricBorder>
 
             {/* Corner accent */}
             <div
@@ -685,14 +685,12 @@ function CTASection() {
         >
           <Link href="/login">
             <motion.span
-              className="group relative inline-flex items-center gap-3 px-10 sm:px-14 py-4 sm:py-5 rounded-xl bg-primary text-primary-foreground font-bold text-base sm:text-lg overflow-hidden"
+              className="group inline-flex items-center gap-3 px-10 sm:px-14 py-4 sm:py-5 rounded-xl bg-primary/10 border border-primary/20 text-primary font-bold text-base sm:text-lg hover:bg-primary/15 hover:border-primary/30 transition-all"
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
             >
-              <span className="relative z-10">STOP WORKING BLIND</span>
-              <ArrowRight className="relative z-10 w-5 h-5 group-hover:translate-x-1.5 transition-transform" />
-              <div className="absolute inset-0 bg-gradient-to-r from-primary via-emerald-400 to-primary bg-[length:200%_100%] animate-shimmer" />
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/[0.08]" />
+              STOP WORKING BLIND
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" />
             </motion.span>
           </Link>
           <p className="text-xs text-muted-foreground/40">No credit card required</p>

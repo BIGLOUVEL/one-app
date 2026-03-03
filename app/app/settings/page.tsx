@@ -1061,29 +1061,38 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Monthly amount */}
-                {subStatus.priceAmount != null && subStatus.priceCurrency && (
-                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/5">
-                    <p className="text-sm text-muted-foreground">{t("Monthly amount", "Montant mensuel")}</p>
-                    <p className="text-sm font-semibold">
-                      <span>{formatPrice(subStatus.priceAmount, subStatus.priceCurrency)}</span>
-                      <span className="text-xs text-muted-foreground font-normal">/{t("month", "mois")}</span>
-                    </p>
-                  </div>
-                )}
-
-                {/* Next billing */}
+                {/* Next billing / Access until */}
                 {subStatus.currentPeriodEnd && (
                   <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/5">
                     <p className="text-sm text-muted-foreground">
-                      {subStatus.status === "canceled" ? t("Access until", "Accès jusqu'au") : t("Next billing", "Prochain prélèvement")}
+                      {subStatus.status === "canceled"
+                        ? t("Access until", "Accès jusqu'au")
+                        : t("Next billing", "Prochain prélèvement")}
                     </p>
-                    <p className="text-sm font-medium">
-                      {new Date(subStatus.currentPeriodEnd).toLocaleDateString(lang === 'fr' ? "fr-FR" : "en-US", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                      })}
+                    <div className="flex items-baseline gap-1.5 text-right">
+                      {subStatus.status !== "canceled" && subStatus.priceAmount != null && subStatus.priceCurrency && (
+                        <p className="text-sm font-semibold">
+                          {formatPrice(subStatus.priceAmount, subStatus.priceCurrency)}
+                        </p>
+                      )}
+                      <p className="text-sm font-medium text-muted-foreground">
+                        {new Date(subStatus.currentPeriodEnd).toLocaleDateString(lang === 'fr' ? "fr-FR" : "en-US", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Monthly plan amount (when no period end date) */}
+                {!subStatus.currentPeriodEnd && subStatus.priceAmount != null && subStatus.priceCurrency && (
+                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/5">
+                    <p className="text-sm text-muted-foreground">{t("Monthly plan", "Abonnement mensuel")}</p>
+                    <p className="text-sm font-semibold">
+                      {formatPrice(subStatus.priceAmount, subStatus.priceCurrency)}
+                      <span className="text-xs text-muted-foreground font-normal">/{t("month", "mois")}</span>
                     </p>
                   </div>
                 )}

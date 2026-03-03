@@ -73,18 +73,21 @@ export async function GET(request: NextRequest) {
       let sub: any = null
 
       if (profile.stripe_subscription_id) {
-        sub = await stripe.subscriptions.retrieve(profile.stripe_subscription_id) as any
+        sub = await stripe.subscriptions.retrieve(profile.stripe_subscription_id, {
+          expand: ["items.data.price"],
+        }) as any
       } else {
         // No subscription ID in DB — look up by customer ID or email
-        sub = await findStripeSubscription(profile.stripe_customer_id, user.email)
-        // Persist for next time
-        if (sub) {
-          await supabaseAdmin.from("profiles").update({ stripe_subscription_id: sub.id }).eq("id", user.id)
+        const found = await findStripeSubscription(profile.stripe_customer_id, user.email)
+        if (found) {
+          // Retrieve with expand to get price details
+          sub = await stripe.subscriptions.retrieve(found.id, { expand: ["items.data.price"] }) as any
+          await supabaseAdmin.from("profiles").update({ stripe_subscription_id: found.id }).eq("id", user.id)
         }
       }
 
       if (sub) {
-        const item = sub.items.data[0]
+        const item = sub.items?.data?.[0]
         if (item?.price) {
           priceAmount = item.price.unit_amount
           priceCurrency = item.price.currency

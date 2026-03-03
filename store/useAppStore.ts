@@ -111,6 +111,7 @@ interface AppStore {
     bounceIcons: boolean            // Sidebar icons bounce on hover
     milestoneAnimations: boolean    // Celebrate 25%, 50%, 75%
     streakFire: boolean             // Fire animation for 7+ day streak
+    dailyDominoCheck: boolean       // Daily alignment check on app open
   }
   setVisualPref: (key: keyof AppStore['visualPrefs'], value: boolean) => void
   resetVisualPrefs: () => void
@@ -294,6 +295,7 @@ export const useAppStore = create<AppStore>()(
         bounceIcons: true,
         milestoneAnimations: true,
         streakFire: true,
+        dailyDominoCheck: true,
       },
 
       setVisualPref: (key, value) => {
@@ -313,6 +315,7 @@ export const useAppStore = create<AppStore>()(
             bounceIcons: true,
             milestoneAnimations: true,
             streakFire: true,
+            dailyDominoCheck: true,
           },
         })
       },

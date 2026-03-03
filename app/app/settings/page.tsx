@@ -20,6 +20,7 @@ const getVisualEffects = (lang: string) => [
   { key: "bounceIcons", label: lang === 'fr' ? "Icônes animées" : "Animated icons", description: lang === 'fr' ? "Rebond des icônes de la sidebar au survol" : "Sidebar icons bounce on hover" },
   { key: "milestoneAnimations", label: lang === 'fr' ? "Célébrations" : "Celebrations", description: lang === 'fr' ? "Animations à 25%, 50%, 75% de progression" : "Animations at 25%, 50%, 75% progress" },
   { key: "streakFire", label: lang === 'fr' ? "Flamme streak" : "Streak flame", description: lang === 'fr' ? "Animation feu pour 7+ jours consécutifs" : "Fire animation for 7+ consecutive days" },
+  { key: "dailyDominoCheck", label: lang === 'fr' ? "Check quotidien" : "Daily check", description: lang === 'fr' ? "Rappel d'alignement à l'ouverture de l'app" : "Alignment reminder when opening the app" },
 ] as const
 
 // Stoic quotes for the theme preview

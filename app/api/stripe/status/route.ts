@@ -9,9 +9,31 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+async function findStripeSubscription(customerId?: string, email?: string) {
+  const statuses = ["active", "trialing"]
+
+  if (customerId) {
+    for (const status of statuses) {
+      const list = await stripe.subscriptions.list({ customer: customerId, status: status as any, limit: 1 }) as any
+      if (list.data.length > 0) return list.data[0]
+    }
+  }
+
+  if (email) {
+    const customers = await stripe.customers.list({ email, limit: 5 }) as any
+    for (const customer of customers.data) {
+      for (const status of statuses) {
+        const list = await stripe.subscriptions.list({ customer: customer.id, status: status as any, limit: 1 }) as any
+        if (list.data.length > 0) return list.data[0]
+      }
+    }
+  }
+
+  return null
+}
+
 export async function GET(request: NextRequest) {
   try {
-    // Get user from auth header
     const authHeader = request.headers.get("authorization")
     if (!authHeader) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -24,7 +46,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get profile
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("subscription_status, current_period_end, promo_used, stripe_subscription_id, stripe_customer_id")
@@ -47,23 +68,32 @@ export async function GET(request: NextRequest) {
     let priceAmount: number | null = null
     let priceCurrency: string | null = null
 
-    // If DB status is unclear but we have a Stripe subscription, fetch from Stripe
-    // to self-heal — this ensures any paid user always gets access
-    if (profile.stripe_subscription_id) {
-      try {
-        const sub = await stripe.subscriptions.retrieve(profile.stripe_subscription_id) as any
+    // Always check Stripe as source of truth
+    try {
+      let sub: any = null
+
+      if (profile.stripe_subscription_id) {
+        sub = await stripe.subscriptions.retrieve(profile.stripe_subscription_id) as any
+      } else {
+        // No subscription ID in DB — look up by customer ID or email
+        sub = await findStripeSubscription(profile.stripe_customer_id, user.email)
+        // Persist for next time
+        if (sub) {
+          await supabaseAdmin.from("profiles").update({ stripe_subscription_id: sub.id }).eq("id", user.id)
+        }
+      }
+
+      if (sub) {
         const item = sub.items.data[0]
         if (item?.price) {
           priceAmount = item.price.unit_amount
           priceCurrency = item.price.currency
         }
 
-        // Always trust Stripe as source of truth if DB status looks wrong
-        const stripeStatus = sub.status // "active" | "trialing" | "canceled" | etc.
+        const stripeStatus = sub.status
         const stripePeriodEnd = new Date(sub.current_period_end * 1000).toISOString()
 
         if (!status || status === "none" || status !== stripeStatus) {
-          // DB is out of sync — repair it
           status = stripeStatus
           currentPeriodEnd = stripePeriodEnd
           await supabaseAdmin
@@ -75,12 +105,11 @@ export async function GET(request: NextRequest) {
             })
             .eq("id", user.id)
         }
-      } catch {
-        // Stripe unreachable — fall back to DB value
       }
+    } catch {
+      // Stripe unreachable — fall back to DB value
     }
 
-    // Check if subscription is still valid (even if canceled, access until period end)
     const isActive =
       status === "active" ||
       status === "trialing" ||

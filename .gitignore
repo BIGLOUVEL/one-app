@@ -28,8 +28,11 @@ yarn-error.log*
 # local env files
 .env*.local
 
-# Claude local settings (may contain API keys)
+# Claude / agent tooling (may contain secrets)
 .claude/settings.local.json
+.agent/
+.agents/
+.cursor/
 
 # vercel
 .vercel

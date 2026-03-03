@@ -174,8 +174,11 @@ export function PreLaunchPage() {
         )}
       </div>
 
-      <div className="absolute bottom-6 left-0 right-0 z-20 flex justify-center">
+      <div className="absolute bottom-6 left-0 right-0 z-20 flex items-center justify-center gap-5">
         <p className="text-[11px] tracking-widest text-white/15 uppercase">ONE — Focus Operating System</p>
+        <span className="text-white/10">·</span>
+        <a href="/terms" className="text-[11px] text-white/15 hover:text-white/35 transition-colors">Terms</a>
+        <a href="/privacy" className="text-[11px] text-white/15 hover:text-white/35 transition-colors">Privacy</a>
       </div>
     </div>
   )

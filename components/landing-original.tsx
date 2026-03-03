@@ -81,18 +81,18 @@ function HeroSection() {
       style={{ opacity: heroOpacity }}
     >
       {/* ColorBends — hero only */}
-      <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.35 }}>
+      <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.55, mixBlendMode: "screen" }}>
         <ColorBends
-          colors={["#10b723", "#2fd016", "#05ff3a", "#ffffff"]}
+          colors={["#10b723", "#2fd016", "#00ff41", "#7fff00", "#ffffff"]}
           rotation={0}
-          speed={0.15}
-          scale={1.2}
-          frequency={0.8}
-          warpStrength={1.2}
-          mouseInfluence={0.6}
-          parallax={0.4}
+          speed={0.2}
+          scale={0.9}
+          frequency={1}
+          warpStrength={1.5}
+          mouseInfluence={1}
+          parallax={0.5}
           noise={0.05}
-          transparent
+          transparent={false}
           autoRotate={0}
         />
       </div>

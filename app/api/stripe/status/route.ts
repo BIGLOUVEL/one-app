@@ -87,10 +87,20 @@ export async function GET(request: NextRequest) {
       }
 
       if (sub) {
-        const item = sub.items?.data?.[0]
-        if (item?.price) {
-          priceAmount = item.price.unit_amount
-          priceCurrency = item.price.currency
+        // Use upcoming invoice amount for accurate next billing (handles promo → full price transitions)
+        try {
+          const upcoming = await stripe.invoices.retrieveUpcoming({ subscription: sub.id }) as any
+          if (upcoming?.amount_due != null) {
+            priceAmount = upcoming.amount_due
+            priceCurrency = upcoming.currency
+          }
+        } catch {
+          // No upcoming invoice (already cancelling, etc.) — fall back to subscription price
+          const item = sub.items?.data?.[0]
+          if (item?.price) {
+            priceAmount = item.price.unit_amount
+            priceCurrency = item.price.currency
+          }
         }
 
         const stripeStatus = sub.status

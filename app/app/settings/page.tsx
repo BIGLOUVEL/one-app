@@ -610,7 +610,6 @@ export default function SettingsPage() {
           ? t(`Subscription canceled. Access until ${endDate}.`, `Abonnement annulé. Accès jusqu'au ${endDate}.`)
           : t("Subscription canceled.", "Abonnement annulé.")
         )
-        setSubStatus(prev => prev ? { ...prev, status: "canceled" } : prev)
         setCancelConfirm(false)
       } else {
         setCancelError(data.error || t("Failed to cancel. Try again.", "Impossible d'annuler. Réessaie."))
@@ -1117,10 +1116,10 @@ export default function SettingsPage() {
                 )}
 
                 {/* Cancel subscription */}
-                {subStatus?.status === "active" || subStatus?.status === "trialing" ? (
-                  cancelSuccess ? (
-                    <p className="text-xs text-primary text-center py-1">{cancelSuccess}</p>
-                  ) : cancelConfirm ? (
+                {cancelSuccess ? (
+                  <p className="text-xs text-primary text-center py-2">{cancelSuccess}</p>
+                ) : (subStatus?.status === "active" || subStatus?.status === "trialing") ? (
+                  cancelConfirm ? (
                     <div className="flex gap-2">
                       <button
                         onClick={cancelSubscription}

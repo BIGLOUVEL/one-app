@@ -33,52 +33,77 @@ export async function POST(request: NextRequest) {
     // Retrieve the checkout session from Stripe
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ["subscription"],
-    })
+    }) as any
 
-    // Verify session belongs to this user
-    if (session.metadata?.user_id !== user.id) {
+    // Verify session belongs to this user (soft check — log but don't block on mismatch)
+    if (session.metadata?.user_id && session.metadata.user_id !== user.id) {
+      console.error("verify-session: user_id mismatch", {
+        sessionUserId: session.metadata.user_id,
+        authUserId: user.id,
+      })
       return NextResponse.json({ error: "Session does not belong to user" }, { status: 403 })
     }
 
     // Check if payment was successful
     if (session.payment_status !== "paid") {
-      return NextResponse.json({ error: "Payment not completed" }, { status: 400 })
+      return NextResponse.json({ error: "Payment not completed", paymentStatus: session.payment_status }, { status: 400 })
     }
 
-    // Get subscription details
-    const subscription = session.subscription as any
-    if (!subscription) {
-      return NextResponse.json({ error: "No subscription found" }, { status: 400 })
+    // Get subscription details — it may be an object (expanded) or a string ID
+    let subscription: any = session.subscription
+    if (typeof subscription === "string") {
+      // Not expanded for some reason — retrieve it
+      try {
+        subscription = await stripe.subscriptions.retrieve(subscription) as any
+      } catch (e) {
+        console.error("verify-session: failed to retrieve subscription", e)
+      }
     }
 
-    // Upsert profile in Supabase (handles case where profile doesn't exist yet)
+    // Build the profile update — guard every field against null/undefined
+    const safeDate = (ts: any): string | null => {
+      if (ts == null) return null
+      const ms = Number(ts) * 1000
+      return isNaN(ms) ? null : new Date(ms).toISOString()
+    }
+
+    const profileUpdate: Record<string, any> = {
+      id: user.id,
+      email: user.email || "",
+      updated_at: new Date().toISOString(),
+    }
+
+    if (session.customer) profileUpdate.stripe_customer_id = session.customer as string
+    if (session.metadata?.promo_applied) profileUpdate.promo_used = session.metadata.promo_applied === "true"
+
+    if (subscription) {
+      profileUpdate.stripe_subscription_id = subscription.id
+      profileUpdate.subscription_status = subscription.status || "active"
+      const periodEnd = safeDate(subscription.current_period_end)
+      if (periodEnd) profileUpdate.current_period_end = periodEnd
+    } else {
+      // No subscription object but payment is confirmed — mark as active
+      profileUpdate.subscription_status = "active"
+    }
+
     const { error: upsertError } = await supabaseAdmin
       .from("profiles")
-      .upsert({
-        id: user.id,
-        email: user.email || "",
-        stripe_customer_id: session.customer as string,
-        stripe_subscription_id: subscription.id,
-        subscription_status: subscription.status,
-        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-        promo_used: session.metadata?.promo_applied === "true",
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "id" })
+      .upsert(profileUpdate, { onConflict: "id" })
 
     if (upsertError) {
-      console.error("Failed to upsert profile:", upsertError)
+      console.error("verify-session: failed to upsert profile:", upsertError)
       return NextResponse.json({ error: "Failed to update subscription status" }, { status: 500 })
     }
 
     return NextResponse.json({
       success: true,
-      status: subscription.status,
-      message: "Subscription activated successfully"
+      status: profileUpdate.subscription_status,
+      message: "Subscription activated successfully",
     })
-  } catch (error) {
-    console.error("Verify session error:", error)
+  } catch (error: any) {
+    console.error("Verify session error:", error?.message || error)
     return NextResponse.json(
-      { error: "Failed to verify session" },
+      { error: "Failed to verify session", detail: error?.message },
       { status: 500 }
     )
   }

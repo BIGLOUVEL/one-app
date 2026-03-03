@@ -80,6 +80,23 @@ function HeroSection() {
       className="relative min-h-screen flex flex-col items-center justify-center px-5 overflow-hidden"
       style={{ opacity: heroOpacity }}
     >
+      {/* ColorBends — hero only */}
+      <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.35 }}>
+        <ColorBends
+          colors={["#10b723", "#2fd016", "#05ff3a", "#ffffff"]}
+          rotation={0}
+          speed={0.15}
+          scale={1.2}
+          frequency={0.8}
+          warpStrength={1.2}
+          mouseInfluence={0.6}
+          parallax={0.4}
+          noise={0.05}
+          transparent
+          autoRotate={0}
+        />
+      </div>
+
       {/* Atmospheric aurora blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -157,18 +174,16 @@ function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.8, ease: smoothEase }}
         >
-          <ElectricBorder color="#00cc55" speed={1.5} chaos={0.1} borderRadius={12}>
-            <Link href="/login">
-              <motion.span
-                className="group inline-flex items-center gap-2.5 px-8 py-4 rounded-xl bg-primary/10 text-primary font-semibold text-sm hover:bg-primary/15 transition-all"
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                STOP WORKING BLIND
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </motion.span>
-            </Link>
-          </ElectricBorder>
+          <Link href="/login">
+            <motion.span
+              className="group inline-flex items-center gap-2.5 px-8 py-4 rounded-xl bg-primary/10 text-primary font-semibold text-sm hover:bg-primary/15 transition-all"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              STOP WORKING BLIND
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </motion.span>
+          </Link>
           <Link href="#system">
             <motion.span
               className="inline-flex items-center gap-2 px-6 py-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground border border-white/[0.06] hover:border-white/[0.12] transition-all"
@@ -688,18 +703,16 @@ function CTASection() {
           transition={{ duration: 0.6, delay: 0.3, ease: smoothEase }}
           className="space-y-4"
         >
-          <ElectricBorder color="#00cc55" speed={1.5} chaos={0.1} borderRadius={12}>
-            <Link href="/login">
-              <motion.span
-                className="group inline-flex items-center gap-3 px-10 sm:px-14 py-4 sm:py-5 rounded-xl bg-primary/10 text-primary font-bold text-base sm:text-lg hover:bg-primary/15 transition-all"
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-              >
-                STOP WORKING BLIND
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" />
-              </motion.span>
-            </Link>
-          </ElectricBorder>
+          <Link href="/login">
+            <motion.span
+              className="group inline-flex items-center gap-3 px-10 sm:px-14 py-4 sm:py-5 rounded-xl bg-primary/10 text-primary font-bold text-base sm:text-lg hover:bg-primary/15 transition-all"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+            >
+              STOP WORKING BLIND
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" />
+            </motion.span>
+          </Link>
           <p className="text-xs text-muted-foreground/40">No credit card required</p>
         </motion.div>
       </div>
@@ -737,23 +750,6 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden selection:bg-primary/20">
       <GrainOverlay />
-
-      {/* ColorBends background */}
-      <div className="fixed inset-0 z-0 pointer-events-none" style={{ opacity: 0.18 }}>
-        <ColorBends
-          colors={["#ff5c7a", "#8a5cff", "#00ffd1"]}
-          rotation={0}
-          speed={0.2}
-          scale={1}
-          frequency={1}
-          warpStrength={1}
-          mouseInfluence={1}
-          parallax={0.5}
-          noise={0.1}
-          transparent
-          autoRotate={0}
-        />
-      </div>
 
       {/* NAV */}
       <motion.header

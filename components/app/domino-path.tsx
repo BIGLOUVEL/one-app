@@ -344,84 +344,109 @@ export function DominoPath() {
         </div>
 
         {/* The domino chain visual */}
-        <div className="relative flex items-end gap-[3px] sm:gap-1 h-24 sm:h-32 overflow-x-auto pb-2 scrollbar-hide">
-          {/* Render up to 30 visible dominos */}
+        <div className="relative flex items-end gap-[3px] sm:gap-[5px] h-28 sm:h-36 overflow-x-auto pb-3 scrollbar-hide">
+
+          {/* Floor line */}
+          <div className="absolute bottom-3 left-0 right-0 h-px bg-white/[0.05]" />
+
           {Array.from({ length: Math.min(totalDominos, 40) }, (_, i) => {
             const isFallen = i < completedDominos
             const isLast = i === completedDominos - 1
             const isNext = i === completedDominos
-            // Height grows slightly with index for perspective
-            const baseHeight = 40 + Math.min(i * 1.5, 40)
+            const baseHeight = 42 + Math.min(i * 1.4, 38)
+            const fallDelay = Math.min(i * 0.045, 1.4)
 
             return (
-              <motion.div
+              <div
                 key={i}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(i * 0.02, 0.8), duration: 0.3 }}
-                className="relative flex-shrink-0"
+                className="relative flex-shrink-0 flex items-end"
                 style={{ height: `${baseHeight}%` }}
               >
-                <motion.div
-                  initial={isFallen ? { rotateZ: 0 } : false}
-                  animate={{
-                    rotateZ: isFallen ? 60 : 0,
-                    originY: 1,
-                    originX: 0.5,
-                  }}
-                  transition={
-                    isFallen
-                      ? { duration: 0.4, ease: "easeIn", delay: Math.min(i * 0.03, 0.6) }
-                      : undefined
-                  }
-                  className={cn(
-                    "relative w-2.5 sm:w-3.5 h-full rounded-sm transition-colors",
-                    isFallen
-                      ? "bg-gradient-to-t from-primary/80 to-primary/40"
-                      : isNext
-                      ? "bg-white/15 border border-primary/30"
-                      : "bg-white/[0.06] border border-white/[0.08]"
-                  )}
-                  style={
-                    isFallen
-                      ? { boxShadow: `0 0 ${isLast ? 12 : 6}px hsl(var(--primary) / ${isLast ? 0.4 : 0.15})` }
-                      : isNext
-                      ? { boxShadow: "0 0 10px hsl(var(--primary) / 0.1)" }
-                      : undefined
-                  }
-                >
-                  {/* Dots on domino */}
-                  {!isFallen && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-                      <div className="w-1 h-1 rounded-full bg-white/10" />
-                      <div className="w-1 h-1 rounded-full bg-white/10" />
-                    </div>
-                  )}
+                {/* Floor shadow for fallen dominos */}
+                {isFallen && (
+                  <motion.div
+                    initial={{ scaleX: 0, opacity: 0 }}
+                    animate={{ scaleX: 1, opacity: 1 }}
+                    transition={{ delay: fallDelay + 0.38, duration: 0.15 }}
+                    className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[2px] w-[160%] rounded-full pointer-events-none"
+                    style={{ background: "hsl(var(--primary) / 0.25)", filter: "blur(1px)" }}
+                  />
+                )}
 
-                  {/* Glow on the last fallen domino */}
+                {/* Domino piece */}
+                <motion.div
+                  animate={{ rotateZ: isFallen ? 83 : 0 }}
+                  transition={isFallen ? {
+                    duration: 0.42,
+                    ease: [0.3, 0, 1, 0.65],
+                    delay: fallDelay,
+                  } : undefined}
+                  style={{ transformOrigin: "50% 100%", height: "100%", width: "100%" }}
+                  className="relative"
+                >
+                  <div
+                    className={cn(
+                      "relative w-3 sm:w-[14px] h-full rounded-[3px] overflow-hidden",
+                      isFallen
+                        ? "bg-gradient-to-b from-primary/70 to-primary/90"
+                        : isNext
+                        ? "bg-white/[0.12] border border-primary/40"
+                        : "bg-white/[0.06] border border-white/[0.09]"
+                    )}
+                    style={isFallen
+                      ? { boxShadow: `0 0 ${isLast ? 14 : 5}px hsl(var(--primary) / ${isLast ? 0.45 : 0.12})` }
+                      : isNext
+                      ? { boxShadow: "0 0 8px hsl(var(--primary) / 0.12)" }
+                      : undefined
+                    }
+                  >
+                    {/* Shine overlay on standing */}
+                    {!isFallen && (
+                      <div className="absolute inset-0 bg-gradient-to-b from-white/[0.06] to-transparent" />
+                    )}
+
+                    {/* Dots on standing dominos */}
+                    {!isFallen && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+                        <div className="w-[3px] h-[3px] rounded-full bg-white/20" />
+                        <div className="w-[3px] h-[3px] rounded-full bg-white/20" />
+                      </div>
+                    )}
+
+                    {/* Impact flash on last fallen */}
+                    {isLast && (
+                      <motion.div
+                        className="absolute inset-0 bg-primary/50 pointer-events-none"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: [0, 0.8, 0] }}
+                        transition={{ delay: fallDelay + 0.38, duration: 0.4 }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Persistent glow on last fallen */}
                   {isLast && (
                     <motion.div
-                      className="absolute -inset-1 rounded-sm pointer-events-none"
-                      animate={{ opacity: [0.3, 0.6, 0.3] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                      style={{ boxShadow: "0 0 15px hsl(var(--primary) / 0.4)" }}
-                    />
-                  )}
-
-                  {/* Pulse on next domino */}
-                  {isNext && (
-                    <motion.div
-                      className="absolute -inset-0.5 rounded-sm border border-primary/20 pointer-events-none"
-                      animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
-                      transition={{ duration: 2, repeat: Infinity }}
+                      className="absolute inset-0 pointer-events-none rounded-[3px]"
+                      animate={{ opacity: [0.2, 0.5, 0.2] }}
+                      transition={{ duration: 2.5, repeat: Infinity }}
+                      style={{ boxShadow: "0 0 18px hsl(var(--primary) / 0.5)" }}
                     />
                   )}
                 </motion.div>
-              </motion.div>
+
+                {/* Next domino pulse ring */}
+                {isNext && (
+                  <motion.div
+                    className="absolute inset-0 rounded-[3px] pointer-events-none border border-primary/25"
+                    animate={{ opacity: [0.6, 0, 0.6], scale: [1, 1.15, 1] }}
+                    transition={{ duration: 1.8, repeat: Infinity }}
+                  />
+                )}
+              </div>
             )
           })}
 
-          {/* "More" indicator if totalDominos > 40 */}
           {totalDominos > 40 && (
             <div className="flex-shrink-0 flex items-center justify-center px-2 self-center">
               <span className="text-[10px] text-muted-foreground/40">+{totalDominos - 40}</span>

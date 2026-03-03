@@ -18,6 +18,8 @@ import {
   Play,
   ArrowRight,
   Flame,
+  X,
+  History,
   type LucideIcon,
 } from "lucide-react"
 import Link from "next/link"
@@ -51,7 +53,10 @@ export function DominoPath() {
   const t = (en: string, fr: string) => lang === 'fr' ? fr : en
   const completedDominos = dominoChain?.completedDominos ?? 0
   const totalDominos = dominoChain?.totalDominos ?? 0
+  const dominoHistory = dominoChain?.dominoHistory ?? []
   const [hoveredLandmark, setHoveredLandmark] = useState<number | null>(null)
+  const [showHistoryPanel, setShowHistoryPanel] = useState(false)
+  const [selectedDominoIndex, setSelectedDominoIndex] = useState<number | null>(null)
 
   // Auto-init domino chain if objective exists but chain was never created
   useEffect(() => {
@@ -340,6 +345,15 @@ export function DominoPath() {
               <div className="w-3 h-5 rounded-sm bg-white/10 border border-white/20" />
               <span className="text-[9px] text-muted-foreground">{t("Standing", "Debout")}</span>
             </div>
+            {dominoHistory.length > 0 && (
+              <button
+                onClick={() => setShowHistoryPanel(true)}
+                className="flex items-center gap-1 text-[9px] text-muted-foreground/50 hover:text-primary transition-colors"
+              >
+                <History className="h-3 w-3" />
+                {t("History", "Historique")}
+              </button>
+            )}
           </div>
         </div>
 
@@ -355,12 +369,20 @@ export function DominoPath() {
             const isNext = i === completedDominos
             const baseHeight = 42 + Math.min(i * 1.4, 38)
             const fallDelay = Math.min(i * 0.045, 1.4)
+            const hasRecord = dominoHistory[i] !== undefined
 
             return (
               <div
                 key={i}
-                className="relative flex-shrink-0 flex items-end"
+                className={cn("relative flex-shrink-0 flex items-end", isFallen && hasRecord && "cursor-pointer")}
                 style={{ height: `${baseHeight}%` }}
+                onClick={() => {
+                  if (isFallen && hasRecord) {
+                    setSelectedDominoIndex(i)
+                    setShowHistoryPanel(true)
+                  }
+                }}
+                title={isFallen && hasRecord ? dominoHistory[i].objectiveText : undefined}
               >
                 {/* Floor shadow for fallen dominos */}
                 {isFallen && (
@@ -750,6 +772,100 @@ export function DominoPath() {
           </motion.button>
         </Link>
       </motion.div>
+
+      {/* ═══════════════════════════════════════════
+          DOMINO HISTORY PANEL
+          ═══════════════════════════════════════════ */}
+      <AnimatePresence>
+        {showHistoryPanel && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:justify-end p-0 sm:p-4"
+            onClick={() => { setShowHistoryPanel(false); setSelectedDominoIndex(null) }}
+          >
+            <motion.div
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ type: "spring", stiffness: 280, damping: 28 }}
+              className="liquid-glass w-full sm:w-[380px] max-h-[80vh] flex flex-col rounded-t-2xl sm:rounded-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+              style={{ boxShadow: "0 -10px 40px rgba(0,0,0,0.3)" }}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
+                <div>
+                  <h2 className="font-bold text-base">{t("Domino history", "Historique des dominos")}</h2>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    {dominoHistory.length} {t(`domino${dominoHistory.length !== 1 ? "s" : ""} fallen`, `domino${dominoHistory.length !== 1 ? "s" : ""} tombé${dominoHistory.length !== 1 ? "s" : ""}`)}
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setShowHistoryPanel(false); setSelectedDominoIndex(null) }}
+                  className="p-2 rounded-xl hover:bg-white/10 transition-colors"
+                >
+                  <X className="h-5 w-5 text-muted-foreground" />
+                </button>
+              </div>
+
+              {/* List */}
+              <div className="overflow-y-auto flex-1 p-4 space-y-2">
+                {dominoHistory.length === 0 ? (
+                  <p className="text-muted-foreground text-sm text-center py-8">
+                    {t("No dominos fallen yet.", "Aucun domino tombé pour l'instant.")}
+                  </p>
+                ) : (
+                  [...dominoHistory].reverse().map((record, revIdx) => {
+                    const idx = dominoHistory.length - 1 - revIdx
+                    const isSelected = selectedDominoIndex === idx
+                    return (
+                      <motion.div
+                        key={record.id}
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: revIdx * 0.04 }}
+                        onClick={() => setSelectedDominoIndex(isSelected ? null : idx)}
+                        className={cn(
+                          "p-4 rounded-xl border cursor-pointer transition-all",
+                          isSelected
+                            ? "bg-primary/10 border-primary/25"
+                            : "bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.05]"
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            {/* Domino mini icon */}
+                            <div className={cn(
+                              "shrink-0 mt-0.5 w-3 h-5 rounded-[2px] rotate-[83deg]",
+                              isSelected ? "bg-primary/80" : "bg-primary/50"
+                            )} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] text-muted-foreground mb-0.5">
+                                #{idx + 1} · {record.type === "session" ? t("Session", "Session") : t("Today's goal", "Objectif du jour")}
+                              </p>
+                              <p className="text-sm font-medium leading-snug line-clamp-2">{record.objectiveText || t("—", "—")}</p>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0 space-y-0.5">
+                            <p className="text-[10px] text-muted-foreground">
+                              {new Date(record.date).toLocaleDateString(lang === 'fr' ? "fr-FR" : "en-GB", { day: "2-digit", month: "short" })}
+                            </p>
+                            {record.sessionDuration && (
+                              <p className="text-[10px] text-primary">{record.sessionDuration} min</p>
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )
+                  })
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

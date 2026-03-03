@@ -318,22 +318,38 @@ function ActionCard({
     todayGoalCompleted,
     completeRightNow,
     completeTodayGoal,
+    resetTodayGoal,
+    updateCascade,
     setNewRightNowAction,
     visualPrefs,
   } = useAppStore()
 
   const [newAction, setNewAction] = useState("")
   const [showDominoFell, setShowDominoFell] = useState(false)
+  const [showTomorrowModal, setShowTomorrowModal] = useState(false)
+  const [tomorrowGoal, setTomorrowGoal] = useState("")
+  const [todayAccomplishment, setTodayAccomplishment] = useState("")
 
   const handleCompleteToday = () => {
     completeTodayGoal()
     setShowDominoFell(true)
     // Confetti celebration
     if (visualPrefs.confettiOnComplete) {
-      confetti({ particleCount: 40, angle: 60, spread: 55, origin: { x: 0, y: 0.7 }, colors: ["#00ff88", "#06b6d4", "#8b5cf6"] })
-      confetti({ particleCount: 40, angle: 120, spread: 55, origin: { x: 1, y: 0.7 }, colors: ["#00ff88", "#06b6d4", "#8b5cf6"] })
+      confetti({ particleCount: 40, angle: 60, spread: 55, origin: { x: 0, y: 0.7 }, colors: ["#10b723", "#ffffff"] })
+      confetti({ particleCount: 40, angle: 120, spread: 55, origin: { x: 1, y: 0.7 }, colors: ["#10b723", "#ffffff"] })
     }
     setTimeout(() => setShowDominoFell(false), 3000)
+    setShowTomorrowModal(true)
+  }
+
+  const handleConfirmTomorrow = () => {
+    if (tomorrowGoal.trim()) {
+      updateCascade("todayGoal", tomorrowGoal.trim())
+      resetTodayGoal()
+    }
+    setShowTomorrowModal(false)
+    setTomorrowGoal("")
+    setTodayAccomplishment("")
   }
 
   const handleSetNewAction = () => {
@@ -544,6 +560,95 @@ function ActionCard({
           </Link>
         </div>
       </div>
+
+      {/* Tomorrow Planning Modal */}
+      <AnimatePresence>
+        {showTomorrowModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70"
+            onClick={() => setShowTomorrowModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 20 }}
+              transition={{ type: "spring", stiffness: 280, damping: 25 }}
+              className="liquid-glass p-6 w-full max-w-md space-y-5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Celebration header */}
+              <div className="text-center space-y-3">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 400, delay: 0.1 }}
+                  className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/15 border border-primary/25 mx-auto"
+                  style={{ boxShadow: "0 0 30px hsl(var(--primary) / 0.2)" }}
+                >
+                  <CheckCircle2 className="h-7 w-7 text-primary" />
+                </motion.div>
+                <div>
+                  <h2 className="text-xl font-bold">
+                    {t("Today's goal reached!", "Objectif du jour atteint !")}
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {t("Domino fell. Plan tomorrow.", "Domino tombé. Pense à demain.")}
+                  </p>
+                </div>
+              </div>
+
+              {/* Accomplishment — optional */}
+              <div className="space-y-2">
+                <label className="text-xs text-muted-foreground uppercase tracking-wider">
+                  {t("What I accomplished today (optional)", "Ce que j'ai accompli aujourd'hui (optionnel)")}
+                </label>
+                <textarea
+                  value={todayAccomplishment}
+                  onChange={(e) => setTodayAccomplishment(e.target.value)}
+                  placeholder={t("Quick notes...", "Notes rapides...")}
+                  rows={2}
+                  className="w-full bg-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                />
+              </div>
+
+              {/* Tomorrow's goal */}
+              <div className="space-y-2">
+                <label className="text-xs text-muted-foreground uppercase tracking-wider">
+                  {t("Tomorrow's goal", "Mon objectif de demain")}
+                </label>
+                <input
+                  type="text"
+                  value={tomorrowGoal}
+                  onChange={(e) => setTomorrowGoal(e.target.value)}
+                  placeholder={t("What will you accomplish tomorrow?", "Qu'est-ce que tu accompliras demain ?")}
+                  className="w-full bg-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  onKeyDown={(e) => e.key === "Enter" && tomorrowGoal.trim() && handleConfirmTomorrow()}
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => setShowTomorrowModal(false)}
+                  className="flex-1 h-11 rounded-xl bg-white/5 hover:bg-white/10 text-sm text-muted-foreground transition-colors"
+                >
+                  {t("Skip", "Passer")}
+                </button>
+                <button
+                  onClick={handleConfirmTomorrow}
+                  disabled={!tomorrowGoal.trim()}
+                  className="flex-1 h-11 rounded-xl bg-primary text-black text-sm font-semibold transition-all disabled:opacity-30 hover:opacity-90"
+                >
+                  {t("Confirm for tomorrow", "Confirmer pour demain")}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }

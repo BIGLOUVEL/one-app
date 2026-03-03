@@ -160,11 +160,28 @@ export interface WeeklyReview {
 // Contract Meter States
 export type ContractState = "stable" | "tension" | "broken" | "fulfilled"
 
+// Domino Record - One fallen domino with its context
+export interface DominoRecord {
+  id: string
+  date: string              // ISO string — when the domino fell
+  objectiveText: string     // todayGoal text at time of falling
+  type: "session" | "today_goal"
+  sessionDuration?: number  // minutes, if type === "session"
+}
+
+// Session Task - optional task list for a focus session
+export interface SessionTask {
+  id: string
+  text: string
+  completed: boolean
+}
+
 // Domino Chain - Momentum tracking
 export interface DominoChain {
   totalDominos: number          // Derived from planned sessions until deadline
   completedDominos: number      // Count of completed focus sessions
   lastSessionDate?: string      // ISO string of last completed session
+  dominoHistory: DominoRecord[] // Per-domino history with objective context
 }
 
 // Contract Meter - Commitment tracking

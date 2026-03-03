@@ -24,7 +24,11 @@ import {
   HelpCircle,
   Trash2,
   FolderOpen,
+  ListChecks,
+  ChevronDown,
+  Zap,
 } from "lucide-react"
+import type { SessionTask } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { IconBolt, IconTarget } from "@/components/ui/custom-icons"
 import { useAppStore, useHasHydrated } from "@/store/useAppStore"
@@ -231,6 +235,14 @@ export default function FocusPage() {
 
   // Objective completion state
   const [objectiveCompleted, setObjectiveCompleted] = useState(false)
+  const [showObjectiveCompletedModal, setShowObjectiveCompletedModal] = useState(false)
+  const [microObjectiveText, setMicroObjectiveText] = useState("")
+  const [showMicroInput, setShowMicroInput] = useState(false)
+
+  // Session task planning
+  const [sessionTasks, setSessionTasks] = useState<SessionTask[]>([])
+  const [showTaskPlanning, setShowTaskPlanning] = useState(false)
+  const [newTaskText, setNewTaskText] = useState("")
 
   // Motivational quotes states
   const [showMotivationalQuotes, setShowMotivationalQuotes] = useState(false)
@@ -396,6 +408,9 @@ export default function FocusPage() {
     setShowMotivationalQuotes(false)
     setIsEditingFocus(false)
     setObjectiveCompleted(false)
+    setShowObjectiveCompletedModal(false)
+    setSessionTasks([])
+    setShowTaskPlanning(false)
     setNewRightNowAction(objective?.rightNowAction || "")
     setSessionState("recenter")
   }
@@ -793,6 +808,79 @@ export default function FocusPage() {
                     <span className="text-sm text-muted-foreground">minutes</span>
                   </div>
                 </div>
+
+                {/* Task planning — optional */}
+                <div>
+                  <button
+                    onClick={() => setShowTaskPlanning(!showTaskPlanning)}
+                    className="w-full flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
+                  >
+                    <ListChecks className="h-4 w-4" />
+                    <span>{t("Plan session tasks (optional)", "Planifier mes tâches (optionnel)")}</span>
+                    <ChevronDown className={cn("h-4 w-4 ml-auto transition-transform", showTaskPlanning && "rotate-180")} />
+                  </button>
+
+                  <AnimatePresence>
+                    {showTaskPlanning && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pt-3 space-y-2">
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={newTaskText}
+                              onChange={(e) => setNewTaskText(e.target.value)}
+                              placeholder={t("A task for this session...", "Une tâche pour cette session...")}
+                              className="flex-1 bg-white/5 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && newTaskText.trim()) {
+                                  setSessionTasks([...sessionTasks, { id: Date.now().toString(), text: newTaskText.trim(), completed: false }])
+                                  setNewTaskText("")
+                                }
+                              }}
+                            />
+                            <Button
+                              onClick={() => {
+                                if (newTaskText.trim()) {
+                                  setSessionTasks([...sessionTasks, { id: Date.now().toString(), text: newTaskText.trim(), completed: false }])
+                                  setNewTaskText("")
+                                }
+                              }}
+                              disabled={!newTaskText.trim()}
+                              className="h-10 px-3 rounded-xl"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <AnimatePresence>
+                            {sessionTasks.map((task) => (
+                              <motion.div
+                                key={task.id}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -10 }}
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.06]"
+                              >
+                                <span className="flex-1 text-sm">{task.text}</span>
+                                <button
+                                  onClick={() => setSessionTasks(sessionTasks.filter(t => t.id !== task.id))}
+                                  className="p-1 rounded hover:bg-white/10 transition-colors"
+                                >
+                                  <X className="h-3.5 w-3.5 text-muted-foreground" />
+                                </button>
+                              </motion.div>
+                            ))}
+                          </AnimatePresence>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
 
               <div className="flex gap-3">
@@ -1093,7 +1181,18 @@ export default function FocusPage() {
                   <div className="flex items-start gap-3">
                     {/* Completion checkbox */}
                     <button
-                      onClick={() => setObjectiveCompleted(!objectiveCompleted)}
+                      onClick={() => {
+                        if (!objectiveCompleted) {
+                          setObjectiveCompleted(true)
+                          setIsPaused(true)
+                          setSessionState("paused")
+                          setShowObjectiveCompletedModal(true)
+                          setShowMicroInput(false)
+                          setMicroObjectiveText("")
+                        } else {
+                          setObjectiveCompleted(false)
+                        }
+                      }}
                       className={`mt-1 shrink-0 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
                         objectiveCompleted
                           ? "bg-emerald-500 border-emerald-500"
@@ -1121,6 +1220,37 @@ export default function FocusPage() {
                   </div>
                 )}
               </div>
+
+              {/* Session tasks (if any were planned) */}
+              {sessionTasks.length > 0 && (
+                <div className="max-w-md mx-auto">
+                  <div className="liquid-glass p-4 space-y-2">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">
+                      {t("Session tasks", "Tâches de session")} · {sessionTasks.filter(t => t.completed).length}/{sessionTasks.length}
+                    </p>
+                    {sessionTasks.map((task) => (
+                      <button
+                        key={task.id}
+                        onClick={() => setSessionTasks(sessionTasks.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t))}
+                        className={cn(
+                          "w-full flex items-center gap-3 p-2.5 rounded-lg transition-all text-left",
+                          task.completed ? "bg-emerald-500/10" : "hover:bg-white/5"
+                        )}
+                      >
+                        <div className={cn(
+                          "shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all",
+                          task.completed ? "bg-emerald-500 border-emerald-500" : "border-white/30"
+                        )}>
+                          {task.completed && <Check className="h-3 w-3 text-white" />}
+                        </div>
+                        <span className={cn("text-sm", task.completed && "line-through text-muted-foreground")}>
+                          {task.text}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Motivational quotes display */}
               {showMotivationalQuotes && (
@@ -1366,6 +1496,128 @@ export default function FocusPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* ============================================
+          OBJECTIVE COMPLETED MODAL
+          ============================================ */}
+      <AnimatePresence>
+        {showObjectiveCompletedModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80"
+          >
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="liquid-glass p-7 w-full max-w-sm space-y-6 text-center"
+            >
+              {/* Celebration icon */}
+              <div className="flex justify-center">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 400, delay: 0.1 }}
+                  className="w-16 h-16 rounded-full bg-primary/15 border border-primary/25 flex items-center justify-center"
+                  style={{ boxShadow: "0 0 30px hsl(var(--primary) / 0.2)" }}
+                >
+                  <Zap className="h-8 w-8 text-primary" />
+                </motion.div>
+              </div>
+
+              <div className="space-y-1.5">
+                <h2 className="text-xl font-bold">
+                  {t("Objective complete!", "Objectif complété !")}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {t("What do you want to do?", "Que veux-tu faire ?")}
+                </p>
+              </div>
+
+              {/* Micro-objective input (shown conditionally) */}
+              <AnimatePresence>
+                {showMicroInput && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="space-y-3 text-left">
+                      <p className="text-xs text-muted-foreground">
+                        {t("What's your next micro-objective for this session?", "Quel est ton prochain micro-objectif pour cette session ?")}
+                      </p>
+                      <textarea
+                        value={microObjectiveText}
+                        onChange={(e) => setMicroObjectiveText(e.target.value)}
+                        placeholder={t("New objective...", "Nouvel objectif...")}
+                        rows={2}
+                        className="w-full bg-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowMicroInput(false)}
+                          className="flex-1 rounded-xl"
+                        >
+                          {t("Back", "Retour")}
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            if (microObjectiveText.trim()) {
+                              setSessionObjective(microObjectiveText.trim())
+                            }
+                            setObjectiveCompleted(false)
+                            setIsPaused(false)
+                            setSessionState("active")
+                            setShowObjectiveCompletedModal(false)
+                            setShowMicroInput(false)
+                            setMicroObjectiveText("")
+                          }}
+                          disabled={!microObjectiveText.trim()}
+                          className="flex-1 rounded-xl glow-green"
+                        >
+                          <Play className="h-3.5 w-3.5 mr-1.5" />
+                          {t("Resume", "Reprendre")}
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Action buttons (hidden when micro input shown) */}
+              {!showMicroInput && (
+                <div className="space-y-3">
+                  <Button
+                    onClick={() => {
+                      setShowObjectiveCompletedModal(false)
+                      setObjectiveCompleted(false)
+                      handleEndSession()
+                    }}
+                    className="w-full h-12 rounded-2xl text-base font-medium glow-green"
+                  >
+                    <Check className="mr-2 h-5 w-5" />
+                    {t("End session", "Terminer la session")}
+                  </Button>
+                  <button
+                    onClick={() => setShowMicroInput(true)}
+                    className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                  >
+                    {t("Continue — add a new objective", "Continuer — ajouter un objectif")}
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ============================================
           POST-IT INPUT MODAL

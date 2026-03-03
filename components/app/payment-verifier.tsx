@@ -329,7 +329,7 @@ function CelebrationCard({ userName, phase }: { userName: string; phase: number 
       {/* Reflection */}
       <motion.div
         className="absolute -bottom-12 left-1/2 -translate-x-1/2 w-3/4 h-24 rounded-full blur-3xl"
-        style={{ background: "linear-gradient(to top, transparent, rgba(255,215,0,0.04), rgba(139,92,246,0.03), transparent)" }}
+        style={{ background: "linear-gradient(to top, transparent, rgba(16,183,35,0.06), transparent)" }}
         animate={{ opacity: [0.5, 1, 0.5] }}
         transition={{ duration: 4, repeat: Infinity }}
       />
@@ -367,36 +367,36 @@ export function PaymentVerifier() {
 
     // Initial big burst
     confetti({
-      particleCount: 100,
+      particleCount: 120,
       spread: 100,
       origin: { x: 0.5, y: 0.45 },
-      colors: ["#FFD700", "#FFA500", "#8B5CF6", "#00FF88", "#06B6D4"],
-      startVelocity: 40,
+      colors: ["#ffffff", "#10b723", "#2fd016", "#e8ffe8"],
+      startVelocity: 45,
       gravity: 0.8,
-      ticks: 200,
+      ticks: 220,
     })
 
     // Side cannons
     setTimeout(() => {
-      confetti({ particleCount: 40, angle: 60, spread: 60, origin: { x: 0, y: 0.6 }, colors: ["#FFD700", "#8B5CF6", "#00FF88"] })
-      confetti({ particleCount: 40, angle: 120, spread: 60, origin: { x: 1, y: 0.6 }, colors: ["#FFD700", "#8B5CF6", "#00FF88"] })
+      confetti({ particleCount: 50, angle: 60, spread: 65, origin: { x: 0, y: 0.6 }, colors: ["#ffffff", "#10b723", "#2fd016"] })
+      confetti({ particleCount: 50, angle: 120, spread: 65, origin: { x: 1, y: 0.6 }, colors: ["#ffffff", "#10b723", "#2fd016"] })
     }, 300)
 
     // Sustained sparkle
     const frame = () => {
       confetti({
-        particleCount: 2,
+        particleCount: 3,
         angle: 60,
         spread: 55,
         origin: { x: 0, y: 0.65 },
-        colors: ["#FFD700", "#FFA500"],
+        colors: ["#ffffff", "#10b723"],
       })
       confetti({
-        particleCount: 2,
+        particleCount: 3,
         angle: 120,
         spread: 55,
         origin: { x: 1, y: 0.65 },
-        colors: ["#FFD700", "#FFA500"],
+        colors: ["#ffffff", "#10b723"],
       })
       if (Date.now() < end) requestAnimationFrame(frame)
     }
@@ -485,11 +485,11 @@ export function PaymentVerifier() {
     setIsExiting(true)
     // Final confetti pop
     confetti({
-      particleCount: 60,
-      spread: 80,
+      particleCount: 80,
+      spread: 90,
       origin: { x: 0.5, y: 0.5 },
-      colors: ["#FFD700", "#00FF88"],
-      startVelocity: 30,
+      colors: ["#ffffff", "#10b723", "#2fd016"],
+      startVelocity: 35,
     })
     setTimeout(() => {
       router.replace("/app")
@@ -524,7 +524,7 @@ export function PaymentVerifier() {
             transition={{ duration: 1.5 }}
           >
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[1000px] rounded-full"
-              style={{ background: "radial-gradient(circle, rgba(255,215,0,0.06) 0%, rgba(139,92,246,0.04) 30%, rgba(0,255,136,0.02) 50%, transparent 70%)" }}
+              style={{ background: "radial-gradient(circle, rgba(16,183,35,0.08) 0%, rgba(47,208,22,0.04) 30%, rgba(255,255,255,0.01) 50%, transparent 70%)" }}
             />
           </motion.div>
 
@@ -548,15 +548,15 @@ export function PaymentVerifier() {
                       className="w-20 h-20 rounded-full border-2 border-white/10"
                       animate={{
                         boxShadow: [
-                          "0 0 0 0 rgba(255,215,0,0)",
-                          "0 0 0 20px rgba(255,215,0,0.05)",
-                          "0 0 0 0 rgba(255,215,0,0)",
+                          "0 0 0 0 rgba(16,183,35,0)",
+                          "0 0 0 20px rgba(16,183,35,0.08)",
+                          "0 0 0 0 rgba(16,183,35,0)",
                         ],
                       }}
                       transition={{ duration: 2, repeat: Infinity }}
                     />
                     <motion.div
-                      className="absolute inset-0 rounded-full border-2 border-t-amber-400/60 border-r-violet-400/40 border-b-transparent border-l-transparent"
+                      className="absolute inset-0 rounded-full border-2 border-t-primary/70 border-r-primary/30 border-b-transparent border-l-transparent"
                       animate={{ rotate: 360 }}
                       transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
                     />
@@ -585,8 +585,8 @@ export function PaymentVerifier() {
                   exit={{ opacity: 0 }}
                   className="flex flex-col items-center gap-5 text-center"
                 >
-                  <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                    <AlertTriangle className="w-7 h-7 text-amber-400" />
+                  <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+                    <AlertTriangle className="w-7 h-7 text-white/50" />
                   </div>
                   <div className="space-y-2">
                     <p className="text-white/90 font-medium">
@@ -635,13 +635,13 @@ export function PaymentVerifier() {
                   {/* Welcome text */}
                   <div className="space-y-2">
                     <motion.div
-                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-amber-500/20 bg-amber-500/5"
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/25 bg-primary/10"
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: 0.2 }}
                     >
-                      <Sparkles className="h-3 w-3 text-amber-400" />
-                      <span className="text-[10px] font-semibold tracking-[0.2em] uppercase text-amber-400">
+                      <Sparkles className="h-3 w-3 text-primary" />
+                      <span className="text-[10px] font-semibold tracking-[0.2em] uppercase text-primary">
                         {t("Membership activated", "Abonnement active")}
                       </span>
                     </motion.div>
@@ -654,7 +654,7 @@ export function PaymentVerifier() {
                     >
                       <span className="text-white">{t("Welcome,", "Bienvenue,")}</span>
                       <br />
-                      <span className="bg-gradient-to-r from-amber-300 via-primary to-violet-400 bg-clip-text text-transparent">
+                      <span className="bg-gradient-to-r from-primary via-emerald-300 to-primary bg-clip-text text-transparent">
                         {t("ONE Pro member.", "membre ONE Pro.")}
                       </span>
                     </motion.h1>
@@ -683,9 +683,9 @@ export function PaymentVerifier() {
                     className="relative group cursor-pointer"
                   >
                     {/* Glow */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-amber-500/20 to-primary/20 rounded-xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                    <div className="absolute inset-0 bg-primary/20 rounded-xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
 
-                    <div className="relative h-13 px-10 bg-gradient-to-r from-amber-500/90 via-primary to-primary/90 rounded-xl flex items-center justify-center gap-3 font-semibold text-black text-sm transition-all overflow-hidden">
+                    <div className="relative h-13 px-10 bg-primary rounded-xl flex items-center justify-center gap-3 font-semibold text-black text-sm transition-all overflow-hidden">
                       {/* Shimmer */}
                       <motion.div
                         className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"

@@ -17,6 +17,7 @@ import {
   AIRoadmap,
   Milestone,
   DominoChain,
+  DominoRecord,
   ContractMeter,
   ContractState,
   PostItCollection,
@@ -204,6 +205,7 @@ interface AppStore {
   // Task Completion Actions
   completeRightNow: () => void
   completeTodayGoal: () => void
+  resetTodayGoal: () => void
   setNewRightNowAction: (action: string) => void
 
   // User tracking
@@ -565,6 +567,7 @@ export const useAppStore = create<AppStore>()(
           totalDominos,
           completedDominos: 0,
           lastSessionDate: undefined,
+          dominoHistory: [],
         }
 
         const contractMeter: ContractMeter = {
@@ -677,6 +680,7 @@ export const useAppStore = create<AppStore>()(
           totalDominos,
           completedDominos: 0,
           lastSessionDate: undefined,
+          dominoHistory: [],
         }
 
         const contractMeter: ContractMeter = {
@@ -892,10 +896,18 @@ export const useAppStore = create<AppStore>()(
         let updatedContractMeter = contractMeter
 
         if (dominoChain) {
+          const record: DominoRecord = {
+            id: generateId(),
+            date: now,
+            objectiveText: objective?.todayGoal ?? "",
+            type: "session",
+            sessionDuration: actualMinutes,
+          }
           updatedDominoChain = {
             ...dominoChain,
             completedDominos: dominoChain.completedDominos + 1,
             lastSessionDate: now,
+            dominoHistory: [...(dominoChain.dominoHistory ?? []), record],
           }
         }
 
@@ -1111,6 +1123,7 @@ export const useAppStore = create<AppStore>()(
           totalDominos,
           completedDominos: 0,
           lastSessionDate: undefined,
+          dominoHistory: [],
         }
 
         const contractMeter: ContractMeter = {
@@ -1241,17 +1254,24 @@ export const useAppStore = create<AppStore>()(
       },
 
       completeTodayGoal: () => {
-        const { dominoChain, contractMeter } = get()
+        const { dominoChain, contractMeter, objective } = get()
         const now = new Date().toISOString()
 
         let updatedDominoChain = dominoChain
         let updatedContractMeter = contractMeter
 
         if (dominoChain) {
+          const record: DominoRecord = {
+            id: generateId(),
+            date: now,
+            objectiveText: objective?.todayGoal ?? "",
+            type: "today_goal",
+          }
           updatedDominoChain = {
             ...dominoChain,
             completedDominos: dominoChain.completedDominos + 1,
             lastSessionDate: now,
+            dominoHistory: [...(dominoChain.dominoHistory ?? []), record],
           }
         }
 
@@ -1271,6 +1291,8 @@ export const useAppStore = create<AppStore>()(
           contractMeter: updatedContractMeter,
         })
       },
+
+      resetTodayGoal: () => set({ todayGoalCompleted: false }),
 
       setNewRightNowAction: (action) => {
         const { objective } = get()

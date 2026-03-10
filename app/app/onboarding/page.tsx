@@ -373,7 +373,7 @@ export default function OnboardingPage() {
   const currentDotIndex = progressDots.findIndex(d => d.steps.includes(step))
 
   // Determine if we should show the nav buttons
-  const showNav = step !== "generating" && step !== "intro" && step !== "name" && step !== "confront" && step !== "eliminate" && step !== "reveal"
+  const showNav = step !== "generating" && step !== "intro" && step !== "name" && step !== "confront" && step !== "eliminate" && step !== "reveal" && step !== "braindump"
 
   // ============================================
   // RENDER
@@ -1560,9 +1560,7 @@ export default function OnboardingPage() {
             <div className="flex gap-3">
               <Button
                 onClick={() => {
-                  if (step === "braindump" && goals.length >= 3) {
-                    setStep("confront")
-                  } else if (step === "context") {
+                  if (step === "context") {
                     setStep("steps")
                   } else if (step === "steps") {
                     setStep("constraints")
@@ -1573,7 +1571,6 @@ export default function OnboardingPage() {
                   }
                 }}
                 disabled={
-                  (step === "braindump" && goals.length < 3) ||
                   (step === "constraints" && hoursPerWeek <= 0) ||
                   isLoading
                 }

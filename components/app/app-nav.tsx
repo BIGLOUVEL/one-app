@@ -6,24 +6,14 @@ import { usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Target,
-  Plus,
-  GitBranch,
   Calendar,
-  Map,
   Timer,
-  Flame,
-  Shield,
-  ClipboardCheck,
   Lock,
   ChevronRight,
   Sparkles,
   TrendingUp,
   Settings,
   LogOut,
-  User,
-  History,
-  Library,
-  LayoutGrid,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAppStore } from "@/store/useAppStore"
@@ -54,28 +44,18 @@ import { Progress } from "@/components/ui/progress"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Logo } from "@/components/ui/logo"
 
-const mainNavItems = [
-  { href: "/app", label: "Dashboard", icon: Target, description: "Your ONE thing", color: "primary" },
-  { href: "/app/define", label: "Define", icon: Plus, description: "Set objective", color: "primary" },
-]
-
-const systemNavItems = [
-  { href: "/app/domino", label: "Domino", icon: GitBranch, description: "Progress & alignment", color: "violet" },
-  { href: "/app/timetable", label: "Timetable", icon: LayoutGrid, description: "Schedule analysis", color: "cyan" },
-  { href: "/app/411", label: "4-1-1", icon: Calendar, description: "Weekly goals", color: "cyan" },
-  { href: "/app/gps", label: "GPS", icon: Map, description: "Purpose & goals", color: "orange" },
-]
-
-const focusNavItems = [
-  { href: "/app/focus", label: "Focus", icon: Timer, description: "Deep work", color: "primary" },
-  { href: "/app/sessions", label: "My Library", icon: Library, description: "Sessions & Post-its", color: "violet" },
-  { href: "/app/habit", label: "66 Days", icon: Flame, description: "Build habit", color: "orange" },
-  { href: "/app/shield", label: "Shield", icon: Shield, description: "Block thieves", color: "cyan" },
-  { href: "/app/review", label: "Review", icon: ClipboardCheck, description: "Reflect", color: "violet" },
+// ─── 5 CORE NAV ITEMS ───────────────────────────────────────────────────────
+// Max 5. Daily touchpoints only. Everything else → Settings or hidden.
+const coreNavItems = [
+  { href: "/app",         label: "Home",         icon: Target,        description: "Your ONE thing — right now",  color: "primary" },
+  { href: "/app/define",  label: "My Objective", icon: Lock,          description: "Where you are & why it matters", color: "primary" },
+  { href: "/app/focus",   label: "Focus",        icon: Timer,         description: "Deep work session",           color: "primary" },
+  { href: "/app/411",     label: "Plan",         icon: Calendar,      description: "Week & month goals",          color: "cyan" },
+  { href: "/app/habit",   label: "Progress",     icon: TrendingUp,    description: "66-day habit & momentum",     color: "orange" },
 ]
 
 function NavItem({ item, isActive, isLocked }: {
-  item: typeof mainNavItems[0],
+  item: typeof coreNavItems[0],
   isActive: boolean,
   isLocked: boolean
 }) {
@@ -293,59 +273,17 @@ function AppSidebarContent() {
         </Link>
       </SidebarHeader>
 
-      {/* Content */}
+      {/* Content — 5 items, no groups, always labeled */}
       <SidebarContent className="px-2 group-data-[collapsible=icon]:px-0">
-        {/* Main */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground/60 px-2 mb-1">
-            Main
-          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainNavItems.map((item) => (
+              {coreNavItems.map((item) => (
                 <NavItem
                   key={item.href}
                   item={item}
-                  isActive={pathname === item.href}
+                  isActive={pathname === item.href || (item.href !== "/app" && pathname.startsWith(item.href))}
                   isLocked={locked}
-                />
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* System */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground/60 px-2 mb-1">
-            System
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {systemNavItems.map((item) => (
-                <NavItem
-                  key={item.href}
-                  item={item}
-                  isActive={pathname === item.href}
-                  isLocked={false}
-                />
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Focus */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground/60 px-2 mb-1">
-            Focus
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {focusNavItems.map((item) => (
-                <NavItem
-                  key={item.href}
-                  item={item}
-                  isActive={pathname === item.href}
-                  isLocked={false}
                 />
               ))}
             </SidebarMenu>
@@ -453,11 +391,11 @@ export function MobileNav() {
   const pathname = usePathname()
 
   const mobileItems = [
-    { href: "/app", label: "Focus", icon: Target, color: "primary" },
-    { href: "/app/domino", label: "Path", icon: GitBranch, color: "violet" },
-    { href: "/app/focus", label: "Session", icon: Timer, color: "primary" },
-    { href: "/app/habit", label: "Habit", icon: Flame, color: "orange" },
-    { href: "/app/review", label: "Review", icon: ClipboardCheck, color: "cyan" },
+    { href: "/app",        label: "Home",     icon: Target,     color: "primary" },
+    { href: "/app/define", label: "Objective", icon: Lock,      color: "primary" },
+    { href: "/app/focus",  label: "Focus",    icon: Timer,      color: "primary" },
+    { href: "/app/411",    label: "Plan",     icon: Calendar,   color: "cyan" },
+    { href: "/app/habit",  label: "Progress", icon: TrendingUp, color: "orange" },
   ]
 
   return (

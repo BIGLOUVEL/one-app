@@ -35,6 +35,7 @@ import { useHasSyncedRemote } from "@/hooks/use-supabase-sync"
 import { AIInsights } from "@/components/app/ai-insights"
 import { cn } from "@/lib/utils"
 import { EnergyWindowStrip } from "@/components/app/energy-window"
+import { FocusingQuestionDrawer } from "@/components/app/focusing-question-drawer"
 
 // ============================================
 // UTILITY FUNCTIONS
@@ -51,11 +52,11 @@ function getProjectStatus(
   const delta = progress - expectedProgress
 
   if (delta >= -5) {
-    return { status: "on_track", label: lang === 'fr' ? "En bonne voie" : "On track", color: "emerald" }
+    return { status: "on_track", label: lang === 'fr' ? "Dans le rythme" : "On track", color: "emerald" }
   } else if (delta >= -20) {
-    return { status: "at_risk", label: lang === 'fr' ? "Attention requise" : "Attention required", color: "amber" }
+    return { status: "at_risk", label: lang === 'fr' ? "Rattraper aujourd'hui" : "Catch up today", color: "amber" }
   } else {
-    return { status: "off_track", label: lang === 'fr' ? "Hors piste" : "Off track", color: "red" }
+    return { status: "off_track", label: lang === 'fr' ? "Session urgente" : "Needs a session", color: "amber" }
   }
 }
 
@@ -195,9 +196,11 @@ function HeroSection({
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <Clock className="h-3 w-3" />
-                  {daysRemaining > 0 ? `${daysRemaining} ${t('days remaining', 'jours restants')}` : t("Deadline reached", "Deadline atteinte")}
+                  {daysRemaining > 0
+                    ? t(`Day ${totalDays - daysRemaining} of ${totalDays}`, `Jour ${totalDays - daysRemaining} sur ${totalDays}`)
+                    : t("Goal window closed", "Fenêtre d'objectif fermée")}
                 </span>
-                <span className="tabular-nums">{totalDays - daysRemaining}/{totalDays}{t('d', 'j')}</span>
+                <span className="tabular-nums text-muted-foreground/60">{daysRemaining > 0 ? `${daysRemaining}d left` : ""}</span>
               </div>
               <div className="h-1 w-full bg-white/[0.06] rounded-full overflow-hidden">
                 <motion.div
@@ -889,6 +892,7 @@ export default function DashboardPage() {
   const t = (en: string, fr: string) => lang === 'fr' ? fr : en
 
   const [showAbandonModal, setShowAbandonModal] = useState(false)
+  const [showFocusingQuestion, setShowFocusingQuestion] = useState(false)
   const [lastMilestone, setLastMilestone] = useState<number>(() => {
     const progress = objective?.progress ?? 0
     const milestones = [25, 50, 75, 100]
@@ -993,8 +997,74 @@ export default function DashboardPage() {
     )
   }
 
-  // Real data
+  // Compute early so completed state can use them
   const objectiveSessions = sessions.filter(s => s.objectiveId === objective.id)
+
+  // ── COMPLETED STATE ─────────────────────────────────────────────────────────
+  if (objective.status === "completed") {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-lg w-full text-center space-y-8"
+        >
+          {/* Icon */}
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
+            className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 border border-primary/20"
+          >
+            <CheckCircle2 className="h-10 w-10 text-primary" />
+          </motion.div>
+
+          {/* Message */}
+          <div className="space-y-3">
+            <h1 className="text-3xl font-bold tracking-tight">
+              {t("Objective complete.", "Objectif accompli.")}
+            </h1>
+            <p className="text-muted-foreground leading-relaxed">
+              <span className="text-foreground font-medium">&ldquo;{objective.somedayGoal || objective.title}&rdquo;</span>
+              <br />
+              {t(
+                "You stayed locked. You executed. One domino at a time.",
+                "Tu es resté verrouillé. Tu as exécuté. Un domino à la fois."
+              )}
+            </p>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { label: t("Sessions", "Sessions"), value: objectiveSessions.length.toString() },
+              { label: t("Days", "Jours"), value: dashboardData.totalDays - dashboardData.daysRemaining + "d" },
+              { label: t("Dominos", "Dominos"), value: (dominoChain?.completedDominos ?? 0).toString() },
+            ].map(stat => (
+              <div key={stat.label} className="liquid-glass p-4 text-center">
+                <p className="text-xl font-bold">{stat.value}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA */}
+          <Link href="/app/onboarding">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full h-14 rounded-xl bg-primary text-primary-foreground font-semibold text-base flex items-center justify-center gap-2"
+            >
+              {t("Define my next ONE Thing", "Définir mon prochain ONE Thing")}
+              <ArrowRight className="h-5 w-5" />
+            </motion.button>
+          </Link>
+        </motion.div>
+      </div>
+    )
+  }
+
+  // Real data (objectiveSessions already computed above)
   const completedSessions = objectiveSessions.length
   // Only count ACTUAL time worked (from session start to end), never the planned duration
   const totalFocusMinutes = objectiveSessions.reduce((acc, s) => acc + (s.actualDuration ?? 0), 0)
@@ -1086,42 +1156,61 @@ export default function DashboardPage() {
             weekGoal={objective.weekGoal}
           />
           <div className="space-y-5">
-            <TrajectoryCard
-              progress={objective.progress}
-              daysElapsed={dashboardData.daysElapsed}
-              totalDays={dashboardData.totalDays}
-              delta={dashboardData.delta}
-            />
+            {/* Trajectory — shown only after 3 sessions & 7 days to avoid punishing new users */}
+            {completedSessions >= 3 && dashboardData.daysElapsed >= 7 ? (
+              <TrajectoryCard
+                progress={objective.progress}
+                daysElapsed={dashboardData.daysElapsed}
+                totalDays={dashboardData.totalDays}
+                delta={dashboardData.delta}
+              />
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="liquid-glass p-5 flex flex-col items-center justify-center gap-2 text-center min-h-[120px]"
+              >
+                <TrendingUp className="h-5 w-5 text-muted-foreground/30" />
+                <p className="text-sm text-muted-foreground/50">
+                  {t("Build your rhythm first.", "Construis ton rythme d'abord.")}
+                </p>
+                <p className="text-xs text-muted-foreground/30">
+                  {t(`Trajectory unlocks after 3 sessions · ${Math.max(0, 3 - completedSessions)} to go`, `Trajectoire après 3 sessions · encore ${Math.max(0, 3 - completedSessions)}`)}
+                </p>
+              </motion.div>
+            )}
             <InsightCard text={generateInsight()} />
           </div>
         </div>
 
-        {/* AI Insights */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-        >
-          <AIInsights />
-        </motion.div>
-
-        {/* Quick Nav */}
-        <QuickNav />
-
-        {/* The Question */}
+        {/* The Question — clickable, opens drawer */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
           className="text-center py-4"
         >
-          <p className="text-sm text-muted-foreground/50 italic leading-relaxed max-w-lg mx-auto">
+          <button
+            onClick={() => setShowFocusingQuestion(true)}
+            className="group text-sm text-muted-foreground/40 italic leading-relaxed max-w-lg mx-auto hover:text-muted-foreground/70 transition-colors cursor-pointer"
+          >
             {t(
               '"What is the ONE thing I can do, such that by doing it, everything else will become easier or unnecessary?"',
               '"Quelle est la SEULE chose que je puisse faire, telle qu\'en la faisant, tout le reste deviendra plus simple ou inutile ?"'
             )}
-          </p>
+            <span className="block text-[10px] text-muted-foreground/30 mt-1 group-hover:text-muted-foreground/50 transition-colors not-italic tracking-wider uppercase">
+              {t("Tap to reflect", "Appuyer pour réfléchir")}
+            </span>
+          </button>
         </motion.div>
+
+        {/* Focusing Question Drawer */}
+        <FocusingQuestionDrawer
+          open={showFocusingQuestion}
+          onClose={() => setShowFocusingQuestion(false)}
+          objectiveTitle={objective.somedayGoal || objective.title}
+        />
 
         {/* Abandon */}
         <motion.div

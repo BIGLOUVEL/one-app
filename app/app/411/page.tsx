@@ -174,9 +174,9 @@ export default function FourOneOnePage() {
           className="flex items-center justify-between"
         >
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">4-1-1 Planning</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">Plan</h1>
             <p className="text-muted-foreground">
-              Align your year, month, and weeks with your ONE thing
+              Break your ONE thing into yearly, monthly & weekly outcomes
             </p>
           </div>
           <AnimatePresence>

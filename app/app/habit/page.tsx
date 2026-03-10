@@ -153,7 +153,7 @@ export default function HabitPage() {
                 <IconFlame size="xl" className="drop-shadow-[0_0_12px_rgba(0,255,136,0.4)]" />
               </div>
             </div>
-            <h1 className="text-3xl font-bold">66-Day Challenge</h1>
+            <h1 className="text-3xl font-bold">Progress</h1>
             <p className="text-muted-foreground">
               Research shows it takes an average of 66 days to form a lasting habit.
               Commit to daily focus sessions on your ONE thing.
@@ -220,7 +220,7 @@ export default function HabitPage() {
         >
           <div className="flex items-center justify-center gap-3">
             <IconFlame size="lg" className="drop-shadow-[0_0_10px_rgba(249,115,22,0.4)]" />
-            <h1 className="text-2xl sm:text-3xl font-bold">66-Day Challenge</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">Progress</h1>
           </div>
           <p className="text-muted-foreground">
             {habitChallenge.minimumSessionMinutes} min/day minimum

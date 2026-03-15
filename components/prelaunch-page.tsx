@@ -6,13 +6,50 @@ import { useRouter } from "next/navigation"
 import { Loader2, ArrowRight, CheckCircle2 } from "lucide-react"
 import { Logo } from "@/components/ui/logo"
 
-// ColorBends uses Three.js — client only
 const ColorBends = dynamic(() => import("@/components/ColorBends"), { ssr: false }) as any
 
 const ADMIN_PASSWORD = "EARLYADOPTER"
+// Launch: 22 March 2026, 18:00 Paris (CET = UTC+1)
+const LAUNCH_DATE = new Date("2026-03-22T17:00:00.000Z")
+
+function useCountdown(target: Date) {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
+
+  useEffect(() => {
+    const tick = () => {
+      const diff = Math.max(0, target.getTime() - Date.now())
+      setTimeLeft({
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((diff % (1000 * 60)) / 1000),
+      })
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [target])
+
+  return timeLeft
+}
+
+function CountdownUnit({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-2xl border border-white/[0.08] bg-black/40 backdrop-blur-sm overflow-hidden">
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+        <span className="text-2xl sm:text-3xl font-black tabular-nums tracking-tight text-white">
+          {String(value).padStart(2, "0")}
+        </span>
+      </div>
+      <span className="text-[9px] uppercase tracking-[0.25em] text-white/25 font-medium">{label}</span>
+    </div>
+  )
+}
 
 export function PreLaunchPage() {
   const router = useRouter()
+  const countdown = useCountdown(LAUNCH_DATE)
 
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -74,6 +111,7 @@ export function PreLaunchPage() {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-[#050505]">
+      {/* Background */}
       <div className="absolute inset-0 z-0">
         <ColorBends
           rotation={45}
@@ -89,10 +127,11 @@ export function PreLaunchPage() {
           noise={0.1}
         />
       </div>
-
       <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
 
       <div className="relative z-20 flex min-h-screen flex-col items-center justify-center px-6 py-16">
+
+        {/* Logo — triple-click reveals admin bypass */}
         <button
           onClick={handleLogoClick}
           className="mb-10 cursor-default select-none outline-none"
@@ -124,7 +163,23 @@ export function PreLaunchPage() {
           Inspired by <span className="italic text-white/35">&ldquo;The ONE Thing&rdquo;</span> — Gary Keller
         </p>
 
-        {/* Form */}
+        {/* Countdown */}
+        <div className="mb-6 flex items-start gap-3 sm:gap-4">
+          <CountdownUnit value={countdown.days} label="days" />
+          <span className="mt-4 sm:mt-5 text-2xl sm:text-3xl font-thin text-white/20 select-none">:</span>
+          <CountdownUnit value={countdown.hours} label="hours" />
+          <span className="mt-4 sm:mt-5 text-2xl sm:text-3xl font-thin text-white/20 select-none">:</span>
+          <CountdownUnit value={countdown.minutes} label="min" />
+          <span className="mt-4 sm:mt-5 text-2xl sm:text-3xl font-thin text-white/20 select-none">:</span>
+          <CountdownUnit value={countdown.seconds} label="sec" />
+        </div>
+
+        {/* Launch date label */}
+        <p className="mb-10 text-center text-[11px] uppercase tracking-[0.2em] text-white/20">
+          22 March 2026 · 18h00 Paris
+        </p>
+
+        {/* Waitlist */}
         {isSuccess ? (
           <div className="flex flex-col items-center gap-3 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full border border-primary/30 bg-primary/10">
@@ -150,7 +205,10 @@ export function PreLaunchPage() {
                 disabled={isLoading}
                 className="flex h-12 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-60"
               >
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><span>Join</span><ArrowRight className="h-4 w-4" /></>}
+                {isLoading
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <><span>Join</span><ArrowRight className="h-4 w-4" /></>
+                }
               </button>
             </div>
             {error && <p className="text-center text-xs text-red-400">{error}</p>}
@@ -158,6 +216,7 @@ export function PreLaunchPage() {
           </form>
         )}
 
+        {/* Hidden admin bypass */}
         {showAdminInput && (
           <form onSubmit={handleAdminSubmit} className="mt-12 flex flex-col items-center gap-2">
             <input
@@ -174,11 +233,8 @@ export function PreLaunchPage() {
         )}
       </div>
 
-      <div className="absolute bottom-6 left-0 right-0 z-20 flex items-center justify-center gap-5">
+      <div className="absolute bottom-6 left-0 right-0 z-20 flex justify-center">
         <p className="text-[11px] tracking-widest text-white/15 uppercase">ONE — Focus Operating System</p>
-        <span className="text-white/10">·</span>
-        <a href="/terms" className="text-[11px] text-white/15 hover:text-white/35 transition-colors">Terms</a>
-        <a href="/privacy" className="text-[11px] text-white/15 hover:text-white/35 transition-colors">Privacy</a>
       </div>
     </div>
   )

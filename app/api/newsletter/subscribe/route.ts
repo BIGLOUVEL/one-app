@@ -1,7 +1,6 @@
 export const dynamic = "force-dynamic"
 
 import { NextRequest, NextResponse } from "next/server"
-import { getBrevoContactsApi, BREVO_LIST_ID } from "@/lib/brevo"
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,18 +10,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Email required" }, { status: 400 })
     }
 
-    const contactsApi = getBrevoContactsApi()
-
-    await contactsApi.createContact({
-      email,
-      listIds: [BREVO_LIST_ID],
-      updateEnabled: true,
-    })
-
+    // Brevo removed — newsletter subscribe is a no-op
     return NextResponse.json({ success: true })
-  } catch (error: any) {
-    // Silent success even on error — newsletter is non-critical
-    console.error("Newsletter subscribe error:", error?.body || error)
+  } catch (error) {
+    console.error("Newsletter subscribe error:", error)
     return NextResponse.json({ success: true })
   }
 }

@@ -1,5 +1,13 @@
 export type ObjectiveStatus = "active" | "completed" | "failed"
 
+// Simple user-defined milestone for the 4-level hierarchy
+export interface UserMilestone {
+  id: string
+  title: string
+  completed: boolean
+  completedAt?: string
+}
+
 // Core Objective with cascade from "Goal Setting to the Now"
 export interface Objective {
   id: string
@@ -10,6 +18,9 @@ export interface Objective {
   weekGoal: string          // This week's ONE thing
   todayGoal: string         // Today's ONE thing
   rightNowAction: string    // Immediate next action
+
+  // 4-level hierarchy: Objective → Milestone → Today → Next Action
+  userMilestones?: UserMilestone[]
 
   // Legacy fields for compatibility
   title: string             // = todayGoal for display

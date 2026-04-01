@@ -3,54 +3,14 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
-import { Loader2, ArrowRight, CheckCircle2 } from "lucide-react"
-import { Logo } from "@/components/ui/logo"
+import { Loader2, ArrowRight, CheckCircle2, Gift } from "lucide-react"
 
 const ColorBends = dynamic(() => import("@/components/ColorBends"), { ssr: false }) as any
 
 const ADMIN_PASSWORD = "EARLYADOPTER"
-// Launch: 22 March 2026, 18:00 Paris (CET = UTC+1)
-const LAUNCH_DATE = new Date("2026-03-22T17:00:00.000Z")
-
-function useCountdown(target: Date) {
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
-
-  useEffect(() => {
-    const tick = () => {
-      const diff = Math.max(0, target.getTime() - Date.now())
-      setTimeLeft({
-        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-        minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
-        seconds: Math.floor((diff % (1000 * 60)) / 1000),
-      })
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [target])
-
-  return timeLeft
-}
-
-function CountdownUnit({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="flex flex-col items-center gap-1.5">
-      <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-2xl border border-white/[0.08] bg-black/40 backdrop-blur-sm overflow-hidden">
-        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-        <span className="text-2xl sm:text-3xl font-black tabular-nums tracking-tight text-white">
-          {String(value).padStart(2, "0")}
-        </span>
-      </div>
-      <span className="text-[9px] uppercase tracking-[0.25em] text-white/25 font-medium">{label}</span>
-    </div>
-  )
-}
 
 export function PreLaunchPage() {
   const router = useRouter()
-  const countdown = useCountdown(LAUNCH_DATE)
-
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
@@ -66,7 +26,7 @@ export function PreLaunchPage() {
   const handleLogoClick = useCallback(() => {
     logoClickCount.current += 1
     if (logoClickTimer.current) clearTimeout(logoClickTimer.current)
-    logoClickTimer.current = setTimeout(() => { logoClickCount.current = 0 }, 600)
+    logoClickTimer.current = setTimeout(() => { logoClickCount.current = 0 }, 1500)
     if (logoClickCount.current >= 3) {
       logoClickCount.current = 0
       setShowAdminInput(true)
@@ -131,22 +91,17 @@ export function PreLaunchPage() {
 
       <div className="relative z-20 flex min-h-screen flex-col items-center justify-center px-6 py-16">
 
-        {/* Logo — triple-click reveals admin bypass */}
+        {/* Badge — triple-click reveals admin bypass */}
         <button
           onClick={handleLogoClick}
-          className="mb-10 cursor-default select-none outline-none"
+          className="mb-5 cursor-default select-none outline-none"
           tabIndex={-1}
           aria-hidden
         >
-          <Logo size="xl" className="drop-shadow-[0_0_24px_rgba(47,208,22,0.5)]" />
-        </button>
-
-        {/* Badge */}
-        <div className="mb-5">
           <span className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-primary">
             Coming soon
           </span>
-        </div>
+        </button>
 
         {/* Title */}
         <h1 className="mb-4 text-center text-5xl font-black leading-[1.05] tracking-tight text-white sm:text-6xl">
@@ -163,21 +118,13 @@ export function PreLaunchPage() {
           Inspired by <span className="italic text-white/35">&ldquo;The ONE Thing&rdquo;</span> — Gary Keller
         </p>
 
-        {/* Countdown */}
-        <div className="mb-6 flex items-start gap-3 sm:gap-4">
-          <CountdownUnit value={countdown.days} label="days" />
-          <span className="mt-4 sm:mt-5 text-2xl sm:text-3xl font-thin text-white/20 select-none">:</span>
-          <CountdownUnit value={countdown.hours} label="hours" />
-          <span className="mt-4 sm:mt-5 text-2xl sm:text-3xl font-thin text-white/20 select-none">:</span>
-          <CountdownUnit value={countdown.minutes} label="min" />
-          <span className="mt-4 sm:mt-5 text-2xl sm:text-3xl font-thin text-white/20 select-none">:</span>
-          <CountdownUnit value={countdown.seconds} label="sec" />
+        {/* Early adopter incentive */}
+        <div className="mb-6 flex items-center gap-2.5 rounded-2xl border border-primary/25 bg-primary/[0.07] px-4 py-3 backdrop-blur-sm">
+          <Gift className="h-4 w-4 shrink-0 text-primary" />
+          <p className="text-[12px] font-medium text-white/75">
+            Early adopters get <span className="text-primary font-semibold">the first month free</span>
+          </p>
         </div>
-
-        {/* Launch date label */}
-        <p className="mb-10 text-center text-[11px] uppercase tracking-[0.2em] text-white/20">
-          22 March 2026 · 18h00 Paris
-        </p>
 
         {/* Waitlist */}
         {isSuccess ? (

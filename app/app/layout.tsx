@@ -74,7 +74,11 @@ function AppHeader() {
 
 function AppMobileNav() {
   const { currentSession } = useAppStore()
+  const hasHydrated = useHasHydrated()
   const pathname = usePathname()
+
+  // Don't render until hydrated (prevents SidebarProvider prerender crash)
+  if (!hasHydrated) return null
 
   // Hide mobile nav during active focus session (bunker mode) or onboarding
   if (currentSession) return null

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Mountain,
@@ -83,7 +83,7 @@ export function CascadeView() {
   const { objective, updateCascade } = useAppStore()
   const lang = useAppStore(s => s.language)
   const t = (en: string, fr: string) => lang === 'fr' ? fr : en
-  const cascadeLevels = getCascadeLevels(lang)
+  const cascadeLevels = useMemo(() => getCascadeLevels(lang), [lang])
   const [editingLevel, setEditingLevel] = useState<string | null>(null)
   const [editValue, setEditValue] = useState("")
   const [showAlignmentCheck, setShowAlignmentCheck] = useState(false)

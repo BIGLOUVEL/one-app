@@ -179,7 +179,6 @@ interface AppStore {
   startSession: (duration?: number) => void
   endSession: (reflection?: string, nextAction?: string, actualMinutes?: number) => void
   addDistraction: (text: string) => void
-  markDistractionHandled: (distractionId: string) => void
 
   // Habit Challenge Actions
   initHabitChallenge: (minimumMinutes: number) => void
@@ -193,7 +192,6 @@ interface AppStore {
 
   // Domino & Contract Actions
   initDominoContract: () => void
-  advanceDomino: () => void
   updateContractState: () => ContractState
   setPlannedSessionsPerDay: (count: number) => void
 
@@ -201,9 +199,17 @@ interface AppStore {
   setLastDailyCheckDate: (date: string) => void
   needsDailyCheck: () => boolean
   setNeedsRecenter: (value: boolean) => void
+  milestoneDismissed: boolean
+  dismissMilestone: () => void
+
+  // User Milestone Actions (4-level hierarchy)
+  addUserMilestone: (title: string) => void
+  completeUserMilestone: (id: string) => void
+  removeUserMilestone: (id: string) => void
 
   // Task Completion Actions
   completeRightNow: () => void
+  uncompleteRightNow: () => void
   completeTodayGoal: () => void
   resetTodayGoal: () => void
   setNewRightNowAction: (action: string) => void
@@ -260,6 +266,7 @@ export const useAppStore = create<AppStore>()(
       // Domino Effect
       lastDailyCheckDate: null,
       needsRecenter: false,
+      milestoneDismissed: false,
 
       // Task completion
       rightNowCompleted: false,
@@ -969,10 +976,12 @@ export const useAppStore = create<AppStore>()(
 
           for (let i = 0; i < sortedDays.length; i++) {
             const dayDate = new Date(sortedDays[i].date)
+            dayDate.setHours(0, 0, 0, 0)
             const expectedDate = new Date()
+            expectedDate.setHours(0, 0, 0, 0)
             expectedDate.setDate(expectedDate.getDate() - i)
 
-            if (dayDate.toDateString() === expectedDate.toDateString()) {
+            if (dayDate.getTime() === expectedDate.getTime()) {
               streak++
             } else {
               break
@@ -980,6 +989,13 @@ export const useAppStore = create<AppStore>()(
           }
 
           set({
+            currentSession: null,
+            sessions: [...sessions, endedSession],
+            dominoChain: updatedDominoChain,
+            contractMeter: updatedContractMeter,
+            sessionPostIts: [],
+            objective: updatedObjective,
+            needsRecenter: true,
             habitChallenge: {
               ...habitChallenge,
               days: updatedDays,
@@ -987,6 +1003,7 @@ export const useAppStore = create<AppStore>()(
               longestStreak: Math.max(habitChallenge.longestStreak, streak),
             },
           })
+          return
         }
 
         set({
@@ -994,7 +1011,7 @@ export const useAppStore = create<AppStore>()(
           sessions: [...sessions, endedSession],
           dominoChain: updatedDominoChain,
           contractMeter: updatedContractMeter,
-          sessionPostIts: [], // Clear post-its after saving to session
+          sessionPostIts: [],
           objective: updatedObjective,
           needsRecenter: true,
         })
@@ -1019,19 +1036,6 @@ export const useAppStore = create<AppStore>()(
         })
       },
 
-      markDistractionHandled: (distractionId) => {
-        const { currentSession } = get()
-        if (!currentSession) return
-
-        set({
-          currentSession: {
-            ...currentSession,
-            distractions: currentSession.distractions.map((d) =>
-              d.id === distractionId ? { ...d, handled: true } : d
-            ),
-          },
-        })
-      },
 
       // Habit Challenge Actions
       initHabitChallenge: (minimumMinutes) => {
@@ -1136,28 +1140,6 @@ export const useAppStore = create<AppStore>()(
         set({ dominoChain, contractMeter })
       },
 
-      advanceDomino: () => {
-        const { dominoChain, contractMeter } = get()
-        if (!dominoChain || !contractMeter) return
-
-        const now = new Date().toISOString()
-
-        set({
-          dominoChain: {
-            ...dominoChain,
-            completedDominos: dominoChain.completedDominos + 1,
-            lastSessionDate: now,
-          },
-          contractMeter: {
-            ...contractMeter,
-            state: "stable",
-            lastActivityDate: now,
-            tensionLevel: Math.max(0, contractMeter.tensionLevel - 20),
-            daysInactive: 0,
-          },
-        })
-      },
-
       updateContractState: () => {
         const { objective, contractMeter, dominoChain } = get()
         if (!objective || !contractMeter) return "stable"
@@ -1213,22 +1195,20 @@ export const useAppStore = create<AppStore>()(
       },
 
       setPlannedSessionsPerDay: (count) => {
-        set({ plannedSessionsPerDay: Math.max(1, Math.min(5, count)) })
+        const clamped = Math.max(1, Math.min(5, count))
+        set({ plannedSessionsPerDay: clamped })
         // Recalculate dominos if objective exists
-        const { objective, plannedSessionsPerDay } = get()
-        if (objective) {
+        const { objective, dominoChain } = get()
+        if (objective && dominoChain) {
           const now = new Date()
           const deadline = new Date(objective.deadline)
           const daysUntilDeadline = Math.max(1, Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
-          const { dominoChain } = get()
-          if (dominoChain) {
-            set({
-              dominoChain: {
-                ...dominoChain,
-                totalDominos: daysUntilDeadline * count,
-              },
-            })
-          }
+          set({
+            dominoChain: {
+              ...dominoChain,
+              totalDominos: daysUntilDeadline * clamped,
+            },
+          })
         }
       },
 
@@ -1248,9 +1228,17 @@ export const useAppStore = create<AppStore>()(
         set({ needsRecenter: value })
       },
 
+      dismissMilestone: () => {
+        set({ milestoneDismissed: true })
+      },
+
       // Task Completion Actions
       completeRightNow: () => {
         set({ rightNowCompleted: true })
+      },
+
+      uncompleteRightNow: () => {
+        set({ rightNowCompleted: false })
       },
 
       completeTodayGoal: () => {
@@ -1293,6 +1281,47 @@ export const useAppStore = create<AppStore>()(
       },
 
       resetTodayGoal: () => set({ todayGoalCompleted: false }),
+
+      // User Milestone Actions
+      addUserMilestone: (title) => {
+        const { objective } = get()
+        if (!objective) return
+        const newMilestone = {
+          id: generateId(),
+          title,
+          completed: false,
+        }
+        set({
+          objective: {
+            ...objective,
+            userMilestones: [...(objective.userMilestones ?? []), newMilestone],
+          },
+        })
+      },
+
+      completeUserMilestone: (id) => {
+        const { objective } = get()
+        if (!objective) return
+        set({
+          objective: {
+            ...objective,
+            userMilestones: (objective.userMilestones ?? []).map(m =>
+              m.id === id ? { ...m, completed: true, completedAt: new Date().toISOString() } : m
+            ),
+          },
+        })
+      },
+
+      removeUserMilestone: (id) => {
+        const { objective } = get()
+        if (!objective) return
+        set({
+          objective: {
+            ...objective,
+            userMilestones: (objective.userMilestones ?? []).filter(m => m.id !== id),
+          },
+        })
+      },
 
       setNewRightNowAction: (action) => {
         const { objective } = get()

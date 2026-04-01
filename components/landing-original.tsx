@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { motion, useScroll, useTransform, useInView } from "framer-motion"
+import { motion, useScroll, useTransform, useInView, useSpring } from "framer-motion"
 import { ArrowRight, ArrowDown } from "lucide-react"
 import ElectricBorder from "@/components/ui/electric-border"
 import { useTheme, UITheme } from "@/components/theme-provider"
@@ -10,6 +10,7 @@ import { useRef, useEffect, useState } from "react"
 import dynamic from "next/dynamic"
 
 const ColorBends = dynamic(() => import("@/components/ColorBends"), { ssr: false }) as import("react").ComponentType<any>
+const FloatingLines = dynamic(() => import("@/components/FloatingLines"), { ssr: false }) as import("react").ComponentType<any>
 
 // ============================================
 // DATA
@@ -44,7 +45,7 @@ const systemTools = [
   },
 ]
 
-const smoothEase = [0.25, 0.46, 0.45, 0.94] as const
+const smoothEase = [0.16, 1, 0.3, 1] as const
 
 // ============================================
 // GRAIN OVERLAY
@@ -80,6 +81,20 @@ function HeroSection() {
       className="relative min-h-screen flex flex-col items-center justify-center px-5 overflow-hidden"
       style={{ opacity: heroOpacity }}
     >
+      {/* FloatingLines — hero only */}
+      <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.6, mixBlendMode: "screen" }}>
+        <FloatingLines
+          linesGradient={["#025019", "#ffffff", "#04a936"]}
+          animationSpeed={1}
+          interactive
+          bendRadius={5}
+          bendStrength={-0.5}
+          mouseDamping={0.05}
+          parallax
+          parallaxStrength={0.2}
+        />
+      </div>
+
       {/* ColorBends — hero only */}
       <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.55, mixBlendMode: "screen" }}>
         <ColorBends
@@ -232,23 +247,24 @@ function ProblemSection() {
     <section className="relative py-24 sm:py-32 lg:py-44 px-5">
       <div ref={ref} className="max-w-3xl mx-auto text-center space-y-5 sm:space-y-6">
         {lines.map((line, i) => (
-          <motion.p
-            key={i}
-            className={
-              line.highlight
-                ? "text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight"
-                : "text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium tracking-tight text-muted-foreground/40"
-            }
-            initial={{ opacity: 0, y: 25 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.7, delay: i * 0.2, ease: smoothEase }}
-          >
-            {line.highlight ? (
-              <>You lack <span className="text-primary">focus</span>.</>
-            ) : (
-              line.text
-            )}
-          </motion.p>
+          <div key={i} className="overflow-hidden">
+            <motion.p
+              className={
+                line.highlight
+                  ? "text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight"
+                  : "text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium tracking-tight text-muted-foreground/40"
+              }
+              initial={{ y: "110%" }}
+              animate={isInView ? { y: "0%" } : {}}
+              transition={{ duration: 0.9, delay: i * 0.18, ease: smoothEase }}
+            >
+              {line.highlight ? (
+                <>You lack <span className="text-primary">focus</span>.</>
+              ) : (
+                line.text
+              )}
+            </motion.p>
+          </div>
         ))}
 
         <motion.p
@@ -286,7 +302,7 @@ function BentoCard({
       animate={isInView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.6, delay: index * 0.08, ease: smoothEase }}
       whileHover={{ y: -3, transition: { duration: 0.25 } }}
-      className={`group relative rounded-2xl border border-white/[0.06] overflow-hidden transition-colors duration-500 hover:border-primary/20 ${
+      className={`group relative rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm overflow-hidden transition-colors duration-500 hover:border-primary/20 hover:bg-white/[0.04] ${
         isHero ? "md:col-span-1 md:row-span-2" : ""
       }`}
     >
@@ -400,7 +416,7 @@ function VideoSection({
                 {String(index).padStart(2, "0")}
               </span>
               <div className="flex-1 h-px bg-white/[0.06] max-w-[40px]" />
-              <span className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground/30">04</span>
+              <span className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground/30">03</span>
             </div>
 
             {/* Headline */}
@@ -440,12 +456,14 @@ function VideoSection({
             transition={{ duration: 0.85, delay: 0.1, ease: smoothEase }}
           >
             {/* Ambient glow */}
-            <div
+            <motion.div
               className="absolute -inset-6 rounded-3xl pointer-events-none"
               style={{
-                background: "radial-gradient(ellipse at center, hsla(150,100%,45%,0.07), transparent 65%)",
+                background: "radial-gradient(ellipse at center, hsla(150,100%,45%,0.09), transparent 65%)",
                 filter: "blur(40px)",
               }}
+              animate={{ opacity: [0.6, 1, 0.6], scale: [0.97, 1.03, 0.97] }}
+              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
             />
 
             {/* Video frame */}
@@ -704,14 +722,16 @@ function CTASection() {
           className="space-y-4"
         >
           <Link href="/login">
-            <motion.span
-              className="group inline-flex items-center gap-3 px-10 sm:px-14 py-4 sm:py-5 rounded-xl bg-primary/10 text-primary font-bold text-base sm:text-lg hover:bg-primary/15 transition-all"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-            >
-              STOP WORKING BLIND
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" />
-            </motion.span>
+            <ElectricBorder color="#00cc55" speed={0.6} chaos={0.15} borderRadius={12}>
+              <motion.span
+                className="group inline-flex items-center gap-3 px-10 sm:px-14 py-4 sm:py-5 rounded-xl bg-primary/10 text-primary font-bold text-base sm:text-lg hover:bg-primary/15 transition-all"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                STOP WORKING BLIND
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" />
+              </motion.span>
+            </ElectricBorder>
           </Link>
           <p className="text-xs text-muted-foreground/40">No credit card required</p>
         </motion.div>
@@ -727,6 +747,10 @@ export default function LandingPage() {
   const { setTheme } = useTheme()
   const savedThemeRef = useRef<string | null>(null)
   const [scrolled, setScrolled] = useState(false)
+
+  // Scroll progress bar
+  const { scrollYProgress } = useScroll()
+  const scaleX = useSpring(scrollYProgress, { stiffness: 120, damping: 30, restDelta: 0.001 })
 
   // Force modern theme
   useEffect(() => {
@@ -750,6 +774,12 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden selection:bg-primary/20">
       <GrainOverlay />
+
+      {/* Scroll progress bar */}
+      <motion.div
+        className="fixed top-0 left-0 right-0 h-[2px] bg-primary z-[300] origin-left"
+        style={{ scaleX }}
+      />
 
       {/* NAV */}
       <motion.header
@@ -811,6 +841,13 @@ export default function LandingPage() {
           subline="Success isn't about doing more. It's about choosing better."
           body="Identify the one objective that creates leverage, and let everything else fall into place."
           reverse
+        />
+        <VideoSection
+          videoSrc="/VIDEO HERO 3.webm"
+          index={3}
+          headline="See your trajectory."
+          subline="Most people work."
+          body="Few actually advance."
         />
         <SystemSection />
         <LockSection />

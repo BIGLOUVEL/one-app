@@ -1,7 +1,12 @@
 export const dynamic = "force-dynamic"
 
 import { NextRequest, NextResponse } from "next/server"
-import { getBrevoContactsApi, BREVO_LIST_ID } from "@/lib/brevo"
+import { createClient } from "@supabase/supabase-js"
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,17 +16,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Valid email required" }, { status: 400 })
     }
 
-    const contactsApi = getBrevoContactsApi()
+    const { error } = await supabase
+      .from("waitlist")
+      .insert({ email: email.toLowerCase().trim() })
 
-    await contactsApi.createContact({
-      email: email.toLowerCase().trim(),
-      listIds: [BREVO_LIST_ID],
-      updateEnabled: true,
-    })
+    if (error) {
+      // Duplicate email — not an error for the user
+      if (error.code === "23505") {
+        return NextResponse.json({ success: true })
+      }
+      console.error("[waitlist] supabase error:", error)
+      return NextResponse.json({ error: "Failed to save" }, { status: 500 })
+    }
 
     return NextResponse.json({ success: true })
-  } catch (err: any) {
-    console.error("[waitlist] brevo error:", err?.body || err)
+  } catch (err) {
+    console.error("[waitlist] error:", err)
     return NextResponse.json({ error: "Failed to save" }, { status: 500 })
   }
+}
+
+export async function GET() {
+  const { data, error } = await supabase
+    .from("waitlist")
+    .select("email, created_at")
+    .order("created_at", { ascending: false })
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ count: data.length, emails: data })
 }

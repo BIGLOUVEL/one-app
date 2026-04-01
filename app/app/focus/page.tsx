@@ -203,6 +203,10 @@ export default function FocusPage() {
     visualPrefs,
     updateCascade,
     setNeedsRecenter,
+    habitChallenge,
+    dominoChain,
+    sessions,
+    fourOneOne,
   } = useAppStore()
 
   const lang = useAppStore(s => s.language)
@@ -269,7 +273,7 @@ export default function FocusPage() {
     }
   }, [objective])
 
-  // Initialize
+  // Initialize — skip idle gate, go straight to bunker-checklist
   useEffect(() => {
     if (hasHydrated) {
       setIsLoading(false)
@@ -280,6 +284,9 @@ export default function FocusPage() {
         const remaining = Math.max(0, currentSession.duration * 60 - elapsed)
         setTimeLeft(remaining)
         setSessionState("active")
+      } else {
+        // No active session → jump directly to bunker checklist
+        setSessionState("bunker-checklist")
       }
     }
   }, [hasHydrated, currentSession])
@@ -532,7 +539,7 @@ export default function FocusPage() {
 
   const progress = timeLeft > 0 ? ((sessionDuration * 60 - timeLeft) / (sessionDuration * 60)) * 100 : 100
   const isImmersive = visualPrefs.immersiveFocus && (sessionState === "active" || sessionState === "paused")
-  const isBunkerLocked = sessionState !== "idle" && sessionState !== "recenter"
+  const isBunkerLocked = sessionState === "active" || sessionState === "paused" || sessionState === "reflection"
 
   return (
     <div
@@ -588,50 +595,6 @@ export default function FocusPage() {
 
       <div className="w-full max-w-2xl relative z-10">
         <AnimatePresence mode="wait">
-          {/* ============================================
-              IDLE STATE
-              ============================================ */}
-          {sessionState === "idle" && (
-            <motion.div
-              key="idle"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="text-center space-y-8"
-            >
-              <div className="space-y-4">
-                <div className="flex justify-center">
-                  <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
-                    <IconBolt size="lg" className="drop-shadow-[0_0_10px_rgba(16,185,129,0.4)]" />
-                  </div>
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-bold">Focus Session</h1>
-                <p className="text-muted-foreground">
-                  Deep work on your ONE thing.
-                </p>
-              </div>
-
-              <div className="liquid-glass p-6 text-left space-y-4">
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Today's ONE Thing</p>
-                  <p className="text-lg font-medium">{objective.todayGoal}</p>
-                </div>
-                <div className="pt-2 border-t border-white/10">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Right Now Action</p>
-                  <p className="text-emerald-400">{objective.rightNowAction}</p>
-                </div>
-              </div>
-
-              <Button
-                onClick={handleStartChecklist}
-                className="h-14 px-8 rounded-2xl text-base font-medium glow-green"
-              >
-                <Play className="mr-2 h-5 w-5" />
-                Enter Bunker Mode
-              </Button>
-            </motion.div>
-          )}
-
           {/* ============================================
               BUNKER CHECKLIST
               ============================================ */}
@@ -896,8 +859,8 @@ export default function FocusPage() {
                   disabled={!sessionObjective.trim()}
                   className="flex-1 h-14 rounded-2xl text-base font-medium glow-green"
                 >
-                  <Play className="mr-2 h-5 w-5" />
-                  Start {customDuration || sessionDuration} min Session
+                  <DoorClosed className="mr-2 h-5 w-5" />
+                  Enter Bunker Mode
                 </Button>
               </div>
             </motion.div>
@@ -1434,66 +1397,123 @@ export default function FocusPage() {
           {/* ============================================
               RECENTER STATE
               ============================================ */}
-          {sessionState === "recenter" && (
-            <motion.div
-              key="recenter"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="space-y-6"
-            >
-              <div className="text-center space-y-2">
-                <div className="flex justify-center mb-4">
-                  <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
-                    <IconTarget size="lg" className="drop-shadow-[0_0_10px_rgba(0,255,136,0.4)]" />
+          {sessionState === "recenter" && (() => {
+            const streak = habitChallenge?.currentStreak ?? 0
+            const totalSessions = sessions.filter(s => s.objectiveId === objective?.id).length
+            const dominosDone = dominoChain?.completedDominos ?? 0
+            // Week planning nudge: show if today is Monday OR if 4-1-1 has no outcomes for week 1
+            const isMonday = new Date().getDay() === 1
+            const currentWeekOutcomes = fourOneOne?.weeks?.[0]?.outcomes?.filter(Boolean) ?? []
+            const weekNotPlanned = !fourOneOne || currentWeekOutcomes.length === 0
+            const showWeekNudge = isMonday || weekNotPlanned
+
+            return (
+              <motion.div
+                key="recenter"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-5"
+              >
+                {/* Session saved header */}
+                <div className="text-center space-y-1">
+                  <div className="flex justify-center mb-3">
+                    <div className="relative p-3 rounded-2xl bg-primary/10 border border-primary/20">
+                      <div className="absolute inset-0 rounded-2xl bg-primary/5 blur-xl" />
+                      <svg className="w-7 h-7 text-primary relative" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  </div>
+                  <h1 className="text-2xl sm:text-3xl font-bold">{t("Session saved.", "Session enregistrée.")}</h1>
+                  <p className="text-muted-foreground text-sm">
+                    {t("A domino fell. Stay on track.", "Un domino est tombé. Reste dans le flow.")}
+                  </p>
+                </div>
+
+                {/* Stats row */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="liquid-glass p-3 rounded-xl text-center space-y-0.5">
+                    <p className="text-xl font-black text-orange-400">{streak > 0 ? `${streak}🔥` : "—"}</p>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50">{t("streak", "streak")}</p>
+                  </div>
+                  <div className="liquid-glass p-3 rounded-xl text-center space-y-0.5">
+                    <p className="text-xl font-black text-primary">{dominosDone}</p>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50">{t("dominos", "dominos")}</p>
+                  </div>
+                  <div className="liquid-glass p-3 rounded-xl text-center space-y-0.5">
+                    <p className="text-xl font-black">{totalSessions}</p>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50">{t("sessions", "sessions")}</p>
                   </div>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-bold">{t("Refocus", "Recentrage")}</h1>
-                <p className="text-muted-foreground">
-                  {t("One more domino. Before continuing, refocus.", "Un domino de plus. Avant de continuer, recentre-toi.")}
-                </p>
-              </div>
 
-              {/* Current cascade context */}
-              <div className="liquid-glass p-6 space-y-4">
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{t("Week objective", "Objectif de la semaine")}</p>
-                  <p className="text-base font-medium">{objective?.weekGoal}</p>
+                {/* Weekly planning nudge */}
+                {showWeekNudge && (
+                  <motion.button
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15 }}
+                    onClick={() => { handleConfirmRecenter(); router.push("/app/411") }}
+                    className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl border border-primary/20 bg-primary/[0.04] hover:bg-primary/[0.08] transition-colors group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        <svg className="w-3.5 h-3.5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <p className="text-xs font-semibold text-primary">
+                          {t("Plan your week", "Planifie ta semaine")}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground/50">
+                          {t("3 outcomes to define", "3 outcomes à définir")}
+                        </p>
+                      </div>
+                    </div>
+                    <svg className="w-4 h-4 text-primary/40 group-hover:text-primary/70 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </motion.button>
+                )}
+
+                {/* Current cascade context */}
+                <div className="liquid-glass p-5 space-y-3">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.2em] mb-1">{t("This week", "Cette semaine")}</p>
+                    <p className="text-sm font-medium leading-snug">{objective?.weekGoal}</p>
+                  </div>
+                  <div className="pt-3 border-t border-white/[0.06]">
+                    <p className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.2em] mb-1">{t("Today", "Aujourd'hui")}</p>
+                    <p className="text-sm font-medium leading-snug">{objective?.todayGoal}</p>
+                  </div>
                 </div>
-                <div className="pt-3 border-t border-white/10">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{t("Today's objective", "Objectif du jour")}</p>
-                  <p className="text-base font-medium">{objective?.todayGoal}</p>
+
+                {/* Next right-now action */}
+                <div className="space-y-2">
+                  <label className="text-xs text-muted-foreground/60 uppercase tracking-[0.15em]">
+                    {t("Next immediate action", "Prochaine action immédiate")}
+                  </label>
+                  <input
+                    type="text"
+                    value={newRightNowAction}
+                    onChange={(e) => setNewRightNowAction(e.target.value)}
+                    placeholder={t("What's next?", "Et maintenant ?")}
+                    className="w-full bg-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 border border-white/[0.06]"
+                    onKeyDown={(e) => { if (e.key === "Enter") handleConfirmRecenter() }}
+                    autoFocus
+                  />
                 </div>
-              </div>
 
-              {/* Next right-now action */}
-              <div className="liquid-glass p-6 space-y-3">
-                <label className="text-sm text-muted-foreground block">
-                  {t("What's your next immediate action?", "Quelle est ta prochaine action immédiate ?")}
-                </label>
-                <input
-                  type="text"
-                  value={newRightNowAction}
-                  onChange={(e) => setNewRightNowAction(e.target.value)}
-                  placeholder={t("Your next action...", "Ta prochaine action...")}
-                  className="w-full bg-white/5 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleConfirmRecenter()
-                  }}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {t("Leave as is if your action stays the same.", "Laisse tel quel si ton action reste la même.")}
-                </p>
-              </div>
-
-              <Button
-                onClick={handleConfirmRecenter}
-                className="w-full h-14 rounded-2xl text-base font-medium glow-green"
-              >
-                {t("Refocused. Continue.", "Recentré. Continuer.")}
-              </Button>
-            </motion.div>
-          )}
+                <Button
+                  onClick={handleConfirmRecenter}
+                  className="w-full h-12 rounded-2xl text-sm font-semibold glow-green"
+                >
+                  {t("Done. Back to home.", "Terminé. Retour.")}
+                </Button>
+              </motion.div>
+            )
+          })()}
         </AnimatePresence>
       </div>
 

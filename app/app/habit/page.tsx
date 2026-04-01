@@ -1,403 +1,505 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import {
-  Trophy,
-  Check,
-  AlertTriangle,
-  Calendar,
-  Sparkles,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { IconFlame, IconTarget } from "@/components/ui/custom-icons"
-import { useAppStore } from "@/store/useAppStore"
+import { ArrowRight, Sparkles, ChevronDown, Check, AlertTriangle } from "lucide-react"
+import { useAppStore, useHasHydrated } from "@/store/useAppStore"
+import { cn } from "@/lib/utils"
 
-const SESSION_OPTIONS = [
-  { value: 15, label: "15 min", description: "Light commitment" },
-  { value: 30, label: "30 min", description: "Moderate focus" },
-  { value: 50, label: "50 min", description: "Deep work" },
-]
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
 
-export default function HabitPage() {
-  const router = useRouter()
-  const {
-    objective,
-    habitChallenge,
-    initHabitChallenge,
-    markDayComplete,
-    getHabitProgress,
-  } = useAppStore()
+function toDateStr(d: Date) {
+  return d.toLocaleDateString("en-CA") // YYYY-MM-DD
+}
 
-  const [selectedMinutes, setSelectedMinutes] = useState(30)
-  const [isLoading, setIsLoading] = useState(true)
+function getWeekStart(d: Date) {
+  const day = d.getDay() // 0=Sun
+  const diff = (day === 0 ? -6 : 1) - day // Mon-based
+  const mon = new Date(d)
+  mon.setDate(d.getDate() + diff)
+  mon.setHours(0, 0, 0, 0)
+  return mon
+}
 
-  useEffect(() => {
-    setIsLoading(false)
-  }, [])
+const WEEKDAY_LABELS = ["L", "M", "M", "J", "V", "S", "D"]
+const MONTH_LABELS   = ["jan", "fév", "mar", "avr", "mai", "jun", "jul", "aoû", "sep", "oct", "nov", "déc"]
 
-  // Redirect if no objective
-  useEffect(() => {
-    if (!isLoading && !objective) {
-      router.replace("/app")
-    }
-  }, [objective, isLoading, router])
+// ─────────────────────────────────────────────────────────────────────────────
+// A — PACE HEBDO
+// ─────────────────────────────────────────────────────────────────────────────
+function PaceCard({ sessionDates }: { sessionDates: Set<string> }) {
+  const lang  = useAppStore(s => s.language)
+  const t     = (en: string, fr: string) => lang === "fr" ? fr : en
 
-  const progress = getHabitProgress()
+  const today     = new Date()
+  const weekStart = getWeekStart(today)
 
-  // Generate 66-day grid
-  const dayGrid = useMemo(() => {
-    if (!habitChallenge) return []
+  const days = Array.from({ length: 5 }, (_, i) => {
+    const d = new Date(weekStart)
+    d.setDate(weekStart.getDate() + i)
+    return { date: d, str: toDateStr(d), label: WEEKDAY_LABELS[i] }
+  })
 
-    const startDate = new Date(habitChallenge.startDate)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+  const doneThisWeek = days.filter(d => sessionDates.has(d.str)).length
+  const todayIdx     = Math.min(today.getDay() === 0 ? 4 : today.getDay() - 1, 4)
+  const target       = todayIdx + 1 // expected sessions up to today
 
-    return Array.from({ length: 66 }, (_, i) => {
-      const date = new Date(startDate)
-      date.setDate(startDate.getDate() + i)
-      date.setHours(0, 0, 0, 0)
+  const status: "on" | "risk" | "behind" =
+    doneThisWeek >= target   ? "on"
+    : doneThisWeek >= target - 1 ? "risk"
+    : "behind"
 
-      const dateStr = date.toISOString().split("T")[0]
-      const dayRecord = habitChallenge.days.find((d) => d.date === dateStr)
+  const pillClass = {
+    on:     "bg-primary/10 text-primary border-primary/20",
+    risk:   "bg-amber-500/10 text-amber-400 border-amber-500/20",
+    behind: "bg-red-500/10 text-red-400 border-red-500/20",
+  }[status]
 
-      const isToday = date.getTime() === today.getTime()
-      const isPast = date.getTime() < today.getTime()
-      const isFuture = date.getTime() > today.getTime()
+  const pillLabel = {
+    on:     t("On pace", "En rythme"),
+    risk:   t("Slowing", "Ralentit"),
+    behind: t("Behind",  "À la traîne"),
+  }[status]
 
-      return {
-        dayNumber: i + 1,
-        date: dateStr,
-        isCompleted: dayRecord?.completed ?? false,
-        sessionMinutes: dayRecord?.sessionMinutes,
-        isToday,
-        isPast,
-        isFuture,
-      }
-    })
-  }, [habitChallenge])
-
-  // Check if yesterday was missed (for "never miss twice" warning)
-  const yesterdayMissed = useMemo(() => {
-    if (!habitChallenge || dayGrid.length === 0) return false
-
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
-    const yesterdayStr = yesterday.toISOString().split("T")[0]
-
-    const startDate = new Date(habitChallenge.startDate)
-    startDate.setHours(0, 0, 0, 0)
-
-    // Only show warning if yesterday is within the challenge period
-    if (yesterday < startDate) return false
-
-    const yesterdayRecord = habitChallenge.days.find(
-      (d) => d.date === yesterdayStr
-    )
-    return !yesterdayRecord?.completed
-  }, [habitChallenge, dayGrid])
-
-  // Today's status
-  const todayCompleted = useMemo(() => {
-    const todayDay = dayGrid.find((d) => d.isToday)
-    return todayDay?.isCompleted ?? false
-  }, [dayGrid])
-
-  const handleInitChallenge = () => {
-    initHabitChallenge(selectedMinutes)
-  }
-
-  const handleMarkToday = () => {
-    const today = new Date().toISOString().split("T")[0]
-    markDayComplete(today, habitChallenge?.minimumSessionMinutes ?? 30)
-  }
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
-        <div className="animate-pulse space-y-4 w-full max-w-lg p-6">
-          <div className="h-8 bg-white/5 rounded-lg w-1/3 mx-auto" />
-          <div className="h-48 bg-white/5 rounded-2xl" />
-        </div>
-      </div>
-    )
-  }
-
-  if (!objective) {
-    return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
-        <IconTarget size="lg" className="animate-pulse" />
-      </div>
-    )
-  }
-
-  // No challenge yet - show setup
-  if (!habitChallenge) {
-    return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 sm:p-6">
-        <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/5 blur-[100px] rounded-full pointer-events-none" />
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-lg space-y-8 relative z-10"
-        >
-          <div className="text-center space-y-4">
-            <div className="flex justify-center">
-              <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20">
-                <IconFlame size="xl" className="drop-shadow-[0_0_12px_rgba(0,255,136,0.4)]" />
-              </div>
-            </div>
-            <h1 className="text-3xl font-bold">Progress</h1>
-            <p className="text-muted-foreground">
-              Research shows it takes an average of 66 days to form a lasting habit.
-              Commit to daily focus sessions on your ONE thing.
-            </p>
-          </div>
-
-          <div className="liquid-glass p-6 space-y-4">
-            <p className="text-sm text-muted-foreground text-center mb-4">
-              Choose your minimum daily commitment:
-            </p>
-
-            <div className="grid gap-3">
-              {SESSION_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setSelectedMinutes(option.value)}
-                  className={`flex items-center justify-between p-4 rounded-xl transition-all ${
-                    selectedMinutes === option.value
-                      ? "bg-primary/10 border-2 border-primary"
-                      : "bg-white/5 border-2 border-transparent hover:bg-white/10"
-                  }`}
-                >
-                  <div className="text-left">
-                    <p className="font-medium">{option.label}</p>
-                    <p className="text-sm text-muted-foreground">{option.description}</p>
-                  </div>
-                  {selectedMinutes === option.value && (
-                    <Check className="h-5 w-5 text-primary" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="liquid-glass p-4 text-center">
-            <p className="text-sm text-muted-foreground">
-              Your ONE thing: <span className="text-foreground">{objective.todayGoal}</span>
-            </p>
-          </div>
-
-          <Button
-            onClick={handleInitChallenge}
-            className="w-full h-14 rounded-2xl text-base font-medium glow-green"
-          >
-            <IconFlame size="sm" className="mr-2" />
-            Start 66-Day Challenge
-          </Button>
-        </motion.div>
-      </div>
-    )
-  }
-
-  // Active challenge view
   return (
-    <div className="min-h-[calc(100vh-4rem)] p-4 sm:p-6">
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-emerald-500/5 blur-[100px] rounded-full pointer-events-none" />
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 font-semibold">
+          {t("This week", "Cette semaine")}
+        </p>
+        <span className={cn(
+          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium tracking-wide border",
+          pillClass
+        )}>
+          <span className="h-1.5 w-1.5 rounded-full bg-current" />
+          {pillLabel}
+        </span>
+      </div>
 
-      <div className="max-w-2xl mx-auto relative z-10 space-y-6">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center space-y-2"
-        >
-          <div className="flex items-center justify-center gap-3">
-            <IconFlame size="lg" className="drop-shadow-[0_0_10px_rgba(249,115,22,0.4)]" />
-            <h1 className="text-2xl sm:text-3xl font-bold">Progress</h1>
+      <div className="flex items-center gap-2.5">
+        {days.map((day, i) => {
+          const done    = sessionDates.has(day.str)
+          const isToday = toDateStr(today) === day.str
+          const isFuture = day.date > today
+          return (
+            <div key={i} className="flex flex-col items-center gap-1.5">
+              <div className={cn(
+                "h-3 w-3 rounded-full transition-all",
+                done && isToday  && "bg-primary ring-2 ring-primary/40 ring-offset-1 ring-offset-background",
+                done && !isToday && "bg-primary shadow-[0_0_8px_rgba(0,255,136,0.4)]",
+                !done && isToday && "border border-primary/40 bg-transparent animate-pulse",
+                !done && !isToday && !isFuture && "bg-white/[0.08]",
+                isFuture && !done && "border border-white/[0.12] bg-transparent",
+              )} />
+              <span className={cn(
+                "text-[9px] font-medium",
+                done ? "text-muted-foreground/60" : "text-muted-foreground/25"
+              )}>
+                {day.label}
+              </span>
+            </div>
+          )
+        })}
+        <span className="text-[13px] font-semibold tabular-nums ml-auto">
+          {doneThisWeek}
+          <span className="text-muted-foreground/40 font-normal"> / 5</span>
+        </span>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// B — CHAIN (GitHub-style)
+// ─────────────────────────────────────────────────────────────────────────────
+function ChainCard({
+  sessionDates,
+  startDate,
+}: {
+  sessionDates: Set<string>
+  startDate: Date
+}) {
+  const lang = useAppStore(s => s.language)
+  const t    = (en: string, fr: string) => lang === "fr" ? fr : en
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  // Build grid: start from the monday of the start week, end at sunday of current week
+  const gridStart = getWeekStart(startDate)
+  const gridEnd   = new Date(getWeekStart(today))
+  gridEnd.setDate(gridEnd.getDate() + 6)
+
+  // Columns = full weeks between gridStart and gridEnd
+  const totalDays  = Math.round((gridEnd.getTime() - gridStart.getTime()) / 86400000) + 1
+  const totalWeeks = Math.ceil(totalDays / 7)
+  const cappedWeeks = Math.min(totalWeeks, 14) // max 14 weeks displayed
+
+  // Build weeks array (most recent on right)
+  const weeksOffset = Math.max(0, totalWeeks - cappedWeeks)
+  const weeks = Array.from({ length: cappedWeeks }, (_, wi) => {
+    return Array.from({ length: 7 }, (_, di) => {
+      const d = new Date(gridStart)
+      d.setDate(gridStart.getDate() + (weeksOffset + wi) * 7 + di)
+      return d
+    })
+  })
+
+  // Month labels: show label when month changes at column boundary
+  const monthLabels: { col: number; label: string }[] = []
+  weeks.forEach((week, wi) => {
+    const firstDay = week[0]
+    if (wi === 0 || firstDay.getMonth() !== weeks[wi - 1][0].getMonth()) {
+      monthLabels.push({ col: wi, label: MONTH_LABELS[firstDay.getMonth()] })
+    }
+  })
+
+  const startStr = startDate.toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB", { day: "numeric", month: "short" })
+
+  return (
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 font-semibold">
+          {t("Chain", "Chaîne")}
+        </p>
+        <p className="text-[10px] text-muted-foreground/30">
+          {t("since", "depuis")} {startStr}
+        </p>
+      </div>
+
+      {/* Month labels */}
+      <div className="flex mb-1" style={{ gap: "3px" }}>
+        {weeks.map((week, wi) => {
+          const ml = monthLabels.find(m => m.col === wi)
+          return (
+            <div key={wi} className="flex-1 min-w-0">
+              {ml ? (
+                <span className="text-[9px] text-muted-foreground/30 uppercase tracking-wider leading-none">
+                  {ml.label}
+                </span>
+              ) : null}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Grid: 7 rows × N cols */}
+      <div className="flex" style={{ gap: "3px" }}>
+        {weeks.map((week, wi) => (
+          <div key={wi} className="flex flex-col" style={{ gap: "3px" }}>
+            {week.map((day, di) => {
+              day.setHours(0, 0, 0, 0)
+              const str       = toDateStr(day)
+              const done      = sessionDates.has(str)
+              const isToday   = str === toDateStr(today)
+              const isFuture  = day > today
+              const isPast    = day < startDate
+
+              return (
+                <motion.div
+                  key={di}
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: (wi * 7 + di) * 0.003, duration: 0.15, ease: "easeOut" }}
+                  className={cn(
+                    "sm:h-2.5 sm:w-2.5 h-2 w-2 rounded-sm",
+                    isPast                       && "bg-transparent",
+                    !isPast && isFuture           && "bg-transparent",
+                    !isPast && !isFuture && !done && !isToday && "bg-white/[0.05]",
+                    done && !isToday             && "bg-primary/70",
+                    done && isToday              && "bg-primary ring-1 ring-primary/60 ring-offset-[1px] ring-offset-background",
+                    !done && isToday             && "border border-primary/35 bg-transparent",
+                  )}
+                />
+              )
+            })}
           </div>
-          <p className="text-muted-foreground">
-            {habitChallenge.minimumSessionMinutes} min/day minimum
+        ))}
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-1.5 mt-3">
+        <span className="text-[9px] text-muted-foreground/25">{t("Less", "Moins")}</span>
+        {["bg-white/[0.05]", "bg-primary/25", "bg-primary/55", "bg-primary"].map((cls, i) => (
+          <div key={i} className={cn("sm:h-2.5 sm:w-2.5 h-2 w-2 rounded-sm", cls)} />
+        ))}
+        <span className="text-[9px] text-muted-foreground/25">{t("More", "Plus")}</span>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// C — PROJECTION
+// ─────────────────────────────────────────────────────────────────────────────
+function ProjectionLine({
+  sessionCount,
+  startDate,
+  deadline,
+}: {
+  sessionCount: number
+  startDate: Date
+  deadline: Date | null
+}) {
+  const lang = useAppStore(s => s.language)
+  const t    = (en: string, fr: string) => lang === "fr" ? fr : en
+
+  const projection = useMemo(() => {
+    if (!deadline || sessionCount < 2) return null
+
+    const now         = new Date()
+    const daysElapsed = Math.max(1, (now.getTime() - startDate.getTime()) / 86400000)
+    const daysLeft    = Math.ceil((deadline.getTime() - now.getTime()) / 86400000)
+
+    if (daysLeft <= 0) return null
+
+    const sessionsPerDay    = sessionCount / daysElapsed
+    const totalDaysForObj   = (deadline.getTime() - startDate.getTime()) / 86400000
+    const expectedSessions  = sessionsPerDay * totalDaysForObj
+    const projectedFinishIn = daysLeft // days remaining at current pace
+
+    // Compare pace: expected session ratio vs actual
+    const expectedRatio = (now.getTime() - startDate.getTime()) / (deadline.getTime() - startDate.getTime())
+    const actualRatio   = sessionCount / Math.max(1, expectedSessions)
+    const delta         = actualRatio - expectedRatio
+
+    return { daysLeft: projectedFinishIn, delta }
+  }, [sessionCount, startDate, deadline])
+
+  if (!projection) return null
+
+  const status: "ahead" | "ok" | "behind" =
+    projection.delta > 0.05  ? "ahead"
+    : projection.delta > -0.1 ? "ok"
+    : "behind"
+
+  const valueClass = {
+    ahead:  "text-primary",
+    ok:     "text-amber-400",
+    behind: "text-red-400",
+  }[status]
+
+  const valueText = {
+    ahead:  t(`${Math.round(projection.delta * 100)}% ahead of pace`, `${Math.round(projection.delta * 100)}% d'avance`),
+    ok:     t(`${projection.daysLeft} days left`, `${projection.daysLeft} jours restants`),
+    behind: t(`${Math.round(Math.abs(projection.delta) * 100)}% behind pace`, `${Math.round(Math.abs(projection.delta) * 100)}% de retard`),
+  }[status]
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      className="flex items-center justify-center gap-2 py-3"
+    >
+      <span className="text-[13px] text-muted-foreground/40">
+        {t("At this pace →", "À ce rythme →")}
+      </span>
+      <span className={cn("text-[15px] font-bold tabular-nums", valueClass)}>
+        {valueText}
+      </span>
+    </motion.div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// D — MILESTONE
+// ─────────────────────────────────────────────────────────────────────────────
+function MilestoneCard({
+  sessionCount,
+  targetSessions,
+  onDismiss,
+}: {
+  sessionCount: number
+  targetSessions: number
+  onDismiss: () => void
+}) {
+  const lang       = useAppStore(s => s.language)
+  const t          = (en: string, fr: string) => lang === "fr" ? fr : en
+  const half       = Math.floor(targetSessions / 2)
+  const isHalfway  = sessionCount >= half
+
+  if (!isHalfway) return null
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.97, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.97, y: 8 }}
+        transition={{ delay: 0.4, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/5 to-primary/[0.02] p-5 shadow-[0_0_40px_rgba(0,255,136,0.06)]"
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <Sparkles className="h-3.5 w-3.5 text-primary/60" />
+          <p className="text-[10px] uppercase tracking-[0.3em] text-primary/60 font-semibold">
+            {t("Halfway", "Mi-parcours")}
           </p>
-        </motion.div>
+        </div>
 
-        {/* Stats Cards */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-3 gap-3"
-        >
-          <div className="liquid-glass p-4 text-center">
-            <p className="text-2xl sm:text-3xl font-bold">{progress.day}</p>
-            <p className="text-xs text-muted-foreground">Day</p>
-          </div>
-          <div className="liquid-glass-green p-4 text-center">
-            <div className="flex items-center justify-center gap-1">
-              <IconFlame size="xs" />
-              <p className="text-2xl sm:text-3xl font-bold text-orange-400">
-                {progress.streak}
-              </p>
-            </div>
-            <p className="text-xs text-muted-foreground">Streak</p>
-          </div>
-          <div className="liquid-glass p-4 text-center">
-            <div className="flex items-center justify-center gap-1">
-              <Trophy className="h-4 w-4 text-violet-400" />
-              <p className="text-2xl sm:text-3xl font-bold text-violet-400">
-                {habitChallenge.longestStreak}
-              </p>
-            </div>
-            <p className="text-xs text-muted-foreground">Best</p>
-          </div>
-        </motion.div>
+        <p className="text-[15px] font-semibold text-foreground/90 leading-snug mb-1">
+          {t(`Session ${half} / ${targetSessions}`, `Session ${half} / ${targetSessions}`)}
+        </p>
+        <p className="text-[13px] text-muted-foreground leading-relaxed">
+          {t(
+            "The hard part is behind you. The second half is lighter.",
+            "La partie difficile est derrière toi. La deuxième moitié est plus légère."
+          )}
+        </p>
 
         {/* Progress bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="space-y-2"
-        >
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Progress</span>
-            <span className="font-medium text-emerald-400">{progress.percentage}%</span>
-          </div>
-          <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden">
+        <div className="mt-4 mb-1">
+          <div className="h-1.5 w-full rounded-full overflow-hidden flex">
             <motion.div
+              className="h-full bg-primary rounded-l-full"
               initial={{ width: 0 }}
-              animate={{ width: `${progress.percentage}%` }}
-              transition={{ duration: 0.5 }}
-              className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400"
+              animate={{ width: "50%" }}
+              transition={{ duration: 0.8, ease: "easeOut", delay: 0.6 }}
             />
+            <div className="h-full flex-1 bg-white/[0.06] rounded-r-full" />
           </div>
-          <p className="text-xs text-muted-foreground text-center">
-            {habitChallenge.days.filter((d) => d.completed).length} of 66 days completed
+          <div className="flex justify-between mt-1.5">
+            <span className="text-[10px] text-primary/60">{half} {t("done", "faites")}</span>
+            <span className="text-[10px] text-muted-foreground/35">{half} {t("left", "restantes")}</span>
+          </div>
+        </div>
+
+        <button
+          onClick={onDismiss}
+          className="mt-4 ml-auto flex items-center gap-1.5 text-[12px] text-muted-foreground/40 hover:text-foreground/60 transition-colors duration-150"
+        >
+          {t("Continue", "Continuer")}
+          <ArrowRight className="h-3 w-3" />
+        </button>
+      </motion.div>
+    </AnimatePresence>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EMPTY STATE
+// ─────────────────────────────────────────────────────────────────────────────
+function EmptyState() {
+  const lang = useAppStore(s => s.language)
+  const t    = (en: string, fr: string) => lang === "fr" ? fr : en
+  return (
+    <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] p-4 flex items-center justify-between gap-3 mb-3">
+      <p className="text-[13px] text-muted-foreground/50">
+        {t("Start your first session to see your chain.", "Lance ta première session pour voir ta chaîne.")}
+      </p>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAGE
+// ─────────────────────────────────────────────────────────────────────────────
+export default function MomentumPage() {
+  const router       = useRouter()
+  const hasHydrated  = useHasHydrated()
+  const {
+    objective,
+    sessions,
+    milestoneDismissed,
+    dismissMilestone,
+  } = useAppStore()
+  const lang = useAppStore(s => s.language)
+  const t    = (en: string, fr: string) => lang === "fr" ? fr : en
+
+  if (!hasHydrated) return (
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
+      <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+
+  if (!objective) {
+    router.replace("/app")
+    return null
+  }
+
+  const startDate  = new Date(objective.createdAt)
+  const deadline   = objective.deadline ? new Date(objective.deadline) : null
+  const objSessions = sessions.filter(s => s.objectiveId === objective.id)
+  const sessionCount = objSessions.length
+
+  // Build set of dates with sessions
+  const sessionDates = new Set(
+    objSessions.map(s => toDateStr(new Date(s.startedAt)))
+  )
+
+  const daysElapsed = Math.max(1, Math.ceil((Date.now() - startDate.getTime()) / 86400000))
+
+  // Target sessions: use planned × total days, default 66
+  const targetSessions = 66
+
+  return (
+    <div className="min-h-[calc(100vh-4rem)] p-4 sm:p-6">
+      {/* Atmospheric glow */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[500px] h-[250px] bg-orange-500/[0.04] blur-[100px] rounded-full pointer-events-none" />
+
+      <div className="relative max-w-2xl mx-auto space-y-3">
+
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="mb-6"
+        >
+          <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground/40 font-medium mb-1">
+            {t("Momentum", "Momentum")}
+          </p>
+          <h1 className="text-[22px] sm:text-[26px] font-bold tracking-tight leading-none">
+            {t("Progress", "Progression")}
+          </h1>
+          <p className="text-[13px] text-muted-foreground/60 mt-1.5">
+            {sessionCount} {sessionCount === 1 ? t("session", "session") : t("sessions", "sessions")}
+            {" · "}
+            {t(`${daysElapsed} days in`, `jour ${daysElapsed}`)}
           </p>
         </motion.div>
 
-        {/* Never Miss Twice Warning */}
-        <AnimatePresence>
-          {yesterdayMissed && !todayCompleted && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="flex items-center gap-3 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20"
-            >
-              <AlertTriangle className="h-5 w-5 text-orange-400 shrink-0" />
-              <div>
-                <p className="font-medium text-orange-400">Never miss twice!</p>
-                <p className="text-sm text-muted-foreground">
-                  You missed yesterday. Don't let the chain break further.
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {sessionCount === 0 && <EmptyState />}
 
-        {/* Today's Action */}
-        {!todayCompleted ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Button
-              onClick={handleMarkToday}
-              className="w-full h-14 rounded-2xl text-base font-medium glow-green"
-            >
-              <Check className="mr-2 h-5 w-5" />
-              Mark Today Complete
-            </Button>
-            <p className="text-xs text-muted-foreground text-center mt-2">
-              Or complete a focus session to auto-mark
-            </p>
-          </motion.div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="liquid-glass-green p-4 text-center"
-          >
-            <div className="flex items-center justify-center gap-2">
-              <Sparkles className="h-5 w-5 text-emerald-400" />
-              <span className="font-medium text-emerald-400">Today Complete!</span>
-            </div>
-          </motion.div>
+        {/* A — Pace hebdo */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <PaceCard sessionDates={sessionDates} />
+        </motion.div>
+
+        {/* B — Chain */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <ChainCard sessionDates={sessionDates} startDate={startDate} />
+        </motion.div>
+
+        {/* C — Projection */}
+        {deadline && sessionCount >= 2 && (
+          <ProjectionLine
+            sessionCount={sessionCount}
+            startDate={startDate}
+            deadline={deadline}
+          />
         )}
 
-        {/* 66-Day Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="liquid-glass p-4 sm:p-6"
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <Calendar className="h-5 w-5 text-muted-foreground" />
-            <h2 className="font-semibold">Your 66 Days</h2>
-          </div>
+        {/* D — Milestone */}
+        {!milestoneDismissed && sessionCount >= Math.floor(targetSessions / 2) && (
+          <MilestoneCard
+            sessionCount={sessionCount}
+            targetSessions={targetSessions}
+            onDismiss={dismissMilestone}
+          />
+        )}
 
-          <div className="grid grid-cols-11 gap-1.5 sm:gap-2">
-            {dayGrid.map((day) => (
-              <motion.div
-                key={day.dayNumber}
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: day.dayNumber * 0.01 }}
-                className={`
-                  aspect-square rounded-lg flex items-center justify-center text-xs font-medium
-                  transition-all duration-200 cursor-default
-                  ${
-                    day.isCompleted
-                      ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
-                      : day.isToday
-                      ? "bg-orange-500/20 border-2 border-orange-500 text-orange-400"
-                      : day.isPast
-                      ? "bg-red-500/10 text-red-400/60"
-                      : "bg-white/5 text-muted-foreground"
-                  }
-                `}
-                title={`Day ${day.dayNumber} - ${day.date}${
-                  day.isCompleted ? " (Completed)" : day.isToday ? " (Today)" : ""
-                }`}
-              >
-                {day.isCompleted ? (
-                  <Check className="h-3 w-3" />
-                ) : (
-                  day.dayNumber
-                )}
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Legend */}
-          <div className="flex items-center justify-center gap-4 mt-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded bg-emerald-500" />
-              <span>Complete</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded border-2 border-orange-500" />
-              <span>Today</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded bg-red-500/20" />
-              <span>Missed</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded bg-white/5" />
-              <span>Upcoming</span>
-            </div>
-          </div>
-        </motion.div>
       </div>
     </div>
   )

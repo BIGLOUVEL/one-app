@@ -3,6 +3,8 @@
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
+import { useState, useRef, useEffect, useCallback } from "react"
+import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Target,
@@ -14,6 +16,18 @@ import {
   TrendingUp,
   Settings,
   LogOut,
+  Plus,
+  Map,
+  Shield,
+  RefreshCw,
+  Check,
+  CalendarDays,
+  Library,
+  GitBranch,
+  BarChart3,
+  X,
+  Flame,
+  Flag,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAppStore } from "@/store/useAppStore"
@@ -45,13 +59,26 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { Logo } from "@/components/ui/logo"
 
 // ─── 5 CORE NAV ITEMS ───────────────────────────────────────────────────────
-// Max 5. Daily touchpoints only. Everything else → Settings or hidden.
 const coreNavItems = [
-  { href: "/app",         label: "Home",         icon: Target,        description: "Your ONE thing — right now",  color: "primary" },
+  { href: "/app",         label: "Home",         icon: Target,        description: "Your ONE thing — right now",     color: "primary" },
   { href: "/app/define",  label: "My Objective", icon: Lock,          description: "Where you are & why it matters", color: "primary" },
-  { href: "/app/focus",   label: "Focus",        icon: Timer,         description: "Deep work session",           color: "primary" },
-  { href: "/app/411",     label: "Plan",         icon: Calendar,      description: "Week & month goals",          color: "cyan" },
-  { href: "/app/habit",   label: "Progress",     icon: TrendingUp,    description: "66-day habit & momentum",     color: "orange" },
+  { href: "/app/focus",   label: "Focus",        icon: Timer,         description: "Deep work session",              color: "primary" },
+  { href: "/app/411",     label: "Milestones",   icon: Flag,          description: "Key phases toward your goal",    color: "cyan"    },
+  { href: "/app/habit",   label: "Progress",     icon: TrendingUp,    description: "66-day habit & momentum",        color: "orange"  },
+]
+
+// ─── OPTIONAL MODULES ────────────────────────────────────────────────────────
+const EXTRAS_KEY = "one-nav-extras"
+
+const extraModules = [
+  { href: "/app/66days",    label: "66 Days",      icon: Flame,        description: "Streak challenge tracker",color: "orange" },
+  { href: "/app/timetable", label: "Calendar",     icon: CalendarDays, description: "Weekly time blocking",    color: "cyan"   },
+  { href: "/app/sessions",  label: "Library",      icon: Library,      description: "Sessions & post-its",     color: "yellow" },
+  { href: "/app/gps",       label: "GPS Plan",     icon: Map,          description: "One-page strategic plan", color: "violet" },
+  { href: "/app/shield",    label: "Four Thieves", icon: Shield,       description: "Protect your focus time", color: "orange" },
+  { href: "/app/review",    label: "Review",       icon: RefreshCw,    description: "Weekly reflection",       color: "cyan"   },
+  { href: "/app/domino",    label: "Domino Chain", icon: GitBranch,    description: "Momentum visualization",  color: "violet" },
+  { href: "/app/analysis",  label: "Analysis",     icon: BarChart3,    description: "Focus performance stats", color: "orange" },
 ]
 
 function NavItem({ item, isActive, isLocked }: {
@@ -88,6 +115,12 @@ function NavItem({ item, isActive, isLocked }: {
       text: "text-orange-400",
       border: "border-orange-500/20",
       glow: "shadow-[0_0_20px_rgba(249,115,22,0.15)]"
+    },
+    yellow: {
+      bg: "bg-yellow-500/10",
+      text: "text-yellow-400",
+      border: "border-yellow-500/20",
+      glow: "shadow-[0_0_20px_rgba(234,179,8,0.15)]"
     },
   }
 
@@ -151,6 +184,279 @@ function NavItem({ item, isActive, isLocked }: {
         </TooltipContent>
       </Tooltip>
     </SidebarMenuItem>
+  )
+}
+
+// ─── MODULE PICKER MODAL (full-screen, COSM-style grid) ─────────────────────
+const moduleColorMap: Record<string, {
+  from: string; to: string; border: string; activeBorder: string
+  glow: string; text: string; blob: string
+}> = {
+  cyan:   { from: "from-cyan-500/20",   to: "to-cyan-900/10",   border: "border-cyan-500/15",   activeBorder: "border-cyan-400/50",   glow: "shadow-[0_0_40px_rgba(6,182,212,0.15)]",    text: "text-cyan-400",   blob: "bg-cyan-400"   },
+  yellow: { from: "from-yellow-500/20", to: "to-yellow-900/10", border: "border-yellow-500/15", activeBorder: "border-yellow-400/50", glow: "shadow-[0_0_40px_rgba(234,179,8,0.15)]",    text: "text-yellow-400", blob: "bg-yellow-400" },
+  violet: { from: "from-violet-500/20", to: "to-violet-900/10", border: "border-violet-500/15", activeBorder: "border-violet-400/50", glow: "shadow-[0_0_40px_rgba(139,92,246,0.15)]",   text: "text-violet-400", blob: "bg-violet-400" },
+  orange: { from: "from-orange-500/20", to: "to-orange-900/10", border: "border-orange-500/15", activeBorder: "border-orange-400/50", glow: "shadow-[0_0_40px_rgba(249,115,22,0.15)]",   text: "text-orange-400", blob: "bg-orange-400" },
+  primary:{ from: "from-primary/20",    to: "to-primary/5",     border: "border-primary/15",    activeBorder: "border-primary/50",    glow: "shadow-[0_0_40px_rgba(0,255,136,0.15)]",   text: "text-primary",    blob: "bg-primary"    },
+}
+
+function ModulePickerModal({ enabled, onToggle, onClose }: {
+  enabled: string[]
+  onToggle: (href: string) => void
+  onClose: () => void
+}) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
+    document.addEventListener("keydown", handler)
+    return () => document.removeEventListener("keydown", handler)
+  }, [onClose])
+
+  return createPortal(
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="fixed inset-0 z-[200] flex items-center justify-center"
+        onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+      >
+        {/* Backdrop */}
+        <div className="absolute inset-0 bg-black/75 backdrop-blur-xl" />
+
+        {/* Atmospheric glow */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/4 left-1/3 w-96 h-96 bg-cyan-500/5 rounded-full blur-[120px]" />
+          <div className="absolute bottom-1/4 right-1/3 w-80 h-80 bg-violet-500/5 rounded-full blur-[100px]" />
+        </div>
+
+        {/* Panel */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 24 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 16 }}
+          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          className="relative z-10 w-full max-w-[680px] mx-6"
+        >
+          {/* Header */}
+          <div className="flex items-start justify-between mb-8">
+            <div>
+              <p className="text-[9px] uppercase tracking-[0.35em] text-white/20 font-semibold mb-2">
+                System
+              </p>
+              <h2 className="text-[22px] font-bold tracking-tight text-white/90 leading-none">
+                Choose Modules
+              </h2>
+            </div>
+            <button
+              onClick={onClose}
+              className="h-8 w-8 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all duration-150 mt-1"
+            >
+              <X className="h-3.5 w-3.5 text-white/50" />
+            </button>
+          </div>
+
+          {/* Grid */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+            {extraModules.map((module, i) => {
+              const isOn = enabled.includes(module.href)
+              const colors = moduleColorMap[module.color] || moduleColorMap.primary
+              const Icon = module.icon
+
+              return (
+                <motion.button
+                  key={module.href}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.035, duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                  onClick={() => onToggle(module.href)}
+                  className={cn(
+                    "relative group aspect-[3/4] rounded-2xl border p-4 text-left overflow-hidden",
+                    "transition-all duration-200",
+                    isOn
+                      ? [colors.activeBorder, colors.glow, `bg-gradient-to-br ${colors.from} ${colors.to}`]
+                      : "border-white/[0.07] bg-white/[0.025] hover:bg-white/[0.05] hover:border-white/[0.12]"
+                  )}
+                >
+                  {/* Decorative blobs */}
+                  <div className={cn(
+                    "absolute -right-6 -top-6 h-20 w-20 rounded-full blur-2xl transition-opacity duration-300",
+                    colors.blob,
+                    isOn ? "opacity-20" : "opacity-0 group-hover:opacity-8"
+                  )} />
+                  <div className={cn(
+                    "absolute -left-3 -bottom-3 h-14 w-14 rounded-full blur-xl transition-opacity duration-300",
+                    colors.blob,
+                    isOn ? "opacity-10" : "opacity-0"
+                  )} />
+
+                  {/* Active check */}
+                  {isOn && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute top-3 right-3 h-5 w-5 rounded-full bg-white/15 flex items-center justify-center"
+                    >
+                      <Check className="h-3 w-3 text-white/80" />
+                    </motion.div>
+                  )}
+
+                  {/* Icon */}
+                  <div className={cn(
+                    "relative flex h-9 w-9 items-center justify-center rounded-xl mb-auto mt-1 transition-all duration-200 border",
+                    isOn
+                      ? [colors.blob.replace("bg-", "bg-") + "/10", colors.border, "border"]
+                      : "bg-white/5 border-white/8"
+                  )}>
+                    <Icon className={cn(
+                      "h-4 w-4 transition-colors duration-200",
+                      isOn ? colors.text : "text-white/25"
+                    )} />
+                  </div>
+
+                  {/* Label at bottom */}
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <p className={cn(
+                      "text-[13px] font-semibold leading-tight transition-colors duration-200",
+                      isOn ? "text-white/90" : "text-white/35"
+                    )}>
+                      {module.label}
+                    </p>
+                    <p className={cn(
+                      "text-[10px] mt-0.5 leading-snug transition-colors duration-200 line-clamp-2",
+                      isOn ? "text-white/40" : "text-white/18"
+                    )}>
+                      {module.description}
+                    </p>
+                  </div>
+                </motion.button>
+              )
+            })}
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-center gap-2 mt-6">
+            <p className="text-[11px] text-white/20">
+              {enabled.length} active
+            </p>
+            <span className="text-white/10">·</span>
+            <p className="text-[11px] text-white/20">Press Esc to close</p>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>,
+    document.body
+  )
+}
+
+// ─── EXTRA MODULES SECTION ───────────────────────────────────────────────────
+function ExtraModulesSection({ pathname, locked }: { pathname: string; locked: boolean }) {
+  const { state } = useSidebar()
+  const isCollapsed = state === "collapsed"
+
+  const [enabled, setEnabled] = useState<string[]>([])
+  const [modalOpen, setModalOpen] = useState(false)
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(EXTRAS_KEY)
+      if (saved) setEnabled(JSON.parse(saved))
+    } catch {}
+  }, [])
+
+  const toggle = (href: string) => {
+    setEnabled(prev => {
+      const next = prev.includes(href) ? prev.filter(h => h !== href) : [...prev, href]
+      localStorage.setItem(EXTRAS_KEY, JSON.stringify(next))
+      return next
+    })
+  }
+
+  const remove = (href: string) => {
+    setEnabled(prev => {
+      const next = prev.filter(h => h !== href)
+      localStorage.setItem(EXTRAS_KEY, JSON.stringify(next))
+      return next
+    })
+  }
+
+  const enabledModules = extraModules.filter(m => enabled.includes(m.href))
+
+  return (
+    <>
+      {/* Enabled extra nav items — with X button on hover */}
+      {enabledModules.length > 0 && (
+        <>
+          <div className="px-3 my-2 group-data-[collapsible=icon]:px-1">
+            <div className="h-px bg-white/[0.05]" />
+          </div>
+          <SidebarMenu>
+            {enabledModules.map(item => (
+              <SidebarMenuItem key={item.href} className="group/extra relative">
+                <NavItem
+                  item={item}
+                  isActive={pathname === item.href}
+                  isLocked={locked}
+                />
+                {/* X button — appears on row hover, hidden when collapsed */}
+                {!isCollapsed && (
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); remove(item.href) }}
+                    className={cn(
+                      "absolute right-2 top-1/2 -translate-y-1/2 z-10",
+                      "h-5 w-5 rounded-md flex items-center justify-center",
+                      "opacity-0 group-hover/extra:opacity-100 transition-all duration-150",
+                      "bg-white/[0.04] hover:bg-red-500/15 hover:text-red-400",
+                      "text-white/25"
+                    )}
+                    title={`Remove ${item.label}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </>
+      )}
+
+      {/* Separator + Add button */}
+      <div className="px-3 mt-2 mb-1 group-data-[collapsible=icon]:px-1">
+        <div className="h-px bg-white/[0.05]" />
+      </div>
+
+      <div className="relative px-2 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => setModalOpen(true)}
+              className={cn(
+                "flex items-center gap-2 rounded-xl transition-all duration-200",
+                "text-muted-foreground/35 hover:text-muted-foreground/70",
+                !isCollapsed && "w-full px-3 h-9",
+                isCollapsed && "h-8 w-8 justify-center",
+                modalOpen && "text-primary/60 bg-primary/8"
+              )}
+            >
+              <motion.div animate={{ rotate: modalOpen ? 45 : 0 }} transition={{ duration: 0.2 }}>
+                <Plus className="h-3.5 w-3.5 shrink-0" />
+              </motion.div>
+              {!isCollapsed && <span className="text-xs font-medium">Add module</span>}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">Add module</TooltipContent>
+        </Tooltip>
+      </div>
+
+      {/* Full-screen module picker modal */}
+      {modalOpen && (
+        <ModulePickerModal
+          enabled={enabled}
+          onToggle={toggle}
+          onClose={() => setModalOpen(false)}
+        />
+      )}
+    </>
   )
 }
 
@@ -273,7 +579,7 @@ function AppSidebarContent() {
         </Link>
       </SidebarHeader>
 
-      {/* Content — 5 items, no groups, always labeled */}
+      {/* Content */}
       <SidebarContent className="px-2 group-data-[collapsible=icon]:px-0">
         <SidebarGroup>
           <SidebarGroupContent>
@@ -287,6 +593,9 @@ function AppSidebarContent() {
                 />
               ))}
             </SidebarMenu>
+
+            {/* Optional modules + add button */}
+            <ExtraModulesSection pathname={pathname} locked={locked} />
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
@@ -394,7 +703,7 @@ export function MobileNav() {
     { href: "/app",        label: "Home",     icon: Target,     color: "primary" },
     { href: "/app/define", label: "Objective", icon: Lock,      color: "primary" },
     { href: "/app/focus",  label: "Focus",    icon: Timer,      color: "primary" },
-    { href: "/app/411",    label: "Plan",     icon: Calendar,   color: "cyan" },
+    { href: "/app/411",    label: "Milestones", icon: Flag,     color: "cyan" },
     { href: "/app/habit",  label: "Progress", icon: TrendingUp, color: "orange" },
   ]
 
